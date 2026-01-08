@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Engineering | Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+
+    <nav class="floating-nav">
+        <a href="{{ url_for('main.dashboard') }}" class="nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}" title="Dashboard">
+            <i class="bi bi-grid-fill"></i>
+        </a>
+
+        <a href="#" class="nav-item" title="Lavori">
+            <i class="bi bi-briefcase-fill"></i>
+        </a>
+
+        <a href="https://progetto_firme_url_placeholder" target="_blank" class="nav-item" title="Firma">
+            <i class="bi bi-pen-fill"></i>
+        </a>
+
+        <div class="nav-divider"></div>
+
+        <a href="#" class="nav-item" title="Impostazioni">
+            <i class="bi bi-gear-fill"></i>
+        </a>
+
+        <div class="nav-profile">
+            <div class="avatar-circle">
+                {{ current_user.username[0] }} </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>

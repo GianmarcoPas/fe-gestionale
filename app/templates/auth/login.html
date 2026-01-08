@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - First Engineering</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+
+    <div class="login-container glass-panel">
+        <div class="logo-area">
+            <h1 class="fe-logo-text">FIRST <span class="fe-green">|</span> ENGINEERING</h1>
+        </div>
+
+        <form method="POST" action="/login">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="input-group">
+                <input type="text" name="username" placeholder="Username" required class="one-ui-input">
+            </div>
+            
+            <div class="input-group">
+                <input type="password" name="password" placeholder="Password" required class="one-ui-input">
+            </div>
+
+            <button type="submit" class="btn-primary-oneui">Accedi</button>
+        </form>
+    </div>
+
+</body>
+</html>
