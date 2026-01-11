@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-section">
+    <h1>Impostazioni</h1>
+</div>
+
+<div class="oneui-grid">
+    
+    {# --- NUOVA SEZIONE: INTERFACCIA LAVORI (SOLO ADMIN) --- #}
+    {% if current_user.role == 'admin' %}
+    <div class="oneui-card span-col-2">
+        <h3>Interfaccia Lavori</h3>
+        <p>Scegli come visualizzare la tabella dei lavori e i menu.</p>
+        
+        <form action="{{ url_for('main.save_view_mode') }}" method="POST" class="view-mode-form">
+            
+            <label class="mode-option">
+                <input type="radio" name="view_mode" value="standard" {% if current_user.admin_view_mode == 'standard' %}checked{% endif %}>
+                <div class="mode-card">
+                    <div class="icon"><i class="bi bi-layout-sidebar-inset-reverse"></i></div>
+                    <strong>Standard (Default)</strong>
+                    <small>Fatture e Compensi in pannello laterale a scomparsa.</small>
+                </div>
+            </label>
+
+            <label class="mode-option">
+                <input type="radio" name="view_mode" value="extra1" {% if current_user.admin_view_mode == 'extra1' %}checked{% endif %}>
+                <div class="mode-card">
+                    <div class="icon"><i class="bi bi-table"></i></div>
+                    <strong>Extra 1 (Scroll)</strong>
+                    <small>Tabella estesa con scorrimento orizzontale e colonne fisse.</small>
+                </div>
+            </label>
+
+            <label class="mode-option">
+                <input type="radio" name="view_mode" value="extra2" {% if current_user.admin_view_mode == 'extra2' %}checked{% endif %}>
+                <div class="mode-card">
+                    <div class="icon"><i class="bi bi-eye-fill"></i></div>
+                    <strong>Extra 2 (Focus)</strong>
+                    <small>Attiva sezione "Focus" nella barra in alto al posto della Firma.</small>
+                </div>
+            </label>
+
+            <button type="submit" class="btn-primary-oneui mt-3" style="width: auto;">Salva Preferenza</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {# --- SEZIONE ESISTENTE: CAMBIA PASSWORD --- #}
+    <div class="oneui-card" style="max-width: 500px;">
+        <h3>Cambia Password</h3>
+        <p style="margin-bottom: 20px;">Inserisci la password attuale e quella nuova.</p>
+        
+        <form action="{{ url_for('main.change_password') }}" method="POST">
+            <div class="input-group">
+                <input type="password" name="old_password" placeholder="Vecchia Password" class="one-ui-input" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="new_password" placeholder="Nuova Password" class="one-ui-input" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="confirm_password" placeholder="Conferma Nuova Password" class="one-ui-input" required>
+            </div>
+            
+            <button type="submit" class="btn-primary-oneui">Aggiorna Password</button>
+        </form>
+    </div>
+
+    {# --- SEZIONE ESISTENTE: GESTIONE UTENTI (SOLO ADMIN) --- #}
+    {% if current_user.role == 'admin' %}
+    <div class="oneui-card span-col-2">
+        <h3>Gestione Utenti</h3>
+        <p style="margin-bottom: 20px;">Resetta le password dei colleghi in caso di smarrimento.</p>
+
+        <div class="table-container">
+            <table class="oneui-table">
+                <thead>
+                    <tr>
+                        <th>Utente</th>
+                        <th>Ruolo</th>
+                        <th style="text-align: right;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td style="font-weight: 600;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar-small">{{ user.username[0] }}</div>
+                                {{ user.username }}
+                                {% if user.id == current_user.id %}
+                                    <span class="badge grey">Tu</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-pill" style="background: {{ '#e3f2fd' if user.role == 'admin' else '#f5f5f5' }};">
+                                {{ user.role|upper }}
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <form action="{{ url_for('main.admin_reset_password', user_id=user.id) }}" method="POST" onsubmit="return confirm('Sei sicuro di voler resettare la password di {{ user.username }} a Ciao1234?');">
+                                <button type="submit" class="btn-reset">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Reset Password
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

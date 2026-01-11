@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Lavori Admin</h1>
+    
+    <div class="view-selector">
+        <button class="btn-view active" onclick="switchView('standard')">Standard</button>
+        <button class="btn-view" onclick="switchView('extra1')">Espansa</button>
+        <button class="btn-view" onclick="switchView('extra2')">Focus Compensi</button>
+    </div>
+</div>
+
+<div class="oneui-card table-wrapper" id="mainWrapper">
+    
+    <table class="oneui-table admin-table" id="adminTable">
+        <thead>
+            <tr>
+                <th class="col-sticky col-num">N°</th>
+                <th class="col-sticky col-cliente">Cliente</th>
+                <th class="col-sticky col-bene">Bene</th>
+                <th class="col-sticky col-valore">Valore</th>
+
+                <th class="col-std">Data Offerta</th>
+                <th class="col-std">Data Firma</th>
+                <th class="col-std">Importo</th>
+                <th class="col-std">Origine</th>
+                <th class="col-std">Redattore</th>
+                <th class="col-std">Revisore</th>
+                <th class="col-std">Caric.</th>
+                <th class="col-std">Data PEC</th>
+                
+                <th class="col-std">Stato</th>
+
+                <th class="col-comp hidden">C. FE</th>
+                <th class="col-comp hidden">C. AMIN</th>
+                <th class="col-comp hidden">C. GALVAN</th>
+                <th class="col-comp hidden">C. FH</th>
+                <th class="col-comp hidden">C. BIANC</th>
+                <th class="col-comp hidden">C. EXT</th>
+                <th class="col-comp hidden">C. REV</th>
+                <th class="col-comp hidden">C. CAR</th>
+
+                <th class="col-fatt hidden">F. FE</th>
+                <th class="col-fatt hidden">F. AMIN</th>
+                <th class="col-fatt hidden">F. GALVAN</th>
+                <th class="col-fatt hidden">F. FH</th>
+                <th class="col-fatt hidden">F. BIANC</th>
+                <th class="col-fatt hidden">F. EXT</th>
+                <th class="col-fatt hidden">F. REV</th>
+                <th class="col-fatt hidden">F. CAR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lavori %}
+            <tr data-id="{{ l.id }}">
+                <td class="col-sticky col-num">{{ l.numero }}</td>
+                <td class="col-sticky col-cliente">{{ l.cliente_nome }}</td>
+                <td class="col-sticky col-bene">{{ l.bene|truncate(20) }}</td>
+                <td class="col-sticky col-valore">€ {{ "{:,.2f}".format(l.valore_bene) }}</td>
+
+                <td class="col-std cell-date-check">
+                    <div class="checkbox-date-wrapper">
+                        <input type="checkbox" class="chk-date" 
+                               {% if l.data_offerta_check %}checked{% endif %}
+                               onchange="toggleDate(this, 'data_offerta', {{ l.id }})">
+                        {% if l.data_offerta %}
+                        <span class="tooltip-date">{{ l.data_offerta.strftime('%d-%m-%Y') }}</span>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <td class="col-std cell-date-check">
+                    <div class="checkbox-date-wrapper">
+                        <input type="checkbox" class="chk-date" 
+                               {% if l.data_firma_check %}checked{% endif %}
+                               onchange="toggleDate(this, 'data_firma', {{ l.id }})">
+                        {% if l.data_firma %}
+                        <span class="visible-date">{{ l.data_firma.strftime('%d-%b') }}</span>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <td class="col-std">€ {{ "{:,.2f}".format(l.importo_offerta) }}</td>
+                <td class="col-std">{{ l.origine }}</td>
+                <td class="col-std">{{ l.redattore }}</td>
+                <td class="col-std"><input type="checkbox" disabled {% if l.has_revisore %}checked{% endif %}></td>
+                <td class="col-std"><input type="checkbox" disabled {% if l.has_caricamento %}checked{% endif %}></td>
+                <td class="col-std">{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
+                
+                <td class="col-std">
+                    <select class="status-select {{ l.stato|replace(' ', '_') }}" onchange="updateStato(this, {{ l.id }})">
+                        <option value="vuoto" {% if l.stato == 'vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if l.stato == 'pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                        <option value="da fatturare" {% if l.stato == 'da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                        <option value="da incassare" {% if l.stato == 'da incassare' %}selected{% endif %}>Da Incassare</option>
+                        <option value="incassata" {% if l.stato == 'incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if l.stato == 'chiusa' %}selected{% endif %}>Chiusa</option>
+                    </select>
+                </td>
+
+                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_fe) }}</td>
+                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_amin) }}</td>
+                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_galvan) }}</td>
+                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_fh) }}</td>
+                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_bianc) }}</td>
+                <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_ext) }}</td> <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_revisore) }}</td> <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_caricamento) }}</td> <td class="col-fatt hidden">{{ l.f_fe }}</td>
+                <td class="col-fatt hidden">{{ l.f_amin }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="overlayPanel" class="overlay-panel">
+        <div class="overlay-header">
+            <h3 id="overlayTitle">Dettagli</h3>
+            <button onclick="closeOverlay()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div id="overlayContent">
+            </div>
+    </div>
+
+</div>
+
+<div class="bottom-floating-bar admin-bar">
+    <div class="bar-group standard-controls">
+        <button class="pill-btn" onclick="openOverlay('fatture')">Fatture</button>
+        <button class="pill-btn" onclick="openOverlay('compensi')">Compensi</button>
+    </div>
+
+    <div class="bar-group extra2-controls" style="display: none;">
+        <button class="pill-btn" onclick="toggleExtra2External()">Passa a Esterni</button>
+    </div>
+
+    <button class="btn-add-circle" onclick="openAddModal()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+</div>
+
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal-glass modal-large">
+        <div class="modal-header">
+            <h3>Nuovo Lavoro</h3>
+            <button class="btn-close" onclick="closeAddModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        
+        <form action="{{ url_for('main.add_lavoro_admin') }}" method="POST" id="formAddLavoro">
+            
+            <div class="form-section">
+                <h4><i class="bi bi-person-lines-fill"></i> Anagrafica Cliente</h4>
+                <div class="form-row">
+                    <div class="input-group flex-2">
+                        <label>Cliente</label>
+                        <input type="text" name="cliente_nome" id="inpCliente" list="clientiList" class="one-ui-input" required placeholder="Cerca o inserisci..." oninput="fetchCliente(this.value)">
+                        <datalist id="clientiList"></datalist>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>P. IVA</label>
+                        <input type="text" name="cliente_piva" id="inpPiva" class="one-ui-input">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-2">
+                        <label>Indirizzo</label>
+                        <input type="text" name="cliente_indirizzo" id="inpIndirizzo" class="one-ui-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Civico</label>
+                        <input type="text" name="cliente_civico" id="inpCivico" class="one-ui-input">
+                    </div>
+                    <div class="input-group">
+                        <label>CAP</label>
+                        <input type="text" name="cliente_cap" id="inpCap" class="one-ui-input">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Comune</label>
+                        <input type="text" name="cliente_comune" id="inpComune" class="one-ui-input">
+                    </div>
+                    <div class="input-group" style="flex: 0.5;">
+                        <label>Prov.</label>
+                        <input type="text" name="cliente_provincia" id="inpProv" class="one-ui-input">
+                    </div>
+                    <div class="input-group flex-2">
+                        <label>PEC</label>
+                        <input type="email" name="cliente_pec" id="inpPec" class="one-ui-input">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4><i class="bi bi-briefcase-fill"></i> Ordine di Lavoro</h4>
+                <div class="form-row">
+                    <div class="input-group flex-2">
+                        <label>Bene (Descrizione)</label>
+                        <input type="text" name="bene" class="one-ui-input">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Valore Bene (€)</label>
+                        <input type="number" step="0.01" name="valore_bene" class="one-ui-input">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Importo Offerta (€)</label>
+                        <input type="number" step="0.01" name="importo_offerta" id="impOfferta" class="one-ui-input" oninput="calcolaCompensi()">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Origine</label>
+                        <select name="origine" id="selOrigine" class="one-ui-input" onchange="toggleExtInput(); calcolaCompensi();">
+                            <option value="AMIN">AMIN</option>
+                            <option value="GALVAN">GALVAN</option>
+                            <option value="FH">FH</option>
+                            <option value="BIANC">BIANC</option>
+                            <option value="ext">Esterno</option>
+                        </select>
+                    </div>
+                    <div class="input-group flex-1" id="divNomeEsterno" style="display:none;">
+                        <label>Nome Esterno</label>
+                        <input type="text" name="nome_esterno" class="one-ui-input">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label>Redattore</label>
+                        <select name="redattore" id="selRedattore" class="one-ui-input" onchange="calcolaCompensi()">
+                            <option value="AMIN">AMIN</option>
+                            <option value="GALVAN">GALVAN</option>
+                            <option value="BIANC">BIANC</option>
+                        </select>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Collaboratore</label>
+                        <input type="text" name="collaboratore" class="one-ui-input">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4><i class="bi bi-calculator"></i> Compensi</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <label class="check-label"><input type="checkbox" name="has_revisore" id="chkRev" onchange="toggleRevCar(); calcolaCompensi();"> Revisore</label>
+                        <label class="check-label"><input type="checkbox" name="has_caricamento" id="chkCar" onchange="toggleRevCar(); calcolaCompensi();"> Caricamento</label>
+                    </div>
+                </div>
+                
+                <div class="form-row small-toggles" id="togglesRevCar" style="display:none; justify-content: flex-end; margin-bottom: 10px;">
+                    <div id="revOptions" style="display:none;">
+                        Revisore: 
+                        <select id="revType" onchange="calcolaCompensi()"><option value="perc">%</option><option value="euro">€</option></select>
+                        <input type="number" id="revVal" value="0" style="width: 60px;" oninput="calcolaCompensi()">
+                    </div>
+                    <div id="carOptions" style="display:none; margin-left: 10px;">
+                        Caricamento: 
+                        <select id="carType" onchange="calcolaCompensi()"><option value="perc">%</option><option value="euro">€</option></select>
+                        <input type="number" id="carVal" value="0" style="width: 60px;" oninput="calcolaCompensi()">
+                    </div>
+                </div>
+
+                <div class="compensi-grid">
+                    <div class="c-item"><label>FE (15%)</label><input type="number" step="0.01" name="c_fe" id="c_fe" class="one-ui-input compact"></div>
+                    <div class="c-item"><label>AMIN</label><input type="number" step="0.01" name="c_amin" id="c_amin" class="one-ui-input compact"></div>
+                    <div class="c-item"><label>GALVAN</label><input type="number" step="0.01" name="c_galvan" id="c_galvan" class="one-ui-input compact"></div>
+                    <div class="c-item"><label>FH</label><input type="number" step="0.01" name="c_fh" id="c_fh" class="one-ui-input compact"></div>
+                    <div class="c-item"><label>BIANC</label><input type="number" step="0.01" name="c_bianc" id="c_bianc" class="one-ui-input compact"></div>
+                    
+                    <div class="c-item" id="fieldExt" style="display:none;"><label>Esterno (10%)</label><input type="number" step="0.01" name="c_ext" id="c_ext" class="one-ui-input compact"></div>
+                    <div class="c-item" id="fieldRev" style="display:none;"><label>Revisore</label><input type="number" step="0.01" name="c_revisore" id="c_revisore" class="one-ui-input compact"></div>
+                    <div class="c-item" id="fieldCar" style="display:none;"><label>Caricamento</label><input type="number" step="0.01" name="c_caricamento" id="c_caricamento" class="one-ui-input compact"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary-oneui mt-3">Salva Lavoro</button>
+        </form>
+    </div>
+</div>
+
+<script>
+/* ================= LOGICA VIEW SWITCHING ================= */
+function switchView(mode) {
+    // Rimuovi classi active dai bottoni
+    document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const table = document.getElementById('adminTable');
+    const controlsStd = document.querySelector('.standard-controls');
+    const controlsExtra2 = document.querySelector('.extra2-controls');
+
+    // Reset classi tabella
+    table.className = 'oneui-table admin-table';
+    controlsStd.style.display = 'none';
+    controlsExtra2.style.display = 'none';
+
+    // Nascondi tutte le colonne opzionali
+    document.querySelectorAll('.col-std, .col-comp, .col-fatt').forEach(el => el.classList.add('hidden'));
+
+    if (mode === 'standard') {
+        table.classList.add('view-standard');
+        controlsStd.style.display = 'flex';
+        // Mostra colonne standard
+        document.querySelectorAll('.col-std').forEach(el => el.classList.remove('hidden'));
+    
+    } else if (mode === 'extra1') {
+        table.classList.add('view-extra1'); // Abilita scroll orizzontale
+        // Mostra TUTTO affiancato
+        document.querySelectorAll('.col-std, .col-comp, .col-fatt').forEach(el => el.classList.remove('hidden'));
+
+    } else if (mode === 'extra2') {
+        table.classList.add('view-extra2');
+        controlsExtra2.style.display = 'flex';
+        // Mostra Stato + Compensi FE/AMIN/GALVAN/FH (Parte 1)
+        // Nota: Le colonne fisse (Num, Cliente, Bene) si vedono sempre
+        document.querySelectorAll('.col-std').forEach(el => {
+            // Mostra solo Stato e Valore in questo mode
+             if(el.innerText.includes('Stato') || el.innerText.includes('Valore')) el.classList.remove('hidden');
+        });
+        // Mostra Compensi Core
+        ['c_fe', 'c_amin', 'c_galvan', 'c_fh'].forEach(id => {
+            // Qui servirebbe logica per targettare le colonne specifiche, semplifico mostrando gruppo 1
+            // Implementazione JS avanzata: toggle classi specifiche
+        });
+        // Per semplicità Extra 2 mostra Compensi Generali
+        document.querySelectorAll('.col-comp').forEach(el => el.classList.remove('hidden'));
+    }
+}
+
+/* ================= LOGICA CALCOLI MODALE ================= */
+function calcolaCompensi() {
+    const importo = parseFloat(document.getElementById('impOfferta').value) || 0;
+    const origine = document.getElementById('selOrigine').value;
+    const redattore = document.getElementById('selRedattore').value;
+    
+    let resto = importo;
+    
+    // 1. Esterno (10% se origine = ext)
+    let valExt = 0;
+    if (origine === 'ext') {
+        valExt = importo * 0.10;
+        resto -= valExt;
+        document.getElementById('fieldExt').style.display = 'block';
+    } else {
+        document.getElementById('fieldExt').style.display = 'none';
+    }
+    document.getElementById('c_ext').value = valExt.toFixed(2);
+
+    // 2. Revisore & Caricamento
+    let valRev = 0;
+    let valCar = 0;
+    
+    if (document.getElementById('chkRev').checked) {
+        const type = document.getElementById('revType').value;
+        const val = parseFloat(document.getElementById('revVal').value) || 0;
+        valRev = (type === 'perc') ? (importo * val / 100) : val;
+        resto -= valRev;
+    }
+    if (document.getElementById('chkCar').checked) {
+        const type = document.getElementById('carType').value;
+        const val = parseFloat(document.getElementById('carVal').value) || 0;
+        valCar = (type === 'perc') ? (importo * val / 100) : val;
+        resto -= valCar;
+    }
+    document.getElementById('c_revisore').value = valRev.toFixed(0); // No decimali
+    document.getElementById('c_caricamento').value = valCar.toFixed(0);
+
+    // 3. FE (15% del restante)
+    let valFE = resto * 0.15;
+    resto -= valFE;
+    document.getElementById('c_fe').value = valFE.toFixed(2);
+
+    // 4. Split del Resto (Amin, Galvan, FH, Bianc)
+    let valAmin = 0, valGalvan = 0, valFH = 0, valBianc = 0;
+
+    if (origine === 'BIANC') {
+        // Manuale: non tocco nulla, lascio all'utente
+    } else {
+        if (origine === 'AMIN' && redattore === 'AMIN') {
+            valAmin = resto * 0.70;
+            valFH = resto * 0.30;
+        } else if (origine === 'GALVAN' && redattore === 'GALVAN') {
+            valGalvan = resto * 0.70;
+            valFH = resto * 0.30;
+        } else if (origine === 'FH' && (redattore === 'AMIN' || redattore === 'GALVAN')) {
+            valFH = resto * 0.50;
+            if (redattore === 'AMIN') valAmin = resto * 0.50;
+            if (redattore === 'GALVAN') valGalvan = resto * 0.50;
+        }
+        // Assegna valori calcolati
+        document.getElementById('c_amin').value = valAmin.toFixed(2);
+        document.getElementById('c_galvan').value = valGalvan.toFixed(2);
+        document.getElementById('c_fh').value = valFH.toFixed(2);
+    }
+}
+
+// Helpers Toggle
+function toggleExtInput() {
+    const isExt = document.getElementById('selOrigine').value === 'ext';
+    document.getElementById('divNomeEsterno').style.display = isExt ? 'block' : 'none';
+}
+
+function toggleRevCar() {
+    const hasRev = document.getElementById('chkRev').checked;
+    const hasCar = document.getElementById('chkCar').checked;
+    
+    document.getElementById('revOptions').style.display = hasRev ? 'inline-block' : 'none';
+    document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
+    
+    document.getElementById('carOptions').style.display = hasCar ? 'inline-block' : 'none';
+    document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
+    
+    document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
+}
+
+/* ================= AUTOCOMPLETE CLIENTI ================= */
+async function fetchCliente(query) {
+    if (query.length < 2) return;
+    const res = await fetch(`/api/clienti?q=${query}`);
+    const data = await res.json();
+    const list = document.getElementById('clientiList');
+    list.innerHTML = '';
+    
+    data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.nome;
+        list.appendChild(opt);
+    });
+    
+    // Se match esatto, compila
+    const match = data.find(c => c.nome === query);
+    if (match) {
+        document.getElementById('inpPiva').value = match.p_iva;
+        document.getElementById('inpIndirizzo').value = match.indirizzo;
+        document.getElementById('inpCivico').value = match.civico;
+        document.getElementById('inpCap').value = match.cap;
+        document.getElementById('inpComune').value = match.comune;
+        document.getElementById('inpProv').value = match.provincia;
+        document.getElementById('inpPec').value = match.pec;
+    }
+}
+
+/* ================= MODALE DATE & STATO ================= */
+function toggleDate(chk, field, id) {
+    if (chk.checked) {
+        let dateVal = prompt("Inserisci la data (AAAA-MM-GG):", new Date().toISOString().split('T')[0]);
+        if (dateVal) {
+            // Chiama API per salvare
+            updateField(id, field, dateVal);
+            updateField(id, field + '_check', true);
+            // Aggiorna UI (ricarica semplice per ora, o manipolazione DOM)
+            location.reload(); 
+        } else {
+            chk.checked = false; // Annulla
+        }
+    } else {
+        updateField(id, field + '_check', false);
+        updateField(id, field, null);
+    }
+}
+
+function updateStato(select, id) {
+    updateField(id, 'stato', select.value);
+    // Cambia colore select
+    select.className = 'status-select ' + select.value.replace(' ', '_');
+}
+
+function updateField(id, field, value) {
+    fetch(`/update_lavoro_field/${id}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({field: field, value: value})
+    });
+}
+
+function openAddModal() { document.getElementById('addModal').classList.add('active'); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+
+// Init default
+switchView('standard');
+</script>
+{% endblock %}

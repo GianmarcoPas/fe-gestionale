@@ -1,62 +1,196 @@
 {% extends "base.html" %}
 
 {% block content %}
+
 <div class="dashboard-header">
     <h2>Ciao, {{ current_user.username }} 👋</h2>
-    <p class="subtitle">Ecco la situazione aggiornata.</p>
+    <p class="subtitle">
+        {% if role == 'admin' %}
+            Panoramica Finanziaria e Gestionale.
+        {% else %}
+            Ecco la situazione aggiornata dei tuoi lavori.
+        {% endif %}
+    </p>
 </div>
 
-<div class="oneui-grid">
-    
-    <div class="oneui-card card-blue">
-        <div class="card-icon"><i class="bi bi-folder-fill"></i></div>
-        <h3>12</h3>
-        <p>Lavori Attivi</p>
+{% if role == 'admin' %}
+    <div class="admin-top-section">
+        
+        <div class="card-widget-revenue">
+            <div class="background-design">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+            </div>
+            <div class="info-section">
+                <div class="left-side">
+                    <div class="temperature" id="displayAmount">
+                        € {{ "{:,.0f}".format(tot_fe) }}
+                    </div>
+                    <div class="date" id="displayName">Fatturato FE</div>
+                </div>
+            </div>
+            <div class="days-section">
+                <button onmouseenter="updateWidget('FE', '{{ tot_fe }}')" onmouseleave="resetWidget()">FE</button>
+                <button onmouseenter="updateWidget('AMIN', '{{ tot_amin }}')" onmouseleave="resetWidget()">AMIN</button>
+                <button onmouseenter="updateWidget('GALV', '{{ tot_galvan }}')" onmouseleave="resetWidget()">GALV</button>
+                <button onmouseenter="updateWidget('CAPR', '{{ tot_capr }}')" onmouseleave="resetWidget()">CAPR</button>
+                <button onmouseenter="updateWidget('FH', '{{ tot_fh }}')" onmouseleave="resetWidget()">FH</button>
+            </div>
+        </div>
+
+        <div class="admin-stats-grid">
+            
+            <div class="card-styled style-blue">
+                <div class="background-design pos-variant-1">
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                </div>
+                <div class="card-content-centered">
+                    <div class="card-icon-large"><i class="bi bi-folder-fill"></i></div>
+                    <div class="card-number-large">{{ total_lavori }}</div>
+                    <div class="card-label-large">Totale Lavori</div>
+                </div>
+            </div>
+
+            <div class="card-styled style-orange">
+                <div class="background-design pos-variant-2">
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                </div>
+                <div class="card-content-centered">
+                    <div class="card-icon-large"><i class="bi bi-clock-history"></i></div>
+                    <div class="card-number-large">{{ in_corso }}</div>
+                    <div class="card-label-large">In Lavorazione</div>
+                </div>
+            </div>
+
+            <div class="card-styled style-green">
+                <div class="background-design pos-variant-3">
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                    <div class="circle"></div>
+                </div>
+                <div class="card-content-centered">
+                    <div class="card-icon-large"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="card-number-large">{{ completati }}</div>
+                    <div class="card-label-large">Completati</div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <div class="oneui-card card-orange">
-        <div class="card-icon"><i class="bi bi-clock-history"></i></div>
-        <h3>5</h3>
-        <p>In Lavorazione</p>
-    </div>
-
-    <div class="oneui-card card-green">
-        <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
-        <h3>7</h3>
-        <p>Completati</p>
-    </div>
-
-    <div class="oneui-card card-purple">
-        <div class="card-icon"><i class="bi bi-currency-euro"></i></div>
-        <h3>€ 12.500</h3>
-        <p>Fatturato Mese</p>
-    </div>
-
-    <div class="oneui-card span-col-2">
+    <div class="oneui-card mt-4">
         <div class="card-header-row">
-            <h4>Timeline Lavori</h4>
-            <span class="badge">Ottobre</span>
+            <h4>Timeline Lavori (Admin)</h4>
+            <span class="badge">{{ timeline[0].label }}</span>
         </div>
-        <div class="timeline-placeholder">
-            <div class="fake-bar" style="width: 60%; background: var(--primary);"></div>
-            <div class="fake-bar" style="width: 40%; background: #ff9f43;"></div>
-            <div class="fake-bar" style="width: 80%; background: #00A651;"></div>
+        <div class="timeline-placeholder" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+            {% for item in timeline %}
+            <div class="timeline-row">
+                <div style="font-size: 0.85rem; font-weight: 600; width: 40px;">{{ item.label }}</div>
+                <div style="flex: 1; background: #f0f0f0; border-radius: 10px; height: 12px; position: relative; overflow: hidden;">
+                    <div class="fake-bar" style="width: {{ item.width }}%; background: {{ item.color }}; height: 100%; border-radius: 10px;"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: #888; width: 30px; text-align: right;">{{ item.count }}</div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
-    <div class="oneui-card">
-        <h4>Notifiche Recenti</h4>
-        <ul class="notification-list">
-            <li>
-                <span class="dot"></span>
-                <span class="text">Admin ha assegnato <b>Lavoro #45</b></span>
-            </li>
-            <li>
-                <span class="dot"></span>
-                <span class="text">Nuovo file caricato in <b>Industria 4.0</b></span>
-            </li>
-        </ul>
+    <script>
+        const defaultAmount = "€ {{ '{:,.0f}'.format(tot_fe) }}";
+        const defaultName = "Fatturato FE";
+        function updateWidget(name, amount) {
+            let formatted = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+            document.getElementById('displayAmount').innerText = formatted;
+            document.getElementById('displayName').innerText = "Fatturato " + name;
+        }
+        function resetWidget() {
+            document.getElementById('displayAmount').innerText = defaultAmount;
+            document.getElementById('displayName').innerText = defaultName;
+        }
+    </script>
+
+{% else %}
+
+    <div class="oneui-grid">
+        
+        <div class="card-styled style-blue">
+            <div class="background-design pos-variant-1">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+            </div>
+            <div class="card-content-centered">
+                <div class="card-icon-large"><i class="bi bi-folder-fill"></i></div>
+                <div class="card-number-large">{{ total_lavori }}</div>
+                <div class="card-label-large">Lavori Attivi</div>
+            </div>
+        </div>
+
+        <div class="card-styled style-orange">
+            <div class="background-design pos-variant-2">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+            </div>
+            <div class="card-content-centered">
+                <div class="card-icon-large"><i class="bi bi-clock-history"></i></div>
+                <div class="card-number-large">{{ in_corso }}</div>
+                <div class="card-label-large">In Lavorazione</div>
+            </div>
+        </div>
+
+        <div class="card-styled style-green">
+            <div class="background-design pos-variant-3">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+            </div>
+            <div class="card-content-centered">
+                <div class="card-icon-large"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="card-number-large">{{ completati }}</div>
+                <div class="card-label-large">Completati</div>
+            </div>
+        </div>
+
+        <div class="oneui-card span-col-2" style="max-height: 240px; overflow-y: auto;"> <div class="card-header-row">
+                <h4>Attività Recente</h4>
+                <span class="badge">{{ timeline[0].label }}</span>
+            </div>
+            <div class="timeline-placeholder" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                {% for item in timeline %}
+                <div class="timeline-row">
+                    <div style="font-size: 0.85rem; font-weight: 600; width: 40px;">{{ item.label }}</div>
+                    <div style="flex: 1; background: #f0f0f0; border-radius: 10px; height: 12px; position: relative; overflow: hidden;">
+                        <div class="fake-bar" style="width: {{ item.width }}%; background: {{ item.color }}; height: 100%; border-radius: 10px;"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #888; width: 30px; text-align: right;">{{ item.count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="oneui-card">
+            <h4>Notifiche Recenti</h4>
+            <ul class="notification-list">
+                <li>
+                    <span class="dot"></span>
+                    <span class="text">Admin ha assegnato <b>Lavoro #45</b></span>
+                </li>
+                <li>
+                    <span class="dot"></span>
+                    <span class="text">Nuovo file caricato in <b>Industria 4.0</b></span>
+                </li>
+            </ul>
+        </div>
+
     </div>
 
-</div>
+{% endif %}
+
 {% endblock %}

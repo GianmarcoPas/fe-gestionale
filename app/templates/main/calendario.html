@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-section">
+    <h1>Agenda Lavori</h1>
+</div>
+
+<div class="oneui-card calendar-wrapper">
+    <div id="calendar"></div>
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        
+        // Recuperiamo i dati passati da Flask (filtro 'tojson')
+        var eventsData = {{ eventi|tojson }};
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth', // Vista Mensile
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,listWeek' // Mese o Lista settimanale
+            },
+            locale: 'it', // Italiano
+            firstDay: 1, // Lunedì primo giorno
+            events: eventsData, // I nostri dati
+            
+            // Stile pulito per i pulsanti
+            buttonText: {
+                today:    'Oggi',
+                month:    'Mese',
+                list:     'Lista'
+            },
+            
+            // Altezza dinamica
+            height: 'auto',
+            contentHeight: 700,
+        });
+
+        calendar.render();
+    });
+</script>
+{% endblock %}

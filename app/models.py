@@ -1,13 +1,15 @@
-from . import db, login_manager
+from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
+# --- MODELLO UTENTE ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200))
-    role = db.Column(db.String(20), nullable=False) # 'admin' o 'base'
-    must_change_password = db.Column(db.Boolean, default=True) # Per il primo accesso
+    username = db.Column(db.String(64), unique=True, index=True)
+    password_hash = db.Column(db.String(128))
+    role = db.Column(db.String(20), default='base')
+    admin_view_mode = db.Column(db.String(20), default='standard')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -15,6 +17,98 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+# --- ANAGRAFICA CLIENTI ---
+class Cliente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), unique=True)
+    p_iva = db.Column(db.String(50))
+    indirizzo = db.Column(db.String(150))
+    civico = db.Column(db.String(20))
+    cap = db.Column(db.String(10))
+    comune = db.Column(db.String(100))
+    provincia = db.Column(db.String(5))
+    pec = db.Column(db.String(100))
+
+# --- LAVORI ADMIN (NUOVO) ---
+class LavoroAdmin(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    numero = db.Column(db.Integer) 
+    
+    # Anagrafica
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'))
+    cliente_rel = db.relationship('Cliente', backref='lavori')
+    cliente_nome = db.Column(db.String(150)) 
+
+    # Ordine di Lavoro
+    bene = db.Column(db.Text)
+    valore_bene = db.Column(db.Float, default=0.0)
+    importo_offerta = db.Column(db.Float, default=0.0)
+    origine = db.Column(db.String(50)) 
+    nome_esterno = db.Column(db.String(100))
+    redattore = db.Column(db.String(50))
+    collaboratore = db.Column(db.String(100)) 
+
+    # Date e Checkbox
+    data_offerta_check = db.Column(db.Boolean, default=False)
+    data_offerta = db.Column(db.Date, nullable=True)
+    data_firma_check = db.Column(db.Boolean, default=False)
+    data_firma = db.Column(db.Date, nullable=True)
+    data_pec = db.Column(db.Date, nullable=True)
+    
+    # Stato
+    stato = db.Column(db.String(50), default='vuoto') 
+
+    # Checkbox Ruoli
+    has_revisore = db.Column(db.Boolean, default=False)
+    has_caricamento = db.Column(db.Boolean, default=False)
+
+    # Compensi
+    c_fe = db.Column(db.Float, default=0.0)
+    c_amin = db.Column(db.Float, default=0.0)
+    c_galvan = db.Column(db.Float, default=0.0)
+    c_fh = db.Column(db.Float, default=0.0)
+    c_bianc = db.Column(db.Float, default=0.0)
+    c_ext = db.Column(db.Float, default=0.0)
+    c_revisore = db.Column(db.Float, default=0.0)
+    c_caricamento = db.Column(db.Float, default=0.0)
+
+    # Fatture (Placeholder stringhe per numeri fattura)
+    f_fe = db.Column(db.String(50))
+    f_amin = db.Column(db.String(50))
+    f_galvan = db.Column(db.String(50))
+    f_fh = db.Column(db.String(50))
+    f_bianc = db.Column(db.String(50))
+    f_ext = db.Column(db.String(50))
+    f_revisore = db.Column(db.String(50))
+    f_caricamento = db.Column(db.String(50))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# --- LAVORI BASE (LEGACY) ---
+# Manteniamo questi per far funzionare la dashboard base
+class Lavoro40(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    numero = db.Column(db.Integer)
+    cliente = db.Column(db.String(100))
+    bene = db.Column(db.String(200))
+    contattato = db.Column(db.Boolean, default=False)
+    data_contatto = db.Column(db.Date, nullable=True)
+    note = db.Column(db.Text)
+    esito = db.Column(db.String(50))
+    sollecito = db.Column(db.Boolean, default=False)
+    compenso = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Lavoro50(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    numero = db.Column(db.Integer)
+    cliente = db.Column(db.String(100))
+    bene = db.Column(db.String(200))
+    contattato = db.Column(db.Boolean, default=False)
+    data_contatto = db.Column(db.Date, nullable=True)
+    note = db.Column(db.Text)
+    codice = db.Column(db.String(50))
+    ex_ante = db.Column(db.String(20))
+    perc_20 = db.Column(db.Boolean, default=False)
+    ex_post = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

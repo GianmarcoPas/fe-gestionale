@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header-section">
+    <h1>Lavori Industria {{ "5.0" if tipo == '50' else "4.0" }}</h1>
+</div>
+
+<div class="table-container oneui-card">
+    <table class="oneui-table">
+    <thead>
+        <tr>
+            <th>N°</th>
+            <th>Cliente</th>
+            <th>Bene</th>
+            
+            {% if tipo == '40' %}
+                <th>Data Contatto</th>
+                <th>Note</th>
+                <th>Sollecito</th>
+                <th>Compenso</th>
+                <th>Esito</th>
+            {% else %}
+                <th>Ex-Ante</th>
+                <th>20%</th>
+                <th>Ex-Post</th>
+                <th>Note</th>
+                <th>Codice</th>
+            {% endif %}
+            </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr oncontextmenu="showContextMenu(event, 
+            '{{ item.id }}', 
+            '{{ tipo }}', 
+            '{{ item.cliente }}', 
+            '{{ item.bene }}',
+            '{{ item.note|replace('\r', '')|replace('\n', ' ')|escape }}',
+            '{{ 'true' if item.contattato else 'false' }}',
+            '{{ item.data_contatto }}',
+            '{{ item.esito if tipo=='40' else '' }}',
+            '{{ item.compenso if tipo=='40' else '' }}',
+            '{{ item.codice if tipo=='50' else '' }}'
+        )">
+            <td>{{ item.numero }}</td>
+            <td>{{ item.cliente }}</td>
+            <td>{{ item.bene }}</td>
+            
+            {% if tipo == '40' %}
+                <td>
+                    {% if item.data_contatto %}
+                        {{ item.data_contatto.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="text-truncate">{{ item.note }}</td>
+                <td>
+                    <span class="badge {{ 'red' if item.sollecito else 'grey' }}">
+                        {{ 'Sì' if item.sollecito else 'No' }}
+                    </span>
+                </td>
+                <td>€ {{ item.compenso or 0 }}</td>
+                <td><span class="status-pill">{{ item.esito }}</span></td>
+            {% else %}
+                <td>{{ item.ex_ante }}</td>
+                <td>
+                    <span class="badge {{ 'green' if item.perc_20 else 'grey' }}">
+                        {{ 'OK' if item.perc_20 else '-' }}
+                    </span>
+                </td>
+                <td>{{ item.ex_post }}</td>
+                <td class="text-truncate">{{ item.note }}</td>
+                <td>{{ item.codice }}</td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="10" style="text-align:center; color:#999; padding: 30px;">
+                Nessun lavoro presente. Clicca + per aggiungere.
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div style="height: 100px;"></div>
+
+<div class="bottom-floating-bar">
+    <a href="{{ url_for('main.lavori', tipo='40') }}" class="pill-switch {{ 'active' if tipo == '40' }}">
+        4.0
+    </a>
+    
+	<button class="btn-add-circle" onclick="openModal('{{ tipo }}')">
+		<i class="bi bi-plus-lg"></i>
+	</button>
+    
+    <a href="{{ url_for('main.lavori', tipo='50') }}" class="pill-switch {{ 'active' if tipo == '50' }}">
+        5.0
+    </a>
+</div>
+
+<div id="modalOverlay" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-glass">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuovo Lavoro</h3>
+            <button class="btn-close" onclick="closeModal(null)"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <form action="{{ url_for('main.add_lavoro') }}" method="POST">
+            <input type="hidden" name="tipo" id="inputTipo" value="{{ tipo }}">
+
+            <div class="input-group">
+                <input type="text" name="cliente" placeholder="Cliente" class="one-ui-input">
+            </div>
+            <div class="input-group">
+                <input type="text" name="bene" placeholder="Bene / Macchinario" class="one-ui-input">
+            </div>
+
+            <div class="toggle-container">
+                <div class="toggle-label">
+                    <span>Contattato?</span>
+                    <small>Attiva per inserire data</small>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="contattato" id="checkContatto" onchange="toggleDate()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <div class="input-group hidden-date" id="dateContainer">
+                <input type="date" name="data_contatto" class="one-ui-input">
+            </div>
+
+            <div id="fields-40" style="display: none;">
+                <label class="section-label">Stato Attuale (Esito)</label>
+                <div class="chips-scroller">
+                    <input type="radio" name="esito" value="Ricevuto" id="st_ric" class="chip-radio" checked>
+                    <label for="st_ric" class="chip-label">Ricevuto</label>
+                    
+                    <input type="radio" name="esito" value="Contattare" id="st_cont" class="chip-radio">
+                    <label for="st_cont" class="chip-label">Contattare</label>
+
+                    <input type="radio" name="esito" value="In corso" id="st_inc" class="chip-radio">
+                    <label for="st_inc" class="chip-label">In corso</label>
+
+                    <input type="radio" name="esito" value="Pronto" id="st_pro" class="chip-radio">
+                    <label for="st_pro" class="chip-label">Pronto</label>
+
+                    <input type="radio" name="esito" value="Completo" id="st_com" class="chip-radio">
+                    <label for="st_com" class="chip-label">Completo</label>
+                     
+                    <input type="radio" name="esito" value="Fatturato" id="st_fat" class="chip-radio">
+                    <label for="st_fat" class="chip-label">Fatturato</label>
+                </div>
+            </div>
+
+            <div id="fields-50" style="display: none;">
+                <div class="input-group">
+                    <input type="text" name="codice" placeholder="Codice TR5" class="one-ui-input">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <textarea name="note" placeholder="Note aggiuntive..." class="one-ui-input" rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary-oneui mt-3">Salva Lavoro</button>
+        </form>
+    </div>
+</div>
+
+<div id="contextMenu" class="context-menu glass-panel">
+    <div class="menu-item" id="btnEditContext">
+        <i class="bi bi-pencil-fill"></i> Modifica
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item delete" id="btnDeleteContext">
+        <i class="bi bi-trash-fill"></i> Elimina
+    </div>
+</div>
+
+<form id="deleteForm" method="POST" style="display:none;"></form>
+
+<script>
+    function openModal(tipoAttuale) {
+        document.getElementById('modalOverlay').classList.add('active');
+        document.getElementById('inputTipo').value = tipoAttuale;
+        document.getElementById('modalTitle').innerText = "Nuovo Lavoro " + tipoAttuale;
+
+        // Mostra i campi giusti
+        if(tipoAttuale === '40') {
+            document.getElementById('fields-40').style.display = 'block';
+            document.getElementById('fields-50').style.display = 'none';
+        } else {
+            document.getElementById('fields-40').style.display = 'none';
+            document.getElementById('fields-50').style.display = 'block';
+        }
+    }
+
+    function closeModal(e) {
+        // Chiudi solo se clicco fuori (overlay) o sulla X
+        if (e === null || e.target.id === 'modalOverlay') {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+    }
+
+    function toggleDate() {
+        const isChecked = document.getElementById('checkContatto').checked;
+        const dateContainer = document.getElementById('dateContainer');
+        if(isChecked) {
+            dateContainer.style.display = 'block';
+            // Piccola animazione
+            setTimeout(() => dateContainer.style.opacity = '1', 10);
+        } else {
+            dateContainer.style.opacity = '0';
+            setTimeout(() => dateContainer.style.display = 'none', 300);
+        }
+    }
+	let currentId, currentTipo, currentCliente, currentBene, currentNote, currentContattato, currentData, currentEsito, currentCompenso, currentCodice;
+
+    function showContextMenu(e, id, tipo, cliente, bene, note, contattato, data, esito, compenso, codice) {
+        e.preventDefault(); // BLOCCA il menu standard del browser
+
+        // Salva i dati in variabili globali per usarli dopo
+        currentId = id; currentTipo = tipo; currentCliente = cliente; currentBene = bene; 
+        currentNote = note; currentContattato = contattato; currentData = data; 
+        currentEsito = esito; currentCompenso = compenso; currentCodice = codice;
+
+        // Posiziona il menu dove è il mouse
+        const menu = document.getElementById('contextMenu');
+        menu.style.top = `${e.pageY}px`;
+        menu.style.left = `${e.pageX}px`;
+        menu.classList.add('active');
+
+        // Chiudi se clicco altrove
+        document.addEventListener('click', hideContextMenu);
+    }
+
+    function hideContextMenu() {
+        document.getElementById('contextMenu').classList.remove('active');
+        document.removeEventListener('click', hideContextMenu);
+    }
+
+    // AZIONE MODIFICA DAL MENU
+    document.getElementById('btnEditContext').onclick = function() {
+        openEditModal(currentId, currentTipo, currentCliente, currentBene, currentNote, currentContattato, currentData, currentEsito, currentCompenso, currentCodice);
+    };
+
+    // AZIONE ELIMINA DAL MENU
+    document.getElementById('btnDeleteContext').onclick = function() {
+        if(confirm('Sei sicuro di voler eliminare il lavoro #' + currentId + '?')) {
+            const form = document.getElementById('deleteForm');
+            // Costruiamo l'URL di eliminazione dinamicamente
+            form.action = "/delete_lavoro/" + currentId + "?tipo=" + currentTipo;
+            form.submit();
+        }
+    };
+    
+    // Funzione Modifica (uguale a prima, assicurati che ci sia)
+    function openEditModal(id, tipo, cliente, bene, note, contattato, data, esito, compenso, codice) {
+        resetForm();
+        document.getElementById('modalOverlay').classList.add('active');
+        document.getElementById('modalTitle').innerText = "Modifica Lavoro #" + id;
+        document.getElementById('inputTipo').value = tipo;
+        document.querySelector('form').action = "/edit_lavoro/" + id;
+
+        document.querySelector('[name="cliente"]').value = cliente;
+        document.querySelector('[name="bene"]').value = bene;
+        document.querySelector('[name="note"]').value = note; // Note decodificate
+        
+        if(contattato === 'true') {
+            document.getElementById('checkContatto').checked = true;
+            document.getElementById('dateContainer').style.display = 'block';
+            setTimeout(()=>document.getElementById('dateContainer').style.opacity = '1', 10);
+            document.querySelector('[name="data_contatto"]').value = data != 'None' ? data : '';
+        }
+
+        if(tipo === '40') {
+            document.getElementById('fields-40').style.display = 'block';
+            document.getElementById('fields-50').style.display = 'none';
+            if(esito) {
+                let radio = document.querySelector(`input[name="esito"][value="${esito}"]`);
+                if(radio) radio.checked = true;
+            }
+            document.querySelector('[name="compenso"]').value = compenso; // Se hai aggiunto campo compenso nella modale
+        } else {
+            document.getElementById('fields-40').style.display = 'none';
+            document.getElementById('fields-50').style.display = 'block';
+            document.querySelector('[name="codice"]').value = codice;
+        }
+    }
+</script>
+
+{% endblock %}
