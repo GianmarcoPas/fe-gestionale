@@ -58,16 +58,81 @@
     </nav>
 
     <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
     </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    {% for category, message in messages %}
+                        showToast('{{ message|e }}', '{{ category }}');
+                    {% endfor %}
+                });
+            </script>
+        {% endif %}
+    {% endwith %}
+	
+	<script>
+        // Gestione Sticky Header Shadow
+        document.addEventListener('scroll', function() {
+            const header = document.querySelector('.header-section');
+            if (header) {
+                // Se abbiamo scorso più di 20px, aggiungiamo la classe "is-stuck"
+                // Questo crea l'effetto ombra quando il contenuto inizia a scorrere sotto
+                if (window.scrollY > 20) {
+                    header.classList.add('is-stuck');
+                } else {
+                    header.classList.remove('is-stuck');
+                }
+            }
+        });
+        
+        // Toast Notification System
+        function showToast(message, category = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-notification toast-${category}`;
+            
+            // Icone per categoria
+            const icons = {
+                'success': '<i class="bi bi-check-circle-fill"></i>',
+                'error': '<i class="bi bi-x-circle-fill"></i>',
+                'warning': '<i class="bi bi-exclamation-triangle-fill"></i>',
+                'info': '<i class="bi bi-info-circle-fill"></i>'
+            };
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[category] || icons['success']}</div>
+                <div class="toast-message">${message}</div>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animazione di entrata
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // Rimozione automatica dopo 4 secondi
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }, 4000);
+        }
+    </script>
 
 </body>
 </html>

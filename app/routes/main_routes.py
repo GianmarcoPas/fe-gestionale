@@ -141,9 +141,11 @@ def lavori_admin():
         
     view_mode = current_user.admin_view_mode
     if view_mode == 'extra2':
-        view_mode = 'standard' # Fallback per la valigetta classica
+        view_mode = 'standard'
     
-    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.desc()).all()
+    # MODIFICA: .asc() invece di .desc()
+    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+    
     return render_template('main/lavori_admin.html', lavori=lavori, view_mode=view_mode)
     
 # NUOVA ROTTA SPECIALE (Sostituto Firma - Solo per Extra 2)
@@ -153,8 +155,8 @@ def lavori_focus():
     if current_user.role != 'admin' or current_user.admin_view_mode != 'extra2':
         return redirect(url_for('main.dashboard'))
     
-    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.desc()).all()
-    # Forziamo il template a renderizzare in modalità Focus
+    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+    
     return render_template('main/lavori_admin.html', lavori=lavori, view_mode='focus_special')
 
 @bp.route('/add_lavoro_admin', methods=['POST'])
@@ -189,17 +191,62 @@ def add_lavoro_admin():
     try:
         # Helper per convertire float
         def to_float(val):
-            try: return float(val)
-            except: return 0.0
+            try:
+                # Gestione stringhe con formattazione italiana (es. 1.234,56)
+                if isinstance(val, str):
+                    val = val.replace('.', '').replace(',', '.')
+                return float(val)
+            except: 
+                return 0.0
 
+        # --- GESTIONE BENI MULTIPLI ---
+        beni_descrizioni = []
+        valore_totale_beni = 0.0
+        
+        # Itera sui beni inviati dal form (beni[0], beni[1], ecc.)
+        i = 0
+        while True:
+            desc_key = f'beni[{i}][descrizione]'
+            val_key = f'beni[{i}][valore]'
+            
+            # Se non esiste la chiave per l'indice corrente, interrompi il ciclo
+            if desc_key not in request.form:
+                break
+                
+            descrizione = request.form.get(desc_key, '').strip()
+            valore_str = request.form.get(val_key, '0')
+            
+            # Converti valore
+            valore = to_float(valore_str)
+            
+            if descrizione:
+                beni_descrizioni.append(descrizione)
+                valore_totale_beni += valore
+                
+            i += 1
+
+        # Genera stringa concatenata (es. "Appartamento A | Box Auto")
+        # Se non ci sono beni multipli, tenta un fallback sul campo singolo 'bene' vecchio stile, se presente
+        if beni_descrizioni:
+            bene_concatenato = ' | '.join(beni_descrizioni)
+        else:
+            bene_concatenato = request.form.get('bene', '') # Fallback
+
+        # Se il valore totale calcolato è 0, controlla se c'è un valore singolo inserito (fallback)
+        if valore_totale_beni == 0.0 and request.form.get('valore_bene'):
+            valore_totale_beni = to_float(request.form.get('valore_bene'))
+
+        # Creazione Oggetto DB
         nuovo = LavoroAdmin(
             numero=new_num,
             cliente_id=cliente.id,
             cliente_nome=nome_cliente,
             
-            # Ordine
-            bene=request.form.get('bene'), 
-            valore_bene=to_float(request.form.get('valore_bene')),
+            # --- CAMPI MODIFICATI ---
+            bene=bene_concatenato, 
+            valore_bene=valore_totale_beni,
+            # ------------------------
+
             importo_offerta=to_float(request.form.get('importo_offerta')),
             
             origine=request.form.get('origine'),
@@ -221,8 +268,9 @@ def add_lavoro_admin():
             c_revisore=to_float(request.form.get('c_revisore')),
             c_caricamento=to_float(request.form.get('c_caricamento')),
 
-            stato='In corso' # Default, o 'vuoto'
+            stato='In corso' # Default
         )
+        
         db.session.add(nuovo)
         db.session.commit()
         flash('Lavoro Admin aggiunto con successo!', 'success')
@@ -232,6 +280,18 @@ def add_lavoro_admin():
         flash(f'Errore salvataggio: {str(e)}', 'error')
 
     return redirect(url_for('main.lavori_admin'))
+    
+# Valori italiani
+def to_float_it(val):
+    """Converte un valore formattato italiano (1.234,56) in float"""
+    if not val:
+        return 0.0
+    try:
+        # Rimuovi punti (separatore migliaia) e sostituisci virgola con punto
+        cleaned = str(val).replace('.', '').replace(',', '.')
+        return float(cleaned)
+    except:
+        return 0.0
 
 @bp.route('/update_lavoro_field/<int:id>', methods=['POST'])
 @login_required
@@ -263,6 +323,20 @@ def update_lavoro_field(id):
 
     db.session.commit()
     return jsonify({'success': True})
+    
+@bp.route('/delete_lavoro_admin/<int:id>', methods=['POST'])
+@login_required
+def delete_lavoro_admin(id):
+    if current_user.role != 'admin':
+        flash('Accesso negato.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    lavoro = LavoroAdmin.query.get_or_404(id)
+    db.session.delete(lavoro)
+    db.session.commit()
+    
+    flash(f'Lavoro #{id} eliminato con successo.', 'success')
+    return redirect(url_for('main.lavori_admin'))
 
 
 # --- ROTTE BASE (Lavori 4.0 / 5.0) ---
@@ -470,3 +544,22 @@ def admin_reset_password(user_id):
     
     flash(f'Password di {user.username} resettata a "{default_pass}"', 'success')
     return redirect(url_for('main.impostazioni'))
+    
+@bp.route('/api/esterni')
+@login_required
+def api_esterni():
+    query = request.args.get('q', '')
+    # Cerca solo se ci sono almeno 1 carattere
+    if len(query) < 1:
+        return jsonify([])
+    
+    # Cerca i nomi univoci nella colonna nome_esterno
+    nomi = db.session.query(LavoroAdmin.nome_esterno)\
+        .filter(LavoroAdmin.nome_esterno.ilike(f'%{query}%'))\
+        .filter(LavoroAdmin.nome_esterno != None)\
+        .filter(LavoroAdmin.nome_esterno != '')\
+        .distinct().limit(10).all()
+    
+    # Restituisce una lista semplice di stringhe ['Nome1', 'Nome2']
+    results = [n[0] for n in nomi]
+    return jsonify(results)

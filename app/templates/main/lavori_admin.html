@@ -1,143 +1,751 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
-    <h1>Lavori Admin</h1>
+<style>
+/* ============================================================
+       FIX SCROLLBAR ORIZZONTALE (METODO SICURO)
+       ============================================================ */
     
-    <div class="view-selector">
-        <button class="btn-view active" onclick="switchView('standard')">Standard</button>
-        <button class="btn-view" onclick="switchView('extra1')">Espansa</button>
-        <button class="btn-view" onclick="switchView('extra2')">Focus Compensi</button>
+    /* 1. Rimuoviamo overflow hidden da html/body */
+    html, body {
+        overflow-x: clip !important; /* 'clip' taglia l'eccesso senza creare un nuovo scroll container */
+        width: 100%;
+        margin: 0;
+    }
+
+
+
+    /* 2. Assicuriamo che il main-content non forzi larghezze strane */
+    .main-content {
+        max-width: 100vw !important; /* Forza a non superare la larghezza finestra */
+        padding-left: 10px !important; 
+        padding-right: 10px !important;
+        box-sizing: border-box; /* Include il padding nel calcolo larghezza */
+        
+        /* Overflow visible per il contenuto */
+        overflow: visible !important; 
+        transition: padding-right 0.3s; 
+    }
+
+<!--     /* Aggiungi questa regola specifica per quando l'overlay è aperto */
+    .main-content.allow-scroll {
+        overflow-x: auto !important;
+    }	 -->
+
+    .table-container {
+        position: relative !important; 
+        overflow: visible !important; 
+        padding-bottom: 80px; 
+        min-height: 600px;
+    }
+
+    /* FIX MOVIMENTO CARD: Blocca lo spostamento e mantiene l'ombra fissa */
+    .oneui-card.table-container,
+    .oneui-card.table-scroll-horizontal {
+        transition: none !important; 
+        transform: none !important; /* Cruciale: rimuove il contesto di trasformazione */
+    }
+
+    .oneui-card.table-container:hover,
+    .oneui-card.table-scroll-horizontal:hover {
+        transform: none !important; 
+        box-shadow: 0 2px 20px rgba(0,0,0,0.03) !important; 
+    }
+
+    /* ECCEZIONE EXTRA 1: Scroll orizzontale interno */
+    .table-scroll-horizontal {
+        overflow-x: auto !important;
+    }
+
+    /* ============================================================
+       2. RIGHE E CELLE
+       ============================================================ */
+    .oneui-table {
+        margin: 0 !important;
+        border-spacing: 0;
+        width: 100%;
+    }
+
+    .oneui-table tr {
+        height: 50px !important;
+        max-height: 50px !important;
+    }
+
+    .oneui-table td {
+        white-space: nowrap;
+        padding: 0 10px !important; 
+        font-size: 0.8rem !important; 
+        height: 50px !important; 
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        border-bottom: 1px solid #eee;
+        box-sizing: border-box; 
+    }
+
+    /* ============================================================
+       3. HEADER TABLE (MAIN TABLE)
+       ============================================================ */
+    .table-container > .oneui-table > thead > tr > th {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 100px; 
+        z-index: 10; 
+        background-color: #F0F2F5 !important; 
+        color: #000 !important;
+        border-bottom: 2px solid #ccc;
+        height: 50px !important; 
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+    }
+
+    /* ============================================================
+       4. SIDE OVERLAY & HEADER (FIX SCROLLBAR INTELLIGENTE)
+       ============================================================ */
+    .side-overlay {
+        position: absolute; 
+        top: 0;
+        right: 0;
+        bottom: 0; 
+        height: 100%; 
+        width: 0;
+        background: rgba(255, 255, 255, 0.98);
+        border-left: 1px solid #ccc;
+        box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+        z-index: 50; 
+        
+        /* Overflow visible */
+        overflow: visible !important; 
+        clip-path: inset(0 0 0 0); 
+        
+        /* FIX SCROLLBAR FANTASMA: 
+           Quando è chiuso (width:0), diventa 'visibility: hidden' DOPO l'animazione.
+           Così il browser sa che non c'è nulla da scrollare. */
+        visibility: hidden;
+        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0.4s;
+        
+        display: block;
+        padding: 0 !important;
+    }
+
+    .side-overlay.active {
+        width: 60%; 
+        max-width: 900px;
+        
+        /* Quando si apre, diventa subito visibile */
+        visibility: visible;
+        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Header Overlay */
+    .side-overlay .overlay-table thead th {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 100px !important; 
+        z-index: 60; 
+        height: 50px !important; 
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        border-bottom: 2px solid #ccc; 
+        box-sizing: border-box;
+        margin: 0 !important;
+        background-clip: padding-box;
+        color: #000 !important;
+    }
+    
+    /* Overlay Compensi - Colori Blu (meno marcati) */
+    #overlayCompensi .overlay-table thead th {
+        background-color: #f5f9ff !important;
+    }
+    
+    #overlayCompensi .overlay-table tbody td {
+        background-color: #f5f9ff !important;
+    }
+    
+    #overlayCompensi .overlay-table thead th[colspan="2"] {
+        background-color: #e3f2fd !important;
+        color: var(--primary) !important;
+    }
+    
+    /* Overlay Fatture - Colori Arancione (meno marcati) */
+    #overlayFatture .overlay-table thead th {
+        background-color: #fffaf5 !important;
+    }
+    
+    #overlayFatture .overlay-table tbody td {
+        background-color: #fffaf5 !important;
+    }
+    
+    #overlayFatture .overlay-table thead th[colspan="2"] {
+        background-color: #fff3e0 !important;
+        color: #e67e22 !important;
+    }
+
+    .side-overlay .overlay-table tbody tr {
+        height: 50px !important;
+    }
+    .side-overlay .overlay-table tbody td {
+        height: 50px !important;
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        border-bottom: 1px solid #eee;
+    }
+
+    /* UI Elements */
+    .btn-close-header { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #333; float: right; }
+    .overlay-title { font-weight: 800; text-transform: uppercase; margin-right: 10px; display: inline-block; line-height: 1; }
+    .status-select { height: 26px !important; font-size: 0.75rem !important; }
+    .text-truncate { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 50px !important; }
+    .gruppo-interni { background-color: rgba(0, 122, 255, 0.03); }
+    .gruppo-esterni { background-color: rgba(255, 159, 67, 0.05); }
+    
+    /* Colori celle compensi e fatture in Focus Table */
+    /* Le colonne sono alternate: C. FE (1), F. FE (2), C. AMIN (3), F. AMIN (4), etc. */
+    /* Quindi: dispari = compensi (blu), pari = fatture (arancione) */
+    #focusTable tbody tr td.gruppo-interni:nth-child(6),
+    #focusTable tbody tr td.gruppo-interni:nth-child(8),
+    #focusTable tbody tr td.gruppo-interni:nth-child(10),
+    #focusTable tbody tr td.gruppo-interni:nth-child(12),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(15),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(17),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(19),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(21) {
+        background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
+    }
+    
+    #focusTable tbody tr td.gruppo-interni:nth-child(7),
+    #focusTable tbody tr td.gruppo-interni:nth-child(9),
+    #focusTable tbody tr td.gruppo-interni:nth-child(11),
+    #focusTable tbody tr td.gruppo-interni:nth-child(13),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(16),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(18),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(20),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(22) {
+        background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
+    }
+    
+    /* Stesso per le intestazioni */
+    #focusTable thead th.gruppo-interni:nth-child(6),
+    #focusTable thead th.gruppo-interni:nth-child(8),
+    #focusTable thead th.gruppo-interni:nth-child(10),
+    #focusTable thead th.gruppo-interni:nth-child(12),
+    #focusTable thead th.gruppo-esterni:nth-child(15),
+    #focusTable thead th.gruppo-esterni:nth-child(17),
+    #focusTable thead th.gruppo-esterni:nth-child(19),
+    #focusTable thead th.gruppo-esterni:nth-child(21) {
+        background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
+    }
+    
+    #focusTable thead th.gruppo-interni:nth-child(7),
+    #focusTable thead th.gruppo-interni:nth-child(9),
+    #focusTable thead th.gruppo-interni:nth-child(11),
+    #focusTable thead th.gruppo-interni:nth-child(13),
+    #focusTable thead th.gruppo-esterni:nth-child(16),
+    #focusTable thead th.gruppo-esterni:nth-child(18),
+    #focusTable thead th.gruppo-esterni:nth-child(20),
+    #focusTable thead th.gruppo-esterni:nth-child(22) {
+        background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
+    }
+</style>
+
+<div class="header-section">
+    <h1>Lavori Admin</h1>
+</div>
+
+{# ==================== MODALITÀ STANDARD (Default) ==================== #}
+{% if view_mode == 'standard' %}
+
+<div class="table-container oneui-card">
+
+    <table class="oneui-table">
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Cliente</th>
+                <th>Bene</th>
+                <th>Valore</th>
+                <th>Data Offerta</th>
+                <th>Data Firma</th>
+                <th>Importo</th>
+
+                <th>Revisore</th>
+                <th>Caric.</th>
+
+                <th>Origine</th>
+                <th>Redattore</th>
+                <th>Data PEC</th>
+                <th>Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lavori %}
+            <tr data-id="{{ l.id }}" oncontextmenu="showContextMenu(event, {{ l.id }})">
+                <td>{{ l.numero }}</td>
+                <td>{{ l.cliente_nome }}</td>
+                <td class="text-truncate">{{ l.bene }}</td>
+                <td>€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+
+                <td>{{ l.data_offerta.strftime('%d/%m/%Y') if l.data_offerta else '-' }}</td>
+                <td>{{ l.data_firma.strftime('%d/%m/%Y') if l.data_firma else '-' }}</td>
+
+                <td>€ {{ "{:,.2f}".format(l.importo_offerta).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                </td>
+
+                <td>
+                    {% if l.c_revisore > 0 %}
+                    € {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if l.c_caricamento > 0 %}
+                    € {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+
+                <td>{{ l.origine or '-' }}</td>
+                <td>{{ l.redattore or '-' }}</td>
+                <td>{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
+                <td>
+                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
+                        onchange="updateStato(this, {{ l.id }})">
+                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
+                            Inviare</option>
+                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
+                        </option>
+                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
+                        </option>
+                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
+                    </select>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="13" style="text-align:center; color:#999; padding: 30px;">
+                    Nessun lavoro presente. Clicca + per aggiungere.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="overlayCompensi" class="side-overlay">
+        <table class="oneui-table overlay-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th colspan="2" style="background-color: #e3f2fd; color: var(--primary);">
+                        <span class="overlay-title"><i class="bi bi-calculator"></i> Compensi</span>
+                    </th>
+                    <th>FE</th>
+                    <th>AMIN</th>
+                    <th>GALVAN</th>
+                    <th>FH</th>
+                    <th>BIANC</th>
+                    <th>Ext</th>
+                    <th>Rev</th>
+                    <th>Caric.</th>
+                    <th style="text-align: right;">
+                        <button class="btn-close-header" onclick="closeOverlay('compensi')"><i
+                                class="bi bi-x-lg"></i></button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lavori %}
+                <tr>
+                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
+                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
+
+                    <td>€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="overlayFatture" class="side-overlay">
+        <table class="oneui-table overlay-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th colspan="2" style="background-color: #fff3e0; color: #e67e22;">
+                        <span class="overlay-title"><i class="bi bi-receipt"></i> Fatture</span>
+                    </th>
+                    <th>FE</th>
+                    <th>AMIN</th>
+                    <th>GALVAN</th>
+                    <th>FH</th>
+                    <th>BIANC</th>
+                    <th>Ext</th>
+                    <th>Rev</th>
+                    <th>Caric.</th>
+                    <th style="text-align: right;">
+                        <button class="btn-close-header" onclick="closeOverlay('fatture')"><i
+                                class="bi bi-x-lg"></i></button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lavori %}
+                <tr>
+                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
+                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
+
+                    <td>{{ l.f_fe or '-' }}</td>
+                    <td>{{ l.f_amin or '-' }}</td>
+                    <td>{{ l.f_galvan or '-' }}</td>
+                    <td>{{ l.f_fh or '-' }}</td>
+                    <td>{{ l.f_bianc or '-' }}</td>
+                    <td>{{ l.f_ext or '-' }}</td>
+                    <td>{{ l.f_revisore or '-' }}</td>
+                    <td>{{ l.f_caricamento or '-' }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
-<div class="oneui-card table-wrapper" id="mainWrapper">
-    
-    <table class="oneui-table admin-table" id="adminTable">
+<div class="bottom-floating-bar">
+    <button class="pill-btn" onclick="openOverlay('compensi')">
+        <i class="bi bi-calculator"></i> Compensi
+    </button>
+
+    <button class="btn-add-circle" onclick="openAddModal()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+
+    <button class="pill-btn" onclick="openOverlay('fatture')">
+        <i class="bi bi-receipt"></i> Fatture
+    </button>
+</div>
+
+
+
+{# ==================== MODALITÀ EXTRA 1 (Scroll Orizzontale) ==================== #}
+{% elif view_mode == 'extra1' %}
+
+<div class="table-container oneui-card table-scroll-horizontal">
+    <table class="oneui-table table-expanded">
         <thead>
             <tr>
-                <th class="col-sticky col-num">N°</th>
-                <th class="col-sticky col-cliente">Cliente</th>
-                <th class="col-sticky col-bene">Bene</th>
-                <th class="col-sticky col-valore">Valore</th>
+                <th class="col-fixed">N°</th>
+                <th class="col-fixed">Cliente</th>
+                <th class="col-fixed">Bene</th>
+                <th class="col-fixed">Valore</th>
 
-                <th class="col-std">Data Offerta</th>
-                <th class="col-std">Data Firma</th>
-                <th class="col-std">Importo</th>
-                <th class="col-std">Origine</th>
-                <th class="col-std">Redattore</th>
-                <th class="col-std">Revisore</th>
-                <th class="col-std">Caric.</th>
-                <th class="col-std">Data PEC</th>
-                
-                <th class="col-std">Stato</th>
+                <th>Data Offerta</th>
+                <th>Data Firma</th>
+                <th>Importo</th>
 
-                <th class="col-comp hidden">C. FE</th>
-                <th class="col-comp hidden">C. AMIN</th>
-                <th class="col-comp hidden">C. GALVAN</th>
-                <th class="col-comp hidden">C. FH</th>
-                <th class="col-comp hidden">C. BIANC</th>
-                <th class="col-comp hidden">C. EXT</th>
-                <th class="col-comp hidden">C. REV</th>
-                <th class="col-comp hidden">C. CAR</th>
+                <th>Revisore</th>
+                <th>Caric.</th>
 
-                <th class="col-fatt hidden">F. FE</th>
-                <th class="col-fatt hidden">F. AMIN</th>
-                <th class="col-fatt hidden">F. GALVAN</th>
-                <th class="col-fatt hidden">F. FH</th>
-                <th class="col-fatt hidden">F. BIANC</th>
-                <th class="col-fatt hidden">F. EXT</th>
-                <th class="col-fatt hidden">F. REV</th>
-                <th class="col-fatt hidden">F. CAR</th>
+                <th>Origine</th>
+                <th>Redattore</th>
+                <th>Data PEC</th>
+                <th>Stato</th>
+
+                <th class="col-compensi">C. FE</th>
+                <th class="col-compensi">C. AMIN</th>
+                <th class="col-compensi">C. GALVAN</th>
+                <th class="col-compensi">C. FH</th>
+                <th class="col-compensi">C. BIANC</th>
+                <th class="col-compensi">C. Ext</th>
+                <th class="col-compensi">C. Rev</th>
+                <th class="col-compensi">C. Car</th>
+
+                <th class="col-fatture">F. FE</th>
+                <th class="col-fatture">F. AMIN</th>
+                <th class="col-fatture">F. GALVAN</th>
+                <th class="col-fatture">F. FH</th>
+                <th class="col-fatture">F. BIANC</th>
+                <th class="col-fatture">F. Ext</th>
+                <th class="col-fatture">F. Rev</th>
+                <th class="col-fatture">F. Car</th>
             </tr>
         </thead>
         <tbody>
             {% for l in lavori %}
             <tr data-id="{{ l.id }}">
-                <td class="col-sticky col-num">{{ l.numero }}</td>
-                <td class="col-sticky col-cliente">{{ l.cliente_nome }}</td>
-                <td class="col-sticky col-bene">{{ l.bene|truncate(20) }}</td>
-                <td class="col-sticky col-valore">€ {{ "{:,.2f}".format(l.valore_bene) }}</td>
+                <td class="col-fixed">{{ l.numero }}</td>
+                <td class="col-fixed">{{ l.cliente_nome }}</td>
+                <td class="col-fixed text-truncate">{{ l.bene }}</td>
+                <td class="col-fixed">€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
 
-                <td class="col-std cell-date-check">
-                    <div class="checkbox-date-wrapper">
-                        <input type="checkbox" class="chk-date" 
-                               {% if l.data_offerta_check %}checked{% endif %}
-                               onchange="toggleDate(this, 'data_offerta', {{ l.id }})">
-                        {% if l.data_offerta %}
-                        <span class="tooltip-date">{{ l.data_offerta.strftime('%d-%m-%Y') }}</span>
-                        {% endif %}
-                    </div>
+                <td>{{ l.data_offerta.strftime('%d/%m/%Y') if l.data_offerta else '-' }}</td>
+                <td>{{ l.data_firma.strftime('%d/%m/%Y') if l.data_firma else '-' }}</td>
+                <td>€ {{ "{:,.2f}".format(l.importo_offerta).replace(",", "X").replace(".", ",").replace("X", ".") }}
                 </td>
 
-                <td class="col-std cell-date-check">
-                    <div class="checkbox-date-wrapper">
-                        <input type="checkbox" class="chk-date" 
-                               {% if l.data_firma_check %}checked{% endif %}
-                               onchange="toggleDate(this, 'data_firma', {{ l.id }})">
-                        {% if l.data_firma %}
-                        <span class="visible-date">{{ l.data_firma.strftime('%d-%b') }}</span>
-                        {% endif %}
-                    </div>
+                <td>
+                    {% if l.c_revisore > 0 %}
+                    € {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if l.c_caricamento > 0 %}
+                    € {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
                 </td>
 
-                <td class="col-std">€ {{ "{:,.2f}".format(l.importo_offerta) }}</td>
-                <td class="col-std">{{ l.origine }}</td>
-                <td class="col-std">{{ l.redattore }}</td>
-                <td class="col-std"><input type="checkbox" disabled {% if l.has_revisore %}checked{% endif %}></td>
-                <td class="col-std"><input type="checkbox" disabled {% if l.has_caricamento %}checked{% endif %}></td>
-                <td class="col-std">{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
-                
-                <td class="col-std">
-                    <select class="status-select {{ l.stato|replace(' ', '_') }}" onchange="updateStato(this, {{ l.id }})">
-                        <option value="vuoto" {% if l.stato == 'vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if l.stato == 'pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
-                        <option value="da fatturare" {% if l.stato == 'da fatturare' %}selected{% endif %}>Da Fatturare</option>
-                        <option value="da incassare" {% if l.stato == 'da incassare' %}selected{% endif %}>Da Incassare</option>
-                        <option value="incassata" {% if l.stato == 'incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if l.stato == 'chiusa' %}selected{% endif %}>Chiusa</option>
+                <td>{{ l.origine or '-' }}</td>
+                <td>{{ l.redattore or '-' }}</td>
+                <td>{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
+                <td>
+                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
+                        onchange="updateStato(this, {{ l.id }})">
+                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
+                            Inviare</option>
+                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
+                        </option>
+                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
+                        </option>
+                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
                     </select>
                 </td>
 
-                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_fe) }}</td>
-                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_amin) }}</td>
-                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_galvan) }}</td>
-                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_fh) }}</td>
-                <td class="col-comp hidden">€ {{ "{:,.2f}".format(l.c_bianc) }}</td>
-                <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_ext) }}</td> <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_revisore) }}</td> <td class="col-comp hidden">{{ "{:,.0f}".format(l.c_caricamento) }}</td> <td class="col-fatt hidden">{{ l.f_fe }}</td>
-                <td class="col-fatt hidden">{{ l.f_amin }}</td>
-                </tr>
+                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X",
+                    ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X",
+                    ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+
+                <td class="col-fatture">{{ l.f_fe or '-' }}</td>
+                <td class="col-fatture">{{ l.f_amin or '-' }}</td>
+                <td class="col-fatture">{{ l.f_galvan or '-' }}</td>
+                <td class="col-fatture">{{ l.f_fh or '-' }}</td>
+                <td class="col-fatture">{{ l.f_bianc or '-' }}</td>
+                <td class="col-fatture">{{ l.f_ext or '-' }}</td>
+                <td class="col-fatture">{{ l.f_revisore or '-' }}</td>
+                <td class="col-fatture">{{ l.f_caricamento or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="29" style="text-align:center; color:#999; padding: 30px;">
+                    Nessun lavoro presente. Clicca + per aggiungere.
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-
-    <div id="overlayPanel" class="overlay-panel">
-        <div class="overlay-header">
-            <h3 id="overlayTitle">Dettagli</h3>
-            <button onclick="closeOverlay()"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div id="overlayContent">
-            </div>
-    </div>
-
 </div>
 
-<div class="bottom-floating-bar admin-bar">
-    <div class="bar-group standard-controls">
-        <button class="pill-btn" onclick="openOverlay('fatture')">Fatture</button>
-        <button class="pill-btn" onclick="openOverlay('compensi')">Compensi</button>
-    </div>
-
-    <div class="bar-group extra2-controls" style="display: none;">
-        <button class="pill-btn" onclick="toggleExtra2External()">Passa a Esterni</button>
-    </div>
-
+<div class="bottom-floating-bar">
     <button class="btn-add-circle" onclick="openAddModal()">
         <i class="bi bi-plus-lg"></i>
     </button>
 </div>
 
+{# ==================== MODALITÀ EXTRA 2 (Focus) ==================== #}
+{% elif view_mode == 'extra2' or view_mode == 'focus_special' %}
+
+<div class="table-container oneui-card">
+
+    <table class="oneui-table" id="focusTable">
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Cliente</th>
+                <th>Bene</th>
+                <th>Valore</th>
+                <th>Stato</th>
+                <th class="gruppo-interni">C. FE</th>
+                <th class="gruppo-interni">F. FE</th>
+                <th class="gruppo-interni">C. AMIN</th>
+                <th class="gruppo-interni">F. AMIN</th>
+                <th class="gruppo-interni">C. GALVAN</th>
+                <th class="gruppo-interni">F. GALVAN</th>
+                <th class="gruppo-interni">C. FH</th>
+                <th class="gruppo-interni">F. FH</th>
+                <th class="gruppo-esterni" style="display:none;">C. BIANC</th>
+                <th class="gruppo-esterni" style="display:none;">F. BIANC</th>
+                <th class="gruppo-esterni" style="display:none;">C. Ext</th>
+                <th class="gruppo-esterni" style="display:none;">F. Ext</th>
+                <th class="gruppo-esterni" style="display:none;">C. Rev</th>
+                <th class="gruppo-esterni" style="display:none;">F. Rev</th>
+                <th class="gruppo-esterni" style="display:none;">C. Car</th>
+                <th class="gruppo-esterni" style="display:none;">F. Car</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lavori %}
+            <tr data-id="{{ l.id }}">
+                <td>{{ l.numero }}</td>
+                <td>{{ l.cliente_nome }}</td>
+                <td class="text-truncate">{{ l.bene }}</td>
+                <td>€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td>
+                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
+                        onchange="updateStato(this, {{ l.id }})">
+                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
+                            Inviare</option>
+                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
+                        </option>
+                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
+                        </option>
+                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
+                    </select>
+                </td>
+                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni">{{ l.f_fe or '-' }}</td>
+                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni">{{ l.f_amin or '-' }}</td>
+                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni">{{ l.f_galvan or '-' }}</td>
+                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".",
+                    ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni">{{ l.f_fh or '-' }}</td>
+                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",",
+                    "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-esterni" style="display:none;">{{ l.f_bianc or '-' }}</td>
+                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}
+                </td>
+                <td class="gruppo-esterni" style="display:none;">{{ l.f_ext or '-' }}</td>
+                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".")
+                    }}</td>
+                <td class="gruppo-esterni" style="display:none;">{{ l.f_revisore or '-' }}</td>
+                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",",
+                    ".") }}</td>
+                <td class="gruppo-esterni" style="display:none;">{{ l.f_caricamento or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="21" style="text-align:center; color:#999; padding: 30px;">
+                    Nessun lavoro presente. Clicca + per aggiungere.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="overlayCompensi" class="side-overlay">
+        <table class="oneui-table overlay-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th colspan="2" style="background-color: #e3f2fd; color: var(--primary);">
+                        <span class="overlay-title"><i class="bi bi-calculator"></i> Compensi</span>
+                    </th>
+                    <th>FE</th>
+                    <th>AMIN</th>
+                    <th>GALVAN</th>
+                    <th>FH</th>
+                    <th>BIANC</th>
+                    <th>Ext</th>
+                    <th>Rev</th>
+                    <th>Caric.</th>
+                    <th style="text-align: right;">
+                        <button class="btn-close-header" onclick="closeOverlay('compensi')"><i
+                                class="bi bi-x-lg"></i></button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lavori %}
+                <tr>
+                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
+                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                    <td>€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="overlayFatture" class="side-overlay">
+        <table class="oneui-table overlay-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th colspan="2" style="background-color: #fff3e0; color: #e67e22;">
+                        <span class="overlay-title"><i class="bi bi-receipt"></i> Fatture</span>
+                    </th>
+                    <th>FE</th>
+                    <th>AMIN</th>
+                    <th>GALVAN</th>
+                    <th>FH</th>
+                    <th>BIANC</th>
+                    <th>Ext</th>
+                    <th>Rev</th>
+                    <th>Caric.</th>
+                    <th style="text-align: right;">
+                        <button class="btn-close-header" onclick="closeOverlay('fatture')"><i
+                                class="bi bi-x-lg"></i></button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lavori %}
+                <tr>
+                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
+                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
+                    <td>{{ l.f_fe or '-' }}</td>
+                    <td>{{ l.f_amin or '-' }}</td>
+                    <td>{{ l.f_galvan or '-' }}</td>
+                    <td>{{ l.f_fh or '-' }}</td>
+                    <td>{{ l.f_bianc or '-' }}</td>
+                    <td>{{ l.f_ext or '-' }}</td>
+                    <td>{{ l.f_revisore or '-' }}</td>
+                    <td>{{ l.f_caricamento or '-' }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<div class="bottom-floating-bar">
+    <button class="pill-btn" id="btnToggleGruppo" onclick="toggleGruppoFocus()">
+        <i class="bi bi-arrow-left-right"></i> Passa a Esterni
+    </button>
+</div>
+
+{% endif %}
+
+<div style="height: 120px;"></div>
 
 <div id="addModal" class="modal-overlay">
     <div class="modal-glass modal-large">
@@ -145,16 +753,26 @@
             <h3>Nuovo Lavoro</h3>
             <button class="btn-close" onclick="closeAddModal()"><i class="bi bi-x-lg"></i></button>
         </div>
-        
-        <form action="{{ url_for('main.add_lavoro_admin') }}" method="POST" id="formAddLavoro">
-            
+
+        <div id="alertCompensi" class="alert error" style="display:none;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span id="alertCompensiText">Attenzione: alcuni compensi risultano negativi!</span>
+        </div>
+
+        <form action="{{ url_for('main.add_lavoro_admin') }}" method="POST" id="formAddLavoro"
+            onsubmit="return validateForm()">
+
             <div class="form-section">
                 <h4><i class="bi bi-person-lines-fill"></i> Anagrafica Cliente</h4>
                 <div class="form-row">
                     <div class="input-group flex-2">
                         <label>Cliente</label>
-                        <input type="text" name="cliente_nome" id="inpCliente" list="clientiList" class="one-ui-input" required placeholder="Cerca o inserisci..." oninput="fetchCliente(this.value)">
-                        <datalist id="clientiList"></datalist>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" name="cliente_nome" id="inpCliente" class="one-ui-input" required
+                                placeholder="Cerca o inserisci..." oninput="searchCliente(this.value)"
+                                onfocus="showSuggestions()" autocomplete="off">
+                            <div id="clienteSuggestions" class="suggestions-dropdown"></div>
+                        </div>
                     </div>
                     <div class="input-group flex-1">
                         <label>P. IVA</label>
@@ -166,23 +784,23 @@
                         <label>Indirizzo</label>
                         <input type="text" name="cliente_indirizzo" id="inpIndirizzo" class="one-ui-input">
                     </div>
-                    <div class="input-group">
+                    <div class="input-group" style="flex: 0.5;">
                         <label>Civico</label>
                         <input type="text" name="cliente_civico" id="inpCivico" class="one-ui-input">
                     </div>
-                    <div class="input-group">
+                    <div class="input-group" style="flex: 0.5;">
                         <label>CAP</label>
                         <input type="text" name="cliente_cap" id="inpCap" class="one-ui-input">
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="input-group">
+                    <div class="input-group flex-1">
                         <label>Comune</label>
                         <input type="text" name="cliente_comune" id="inpComune" class="one-ui-input">
                     </div>
-                    <div class="input-group" style="flex: 0.5;">
+                    <div class="input-group" style="flex: 0.3;">
                         <label>Prov.</label>
-                        <input type="text" name="cliente_provincia" id="inpProv" class="one-ui-input">
+                        <input type="text" name="cliente_provincia" id="inpProv" class="one-ui-input" maxlength="2">
                     </div>
                     <div class="input-group flex-2">
                         <label>PEC</label>
@@ -193,24 +811,105 @@
 
             <div class="form-section">
                 <h4><i class="bi bi-briefcase-fill"></i> Ordine di Lavoro</h4>
-                <div class="form-row">
-                    <div class="input-group flex-2">
-                        <label>Bene (Descrizione)</label>
-                        <input type="text" name="bene" class="one-ui-input">
-                    </div>
-                    <div class="input-group flex-1">
-                        <label>Valore Bene (€)</label>
-                        <input type="number" step="0.01" name="valore_bene" class="one-ui-input">
+
+                <div id="beniContainer">
+                    <div class="bene-row form-row" data-index="0">
+                        <div class="input-group flex-2">
+                            <label>Bene (Descrizione)</label>
+                            <input type="text" name="beni[0][descrizione]" class="one-ui-input bene-desc" required>
+                        </div>
+                        <div class="input-group flex-1">
+                            <label>Valore Bene (€)</label>
+                            <input type="text" name="beni[0][valore]" class="one-ui-input currency-input bene-valore"
+                                oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                        </div>
+                        <div class="input-group btn-remove-group" style="display:none;">
+                            <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <button type="button" class="btn-add-bene" onclick="addBene()">
+                    <i class="bi bi-plus-circle"></i> Aggiungi Bene
+                </button>
+
+                <div class="form-row align-items-end">
+
+                    <div class="input-group flex-1">
+                        <label>Importo Offerta</label>
+                        <div class="currency-wrapper">
+                            <span class="currency-symbol">€</span>
+                            <input type="text" name="importo_offerta" id="impOfferta"
+                                class="one-ui-input has-symbol currency-input"
+                                oninput="formatCurrencyInput(this); calcolaCompensi();"
+                                onblur="formatCurrencyBlur(this); calcolaCompensi();">
+                        </div>
+                    </div>
+
+                    <div class="input-group flex-1">
+                        <div class="switch-group">
+                            <span class="switch-label">Spese ammin. 6%</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chkSpeseAmm" name="spese_amministrative"
+                                    onchange="calcolaCompensi()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+
+                    <div class="input-group flex-1">
+                        <div class="switch-group">
+                            <span class="switch-label">Revisione</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chkRevisione" name="has_revisore" onchange="toggleSpese()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div id="divImportoRevisione" class="sub-input" style="display:none; margin-top: 10px;">
+                            <div class="currency-wrapper">
+                                <span class="currency-symbol">€</span>
+                                <input type="text" name="importo_revisione" id="impRevisione"
+                                    class="one-ui-input has-symbol compact currency-input" placeholder="0,00"
+                                    oninput="formatCurrencyInput(this); calcolaCompensi();"
+                                    onblur="formatCurrencyBlur(this); calcolaCompensi();">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group flex-1">
+                        <div class="switch-group">
+                            <span class="switch-label">Caricamento</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chkCaricamento" name="has_caricamento"
+                                    onchange="toggleSpese()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div id="divImportoCaricamento" class="sub-input" style="display:none; margin-top: 10px;">
+                            <div class="currency-wrapper">
+                                <span class="currency-symbol">€</span>
+                                <input type="text" name="importo_caricamento" id="impCaricamento"
+                                    class="one-ui-input has-symbol compact currency-input" placeholder="0,00"
+                                    oninput="formatCurrencyInput(this); calcolaCompensi();"
+                                    onblur="formatCurrencyBlur(this); calcolaCompensi();">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="input-group flex-1">
-                        <label>Importo Offerta (€)</label>
-                        <input type="number" step="0.01" name="importo_offerta" id="impOfferta" class="one-ui-input" oninput="calcolaCompensi()">
-                    </div>
-                    <div class="input-group flex-1">
                         <label>Origine</label>
-                        <select name="origine" id="selOrigine" class="one-ui-input" onchange="toggleExtInput(); calcolaCompensi();">
+                        <select name="origine" id="selOrigine" class="one-ui-input"
+                            onchange="toggleExtInput(); calcolaCompensi();">
+                            <option value="">-- Seleziona --</option>
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
                             <option value="FH">FH</option>
@@ -220,18 +919,26 @@
                     </div>
                     <div class="input-group flex-1" id="divNomeEsterno" style="display:none;">
                         <label>Nome Esterno</label>
-                        <input type="text" name="nome_esterno" class="one-ui-input">
+                        <div class="autocomplete-wrapper">
+                            <input type="text" name="nome_esterno" id="inpEsterno" class="one-ui-input"
+                                placeholder="Cerca o inserisci..." oninput="searchEsterno(this.value)"
+                                onfocus="showSuggestionsEsterno()" autocomplete="off">
+                            <div id="esternoSuggestions" class="suggestions-dropdown"></div>
+                        </div>
                     </div>
-                </div>
-                <div class="form-row">
+
                     <div class="input-group flex-1">
                         <label>Redattore</label>
                         <select name="redattore" id="selRedattore" class="one-ui-input" onchange="calcolaCompensi()">
+                            <option value="">-- Seleziona --</option>
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
                             <option value="BIANC">BIANC</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Collaboratore</label>
                         <input type="text" name="collaboratore" class="one-ui-input">
@@ -239,38 +946,71 @@
                 </div>
             </div>
 
-            <div class="form-section">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h4><i class="bi bi-calculator"></i> Compensi</h4>
-                    <div style="display: flex; gap: 10px;">
-                        <label class="check-label"><input type="checkbox" name="has_revisore" id="chkRev" onchange="toggleRevCar(); calcolaCompensi();"> Revisore</label>
-                        <label class="check-label"><input type="checkbox" name="has_caricamento" id="chkCar" onchange="toggleRevCar(); calcolaCompensi();"> Caricamento</label>
+            <div class="form-section result-section">
+                <h4><i class="bi bi-calculator"></i> Ripartizione Compensi</h4>
+
+                <div class="form-row toggles-row" id="togglesRevCar" style="display:none; margin-bottom: 15px;">
+                    <div id="revOptions" class="toggle-option" style="display:none;">
+                        <span>Compenso Revisore:</span>
+                        <select id="revType" class="small-select" onchange="calcolaCompensi()">
+                            <option value="perc">%</option>
+                            <option value="euro">€</option>
+                        </select>
+                        <input type="text" id="revVal" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
-                </div>
-                
-                <div class="form-row small-toggles" id="togglesRevCar" style="display:none; justify-content: flex-end; margin-bottom: 10px;">
-                    <div id="revOptions" style="display:none;">
-                        Revisore: 
-                        <select id="revType" onchange="calcolaCompensi()"><option value="perc">%</option><option value="euro">€</option></select>
-                        <input type="number" id="revVal" value="0" style="width: 60px;" oninput="calcolaCompensi()">
-                    </div>
-                    <div id="carOptions" style="display:none; margin-left: 10px;">
-                        Caricamento: 
-                        <select id="carType" onchange="calcolaCompensi()"><option value="perc">%</option><option value="euro">€</option></select>
-                        <input type="number" id="carVal" value="0" style="width: 60px;" oninput="calcolaCompensi()">
+                    <div id="carOptions" class="toggle-option" style="display:none;">
+                        <span>Compenso Caricamento:</span>
+                        <select id="carType" class="small-select" onchange="calcolaCompensi()">
+                            <option value="perc">%</option>
+                            <option value="euro">€</option>
+                        </select>
+                        <input type="text" id="carVal" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
                 </div>
 
                 <div class="compensi-grid">
-                    <div class="c-item"><label>FE (15%)</label><input type="number" step="0.01" name="c_fe" id="c_fe" class="one-ui-input compact"></div>
-                    <div class="c-item"><label>AMIN</label><input type="number" step="0.01" name="c_amin" id="c_amin" class="one-ui-input compact"></div>
-                    <div class="c-item"><label>GALVAN</label><input type="number" step="0.01" name="c_galvan" id="c_galvan" class="one-ui-input compact"></div>
-                    <div class="c-item"><label>FH</label><input type="number" step="0.01" name="c_fh" id="c_fh" class="one-ui-input compact"></div>
-                    <div class="c-item"><label>BIANC</label><input type="number" step="0.01" name="c_bianc" id="c_bianc" class="one-ui-input compact"></div>
-                    
-                    <div class="c-item" id="fieldExt" style="display:none;"><label>Esterno (10%)</label><input type="number" step="0.01" name="c_ext" id="c_ext" class="one-ui-input compact"></div>
-                    <div class="c-item" id="fieldRev" style="display:none;"><label>Revisore</label><input type="number" step="0.01" name="c_revisore" id="c_revisore" class="one-ui-input compact"></div>
-                    <div class="c-item" id="fieldCar" style="display:none;"><label>Caricamento</label><input type="number" step="0.01" name="c_caricamento" id="c_caricamento" class="one-ui-input compact"></div>
+                    <div class="c-item">
+                        <label>FE (15% + Sp.Amm.)</label>
+                        <input type="text" name="c_fe" id="c_fe" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item">
+                        <label>AMIN</label>
+                        <input type="text" name="c_amin" id="c_amin" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item">
+                        <label>GALVAN</label>
+                        <input type="text" name="c_galvan" id="c_galvan" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item">
+                        <label>FH</label>
+                        <input type="text" name="c_fh" id="c_fh" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+
+                    <div class="c-item" id="fieldBianc" style="display:none;">
+                        <label>BIANC</label>
+                        <input type="text" name="c_bianc" id="c_bianc" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item" id="fieldExt" style="display:none;">
+                        <label>Esterno (10%)</label>
+                        <input type="text" name="c_ext" id="c_ext" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item" id="fieldRev" style="display:none;">
+                        <label>Revisore</label>
+                        <input type="text" name="c_revisore" id="c_revisore" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item" id="fieldCar" style="display:none;">
+                        <label>Caricamento</label>
+                        <input type="text" name="c_caricamento" id="c_caricamento"
+                            class="one-ui-input compact currency-input" oninput="formatCurrencyInput(this)"
+                            onblur="formatCurrencyBlur(this)">
+                    </div>
                 </div>
             </div>
 
@@ -279,205 +1019,562 @@
     </div>
 </div>
 
+<div id="contextMenu" class="context-menu glass-panel">
+    <div class="menu-item" onclick="editLavoro(currentLavoroId)">
+        <i class="bi bi-pencil-fill"></i> Modifica
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item delete" onclick="deleteLavoro(currentLavoroId)">
+        <i class="bi bi-trash-fill"></i> Elimina
+    </div>
+</div>
+
+<form id="deleteForm" method="POST" style="display:none;"></form>
+
 <script>
-/* ================= LOGICA VIEW SWITCHING ================= */
-function switchView(mode) {
-    // Rimuovi classi active dai bottoni
-    document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+    /* ==================== VARIABILI GLOBALI ==================== */
+    let currentLavoroId = null;
+    let showingEsterni = false;
+    let clientiCache = [];
+    let esterniCache = []; // Cache per nomi esterni
+    let beneIndex = 1;
 
-    const table = document.getElementById('adminTable');
-    const controlsStd = document.querySelector('.standard-controls');
-    const controlsExtra2 = document.querySelector('.extra2-controls');
+    /* ==================== BLOCCA INVIO SU ENTER E VALIDA ==================== */
+    document.getElementById('formAddLavoro').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
 
-    // Reset classi tabella
-    table.className = 'oneui-table admin-table';
-    controlsStd.style.display = 'none';
-    controlsExtra2.style.display = 'none';
+            // 1. Forza l'evento BLUR sull'elemento attuale
+            e.target.blur();
 
-    // Nascondi tutte le colonne opzionali
-    document.querySelectorAll('.col-std, .col-comp, .col-fatt').forEach(el => el.classList.add('hidden'));
+            // 2. Cerca il prossimo campo e dacci il focus
+            const inputs = Array.from(this.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]), select, textarea'));
+            const currentIndex = inputs.indexOf(e.target);
 
-    if (mode === 'standard') {
-        table.classList.add('view-standard');
-        controlsStd.style.display = 'flex';
-        // Mostra colonne standard
-        document.querySelectorAll('.col-std').forEach(el => el.classList.remove('hidden'));
-    
-    } else if (mode === 'extra1') {
-        table.classList.add('view-extra1'); // Abilita scroll orizzontale
-        // Mostra TUTTO affiancato
-        document.querySelectorAll('.col-std, .col-comp, .col-fatt').forEach(el => el.classList.remove('hidden'));
+            setTimeout(() => {
+                if (currentIndex > -1 && currentIndex < inputs.length - 1) {
+                    inputs[currentIndex + 1].focus();
+                }
+            }, 10);
+        }
+    });
 
-    } else if (mode === 'extra2') {
-        table.classList.add('view-extra2');
-        controlsExtra2.style.display = 'flex';
-        // Mostra Stato + Compensi FE/AMIN/GALVAN/FH (Parte 1)
-        // Nota: Le colonne fisse (Num, Cliente, Bene) si vedono sempre
-        document.querySelectorAll('.col-std').forEach(el => {
-            // Mostra solo Stato e Valore in questo mode
-             if(el.innerText.includes('Stato') || el.innerText.includes('Valore')) el.classList.remove('hidden');
+    /* ==================== FORMATTAZIONE VALUTA (MANUALE E FORZATA) ==================== */
+
+    function parseCurrency(value) {
+        if (!value) return 0;
+        let str = value.toString();
+
+        // Gestione intelligente: se l'utente scrive "1000.50" (punto come decimale)
+        if (str.indexOf('.') !== -1 && str.indexOf(',') === -1) {
+            const parts = str.split('.');
+            if (parts[parts.length - 1].length === 2 || parts[0].length >= 4) {
+                str = str.replace('.', ',');
+            }
+        }
+
+        str = str.replace(/\./g, '');
+        str = str.replace(',', '.');
+
+        return parseFloat(str) || 0;
+    }
+
+    function formatCurrency(value) {
+        if (value === null || value === '' || isNaN(value)) return '';
+
+        let num = parseFloat(value);
+        let fixed = num.toFixed(2);
+        let parts = fixed.split('.');
+
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    }
+
+    function formatCurrencyInput(input) {
+        let value = input.value.replace(/[^\d.,]/g, '');
+        input.value = value;
+    }
+
+    function formatCurrencyBlur(input) {
+        let value = parseCurrency(input.value);
+        if (value !== 0 || input.value !== '') {
+            input.value = formatCurrency(value);
+        } else if (input.value !== '') {
+            input.value = '0,00';
+        }
+
+        // Ricalcola totali se necessario
+        if (input.name === 'importo_offerta' ||
+            input.name === 'importo_revisione' ||
+            input.name === 'importo_caricamento' ||
+            input.classList.contains('bene-valore')) {
+            calcolaCompensi();
+        }
+    }
+
+    function setCurrencyValue(inputId, value) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.value = formatCurrency(value);
+            if (value < 0) {
+                input.classList.add('negative-value');
+            } else {
+                input.classList.remove('negative-value');
+            }
+        }
+    }
+
+    /* ==================== AUTOCOMPLETE CLIENTI ==================== */
+    async function searchCliente(query) {
+        const suggestionsDiv = document.getElementById('clienteSuggestions');
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/clienti?q=${encodeURIComponent(query)}`);
+            clientiCache = await res.json();
+            if (clientiCache.length > 0) {
+                suggestionsDiv.innerHTML = clientiCache.map((c, i) => `
+                <div class="suggestion-item" onclick="selectCliente(${i})">
+                    <strong>${c.nome}</strong>
+                    ${c.p_iva ? `<small>P.IVA: ${c.p_iva}</small>` : ''}
+                </div>
+            `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Errore fetch clienti:', err);
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function selectCliente(index) {
+        const c = clientiCache[index];
+        if (c) {
+            document.getElementById('inpCliente').value = c.nome;
+            document.getElementById('inpPiva').value = c.p_iva || '';
+            document.getElementById('inpIndirizzo').value = c.indirizzo || '';
+            document.getElementById('inpCivico').value = c.civico || '';
+            document.getElementById('inpCap').value = c.cap || '';
+            document.getElementById('inpComune').value = c.comune || '';
+            document.getElementById('inpProv').value = c.provincia || '';
+            document.getElementById('inpPec').value = c.pec || '';
+        }
+        document.getElementById('clienteSuggestions').style.display = 'none';
+    }
+
+    function showSuggestions() {
+        const query = document.getElementById('inpCliente').value;
+        if (query.length >= 1 && clientiCache.length > 0) {
+            document.getElementById('clienteSuggestions').style.display = 'block';
+        }
+    }
+
+    /* ==================== AUTOCOMPLETE ESTERNI (NUOVO) ==================== */
+    async function searchEsterno(query) {
+        const suggestionsDiv = document.getElementById('esternoSuggestions');
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/esterni?q=${encodeURIComponent(query)}`);
+            esterniCache = await res.json(); // Array di stringhe ['Nome1', 'Nome2']
+            if (esterniCache.length > 0) {
+                suggestionsDiv.innerHTML = esterniCache.map((nome, i) => `
+                <div class="suggestion-item" onclick="selectEsterno(${i})">
+                    <strong>${nome}</strong>
+                </div>
+            `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Errore fetch esterni:', err);
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function selectEsterno(index) {
+        const nome = esterniCache[index];
+        if (nome) {
+            document.getElementById('inpEsterno').value = nome;
+        }
+        document.getElementById('esternoSuggestions').style.display = 'none';
+    }
+
+    function showSuggestionsEsterno() {
+        const query = document.getElementById('inpEsterno').value;
+        if (query.length >= 1 && esterniCache.length > 0) {
+            document.getElementById('esternoSuggestions').style.display = 'block';
+        }
+    }
+
+    // Chiudi dropdown al click fuori
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            document.getElementById('clienteSuggestions').style.display = 'none';
+            document.getElementById('esternoSuggestions').style.display = 'none';
+        }
+    });
+
+    /* ==================== GESTIONE BENI MULTIPLI ==================== */
+    function addBene() {
+        const container = document.getElementById('beniContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'bene-row form-row';
+        newRow.dataset.index = beneIndex;
+
+        newRow.innerHTML = `
+        <div class="input-group flex-2">
+            <label>Bene (Descrizione)</label>
+            <input type="text" name="beni[${beneIndex}][descrizione]" class="one-ui-input bene-desc">
+        </div>
+        <div class="input-group flex-1">
+            <label>Valore Bene (€)</label>
+            <input type="text" name="beni[${beneIndex}][valore]" class="one-ui-input currency-input bene-valore"
+                   oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+        </div>
+        <div class="input-group btn-remove-group">
+            <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+
+        container.appendChild(newRow);
+        beneIndex++;
+        updateRemoveButtons();
+    }
+
+    function removeBene(btn) {
+        const row = btn.closest('.bene-row');
+        row.remove();
+        updateRemoveButtons();
+    }
+
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('.bene-row');
+        rows.forEach((row, index) => {
+            const removeGroup = row.querySelector('.btn-remove-group');
+            if (removeGroup) {
+                removeGroup.style.display = rows.length > 1 ? 'flex' : 'none';
+            }
         });
-        // Mostra Compensi Core
-        ['c_fe', 'c_amin', 'c_galvan', 'c_fh'].forEach(id => {
-            // Qui servirebbe logica per targettare le colonne specifiche, semplifico mostrando gruppo 1
-            // Implementazione JS avanzata: toggle classi specifiche
+    }
+
+	/* ==================== OVERLAY & UI ==================== */
+    function openOverlay(type) {
+        // 1. Chiudi eventuali altri overlay
+        closeOverlay('compensi');
+        closeOverlay('fatture');
+        
+        // 2. Trova l'overlay giusto
+        const overlayId = 'overlay' + capitalize(type);
+        const overlay = document.getElementById(overlayId);
+        
+        if (overlay) {
+            overlay.classList.add('active');
+            
+            // 3. FONDAMENTALE: Aggiunge la classe al BODY per mostrare la barra di scorrimento
+            document.body.classList.add('overlay-open');
+        }
+    }
+
+    function closeOverlay(type) {
+        const overlayId = 'overlay' + capitalize(type);
+        const overlay = document.getElementById(overlayId);
+        
+        if (overlay) {
+            overlay.classList.remove('active');
+            
+            // 4. Rimuove la classe dal BODY (nasconde la barra)
+            document.body.classList.remove('overlay-open');
+        }
+    }
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function toggleGruppoFocus() {
+        showingEsterni = !showingEsterni;
+        const btn = document.getElementById('btnToggleGruppo');
+        document.querySelectorAll('.gruppo-interni').forEach(el => el.style.display = showingEsterni ? 'none' : '');
+        document.querySelectorAll('.gruppo-esterni').forEach(el => el.style.display = showingEsterni ? '' : 'none');
+        btn.innerHTML = showingEsterni
+            ? '<i class="bi bi-arrow-left-right"></i> Passa a Interni'
+            : '<i class="bi bi-arrow-left-right"></i> Passa a Esterni';
+    }
+
+    function toggleDateField(chk, field, id) {
+        // FUNZIONE RIMASTA PER COMPATIBILITÀ (NON PIÙ USATA NELLA VIEW STANDARD)
+        if (chk.checked) {
+            const dateVal = prompt("Inserisci la data (AAAA-MM-GG):", new Date().toISOString().split('T')[0]);
+            if (dateVal) {
+                updateField(id, field, dateVal);
+                updateField(id, field + '_check', true);
+                setTimeout(() => location.reload(), 500);
+            } else {
+                chk.checked = false;
+            }
+        } else {
+            updateField(id, field + '_check', false);
+            updateField(id, field, null);
+        }
+    }
+
+    function updateStato(select, id) {
+        updateField(id, 'stato', select.value);
+        select.className = 'status-select stato-' + select.value.replace(/ /g, '-');
+    }
+
+    function showContextMenu(e, id) {
+        e.preventDefault();
+        currentLavoroId = id;
+        const menu = document.getElementById('contextMenu');
+        menu.style.top = `${e.pageY}px`;
+        menu.style.left = `${e.pageX}px`;
+        menu.classList.add('active');
+        document.addEventListener('click', hideContextMenu);
+    }
+
+    function hideContextMenu() {
+        document.getElementById('contextMenu').classList.remove('active');
+        document.removeEventListener('click', hideContextMenu);
+    }
+
+    function deleteLavoro(id) {
+        if (confirm('Sei sicuro di voler eliminare il lavoro #' + id + '?')) {
+            const form = document.getElementById('deleteForm');
+            form.action = "/delete_lavoro_admin/" + id;
+            form.submit();
+        }
+    }
+
+    function editLavoro(id) {
+        // Per ora non fa nulla o ricarica, in futuro potrebbe aprire modale di edit
+        alert('Funzione modifica rapida non ancora implementata per ID: ' + id);
+    }
+
+    function updateField(id, field, value) {
+        fetch(`/update_lavoro_field/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: field, value: value })
         });
-        // Per semplicità Extra 2 mostra Compensi Generali
-        document.querySelectorAll('.col-comp').forEach(el => el.classList.remove('hidden'));
     }
-}
 
-/* ================= LOGICA CALCOLI MODALE ================= */
-function calcolaCompensi() {
-    const importo = parseFloat(document.getElementById('impOfferta').value) || 0;
-    const origine = document.getElementById('selOrigine').value;
-    const redattore = document.getElementById('selRedattore').value;
-    
-    let resto = importo;
-    
-    // 1. Esterno (10% se origine = ext)
-    let valExt = 0;
-    if (origine === 'ext') {
-        valExt = importo * 0.10;
-        resto -= valExt;
-        document.getElementById('fieldExt').style.display = 'block';
-    } else {
-        document.getElementById('fieldExt').style.display = 'none';
+    function openAddModal() {
+        document.getElementById('addModal').classList.add('active');
+
+        // --- FIX: BLOCCA LO SCROLL DELLA PAGINA DIETRO ---
+        document.body.style.overflow = 'hidden';
+        // -------------------------------------------------
+
+        document.getElementById('formAddLavoro').reset();
+        document.getElementById('alertCompensi').style.display = 'none';
+
+        // Reset beni
+        const container = document.getElementById('beniContainer');
+        const rows = container.querySelectorAll('.bene-row');
+        rows.forEach((row, i) => { if (i > 0) row.remove(); });
+        beneIndex = 1;
+        updateRemoveButtons();
+
+        toggleSpese();
+        toggleExtInput();
     }
-    document.getElementById('c_ext').value = valExt.toFixed(2);
 
-    // 2. Revisore & Caricamento
-    let valRev = 0;
-    let valCar = 0;
-    
-    if (document.getElementById('chkRev').checked) {
-        const type = document.getElementById('revType').value;
-        const val = parseFloat(document.getElementById('revVal').value) || 0;
-        valRev = (type === 'perc') ? (importo * val / 100) : val;
-        resto -= valRev;
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('active');
+
+        // --- FIX: RIATTIVA LO SCROLL DELLA PAGINA ---
+        document.body.style.overflow = '';
+        // --------------------------------------------
     }
-    if (document.getElementById('chkCar').checked) {
-        const type = document.getElementById('carType').value;
-        const val = parseFloat(document.getElementById('carVal').value) || 0;
-        valCar = (type === 'perc') ? (importo * val / 100) : val;
-        resto -= valCar;
+
+    /* ==================== CALCOLO COMPENSI ==================== */
+    function toggleSpese() {
+        const hasRev = document.getElementById('chkRevisione').checked;
+        const hasCar = document.getElementById('chkCaricamento').checked;
+
+        document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
+        document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
+
+        document.getElementById('revOptions').style.display = hasRev ? 'flex' : 'none';
+        document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
+
+        document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
+        document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
+
+        document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
+
+        calcolaCompensi();
     }
-    document.getElementById('c_revisore').value = valRev.toFixed(0); // No decimali
-    document.getElementById('c_caricamento').value = valCar.toFixed(0);
 
-    // 3. FE (15% del restante)
-    let valFE = resto * 0.15;
-    resto -= valFE;
-    document.getElementById('c_fe').value = valFE.toFixed(2);
+    function calcolaCompensi() {
+        const importoOfferta = parseCurrency(document.getElementById('impOfferta').value);
+        const importoRevisione = parseCurrency(document.getElementById('impRevisione').value);
+        const importoCaricamento = parseCurrency(document.getElementById('impCaricamento').value);
 
-    // 4. Split del Resto (Amin, Galvan, FH, Bianc)
-    let valAmin = 0, valGalvan = 0, valFH = 0, valBianc = 0;
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        const hasSpeseAmm = document.getElementById('chkSpeseAmm').checked;
+        const hasRevisione = document.getElementById('chkRevisione').checked;
+        const hasCaricamento = document.getElementById('chkCaricamento').checked;
 
-    if (origine === 'BIANC') {
-        // Manuale: non tocco nulla, lascio all'utente
-    } else {
-        if (origine === 'AMIN' && redattore === 'AMIN') {
+        const totale = importoOfferta + importoRevisione + importoCaricamento;
+        let resto = totale;
+
+        // 1. ESTERNO
+        let valExt = 0;
+        if (origine === 'ext') {
+            valExt = totale * 0.10;
+            resto -= valExt;
+        }
+
+        // 2. REVISORE
+        let valRev = 0;
+        if (hasRevisione) {
+            const revType = document.getElementById('revType').value;
+            let rawRevVal = document.getElementById('revVal').value;
+            let revVal = 0;
+
+            if (revType === 'euro') {
+                revVal = parseCurrency(rawRevVal);
+                valRev = revVal;
+            } else {
+                revVal = parseFloat(rawRevVal.replace(',', '.')) || 0;
+                valRev = (totale * revVal / 100);
+            }
+            resto -= valRev;
+        }
+
+        // 3. CARICAMENTO
+        let valCar = 0;
+        if (hasCaricamento) {
+            const carType = document.getElementById('carType').value;
+            let rawCarVal = document.getElementById('carVal').value;
+            let carVal = 0;
+
+            if (carType === 'euro') {
+                carVal = parseCurrency(rawCarVal);
+                valCar = carVal;
+            } else {
+                carVal = parseFloat(rawCarVal.replace(',', '.')) || 0;
+                valCar = (totale * carVal / 100);
+            }
+            resto -= valCar;
+        }
+
+        // 4. SPESE AMM (6%)
+        let speseAmm = 0;
+        if (hasSpeseAmm) {
+            speseAmm = totale * 0.06;
+        }
+
+        // 5. FE
+        const fe15 = resto * 0.15;
+        let valFE = fe15 + speseAmm;
+        resto -= fe15;
+
+        // 6. SPLIT RESTO
+        let valAmin = 0, valGalvan = 0, valFH = 0, valBianc = 0;
+
+        if (origine === 'BIANC') {
+            // Manuale
+        } else if (origine === 'ext') {
+            valFH = resto * 0.30;
+            if (redattore === 'AMIN') valAmin = resto * 0.70;
+            else if (redattore === 'GALVAN') valGalvan = resto * 0.70;
+            else if (redattore === 'BIANC') valBianc = resto * 0.70;
+        } else if (origine === 'AMIN' && redattore === 'AMIN') {
             valAmin = resto * 0.70;
             valFH = resto * 0.30;
         } else if (origine === 'GALVAN' && redattore === 'GALVAN') {
             valGalvan = resto * 0.70;
             valFH = resto * 0.30;
-        } else if (origine === 'FH' && (redattore === 'AMIN' || redattore === 'GALVAN')) {
+        } else if (origine === 'FH') {
             valFH = resto * 0.50;
             if (redattore === 'AMIN') valAmin = resto * 0.50;
-            if (redattore === 'GALVAN') valGalvan = resto * 0.50;
+            else if (redattore === 'GALVAN') valGalvan = resto * 0.50;
         }
-        // Assegna valori calcolati
-        document.getElementById('c_amin').value = valAmin.toFixed(2);
-        document.getElementById('c_galvan').value = valGalvan.toFixed(2);
-        document.getElementById('c_fh').value = valFH.toFixed(2);
-    }
-}
 
-// Helpers Toggle
-function toggleExtInput() {
-    const isExt = document.getElementById('selOrigine').value === 'ext';
-    document.getElementById('divNomeEsterno').style.display = isExt ? 'block' : 'none';
-}
+        setCurrencyValue('c_fe', valFE);
+        setCurrencyValue('c_amin', valAmin);
+        setCurrencyValue('c_galvan', valGalvan);
+        setCurrencyValue('c_fh', valFH);
+        setCurrencyValue('c_bianc', valBianc);
+        setCurrencyValue('c_ext', valExt);
+        setCurrencyValue('c_revisore', valRev);
+        setCurrencyValue('c_caricamento', valCar);
 
-function toggleRevCar() {
-    const hasRev = document.getElementById('chkRev').checked;
-    const hasCar = document.getElementById('chkCar').checked;
-    
-    document.getElementById('revOptions').style.display = hasRev ? 'inline-block' : 'none';
-    document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
-    
-    document.getElementById('carOptions').style.display = hasCar ? 'inline-block' : 'none';
-    document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
-    
-    document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
-}
+        const allValues = [valFE, valAmin, valGalvan, valFH, valBianc, valExt, valRev, valCar, resto];
+        const hasNegative = allValues.some(v => v < -0.01);
 
-/* ================= AUTOCOMPLETE CLIENTI ================= */
-async function fetchCliente(query) {
-    if (query.length < 2) return;
-    const res = await fetch(`/api/clienti?q=${query}`);
-    const data = await res.json();
-    const list = document.getElementById('clientiList');
-    list.innerHTML = '';
-    
-    data.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.nome;
-        list.appendChild(opt);
-    });
-    
-    // Se match esatto, compila
-    const match = data.find(c => c.nome === query);
-    if (match) {
-        document.getElementById('inpPiva').value = match.p_iva;
-        document.getElementById('inpIndirizzo').value = match.indirizzo;
-        document.getElementById('inpCivico').value = match.civico;
-        document.getElementById('inpCap').value = match.cap;
-        document.getElementById('inpComune').value = match.comune;
-        document.getElementById('inpProv').value = match.provincia;
-        document.getElementById('inpPec').value = match.pec;
-    }
-}
-
-/* ================= MODALE DATE & STATO ================= */
-function toggleDate(chk, field, id) {
-    if (chk.checked) {
-        let dateVal = prompt("Inserisci la data (AAAA-MM-GG):", new Date().toISOString().split('T')[0]);
-        if (dateVal) {
-            // Chiama API per salvare
-            updateField(id, field, dateVal);
-            updateField(id, field + '_check', true);
-            // Aggiorna UI (ricarica semplice per ora, o manipolazione DOM)
-            location.reload(); 
+        const alertDiv = document.getElementById('alertCompensi');
+        if (hasNegative) {
+            alertDiv.style.display = 'flex';
+            document.getElementById('alertCompensiText').textContent = 'Attenzione: alcuni compensi risultano negativi!';
         } else {
-            chk.checked = false; // Annulla
+            alertDiv.style.display = 'none';
         }
-    } else {
-        updateField(id, field + '_check', false);
-        updateField(id, field, null);
     }
-}
 
-function updateStato(select, id) {
-    updateField(id, 'stato', select.value);
-    // Cambia colore select
-    select.className = 'status-select ' + select.value.replace(' ', '_');
-}
+    function toggleExtInput() {
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        const isExt = origine === 'ext';
+        const isBianc = origine === 'BIANC' || redattore === 'BIANC';
 
-function updateField(id, field, value) {
-    fetch(`/update_lavoro_field/${id}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({field: field, value: value})
-    });
-}
+        document.getElementById('divNomeEsterno').style.display = isExt ? 'block' : 'none';
+        document.getElementById('fieldExt').style.display = isExt ? 'block' : 'none';
+        document.getElementById('fieldBianc').style.display = isBianc ? 'block' : 'none';
+    }
 
-function openAddModal() { document.getElementById('addModal').classList.add('active'); }
-function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+    function validateForm() {
+        const alertDiv = document.getElementById('alertCompensi');
+        if (alertDiv.style.display !== 'none') {
+            alert('Impossibile salvare: ci sono compensi negativi.');
+            return false;
+        }
 
-// Init default
-switchView('standard');
+        // Validazione Revisore
+        if (document.getElementById('chkRevisione').checked) {
+            const revInputVal = parseCurrency(document.getElementById('revVal').value);
+            if (revInputVal <= 0) {
+                alert('Hai attivato "Revisione" ma non hai inserito il compenso.');
+                document.getElementById('revVal').focus();
+                return false;
+            }
+        }
+
+        // Validazione Caricamento
+        if (document.getElementById('chkCaricamento').checked) {
+            const carInputVal = parseCurrency(document.getElementById('carVal').value);
+            if (carInputVal <= 0) {
+                alert('Hai attivato "Caricamento" ma non hai inserito il compenso.');
+                document.getElementById('carVal').focus();
+                return false;
+            }
+        }
+
+        document.querySelectorAll('.currency-input').forEach(input => {
+            input.value = parseCurrency(input.value);
+        });
+        return true;
+    }
+
+    // Inizializzazione
+    toggleExtInput();
+    toggleSpese();
+
+
 </script>
+
 {% endblock %}
