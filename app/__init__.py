@@ -39,15 +39,23 @@ def create_app():
         db.create_all()
         
         # Crea utenti admin/base di default se non esistono
-        if not User.query.filter_by(username='Carmela').first():
-            admin = User(username='Carmela', role='admin', admin_view_mode='extra2')
-            admin.set_password('Ciao1234')
-            db.session.add(admin)
+        default_pass = 'Ciao1234'
         
-        if not User.query.filter_by(username='Gianmarco').first():
-            base = User(username='Gianmarco', role='base')
-            base.set_password('Ciao1234')
-            db.session.add(base)
+        # Admin users
+        admins = ['Roberto', 'Lucio', 'Giuseppe', 'Carmela']
+        for username in admins:
+            if not User.query.filter_by(username=username).first():
+                admin = User(username=username, role='admin', admin_view_mode='extra2')
+                admin.set_password(default_pass)
+                db.session.add(admin)
+        
+        # Base users
+        base_users = ['Gianmarco', 'Francescos', 'Francescou', 'Giovanni', 'Marco']
+        for username in base_users:
+            if not User.query.filter_by(username=username).first():
+                base = User(username=username, role='base', admin_view_mode='standard')
+                base.set_password(default_pass)
+                db.session.add(base)
             
         db.session.commit()
 
