@@ -35,7 +35,7 @@
     .table-container {
         position: relative !important; 
         overflow: visible !important; 
-        padding-bottom: 80px; 
+        padding-bottom: 0 !important; 
         min-height: 600px;
     }
 
@@ -55,6 +55,25 @@
     /* ECCEZIONE EXTRA 1: Scroll orizzontale interno */
     .table-scroll-horizontal {
         overflow-x: auto !important;
+        /* Assicura che lo sticky funzioni correttamente */
+        position: relative;
+    }
+    
+    /* Fix per header sticky in modalità EXTRA 1 */
+    .table-scroll-horizontal .table-expanded thead th {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 0 !important; /* Verrà calcolato dinamicamente via JavaScript */
+        z-index: 10 !important;
+        background-color: #F0F2F5 !important;
+        color: #000 !important;
+        border-bottom: 3px solid #bbb !important;
+    }
+    
+    /* Le colonne fisse devono avere z-index maggiore per stare sopra le altre */
+    .table-scroll-horizontal .table-expanded thead .col-fixed {
+        z-index: 11 !important;
+        background-color: #F0F2F5 !important;
     }
 
     /* ============================================================
@@ -78,7 +97,7 @@
         height: 50px !important; 
         vertical-align: middle !important;
         line-height: 1.2 !important;
-        border-bottom: 1px solid #eee;
+        border-bottom: 2px solid #ddd;
         box-sizing: border-box; 
     }
 
@@ -92,7 +111,7 @@
         z-index: 10; 
         background-color: #F0F2F5 !important; 
         color: #000 !important;
-        border-bottom: 2px solid #ccc;
+        border-bottom: 3px solid #bbb;
         height: 50px !important; 
         padding: 0 10px !important;
         vertical-align: middle !important;
@@ -147,7 +166,7 @@
         height: 50px !important; 
         padding: 0 10px !important;
         vertical-align: middle !important;
-        border-bottom: 2px solid #ccc; 
+        border-bottom: 3px solid #bbb; 
         box-sizing: border-box;
         margin: 0 !important;
         background-clip: padding-box;
@@ -189,28 +208,38 @@
         height: 50px !important;
         padding: 0 10px !important;
         vertical-align: middle !important;
-        border-bottom: 1px solid #eee;
+        border-bottom: 2px solid #ddd;
     }
 
     /* UI Elements */
     .btn-close-header { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #333; float: right; }
     .overlay-title { font-weight: 800; text-transform: uppercase; margin-right: 10px; display: inline-block; line-height: 1; }
     .status-select { height: 26px !important; font-size: 0.75rem !important; }
+    
+    /* Evidenziazione riga selezionata */
+    .oneui-table tbody tr.row-selected {
+        background-color: rgba(0, 122, 255, 0.15) !important;
+    }
+    .oneui-table tbody tr.row-selected td {
+        background-color: rgba(0, 122, 255, 0.15) !important;
+    }
     .text-truncate { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 50px !important; }
     .gruppo-interni { background-color: rgba(0, 122, 255, 0.03); }
     .gruppo-esterni { background-color: rgba(255, 159, 67, 0.05); }
     
     /* Colori celle compensi e fatture in Focus Table */
-    /* Le colonne sono alternate: C. FE (1), F. FE (2), C. AMIN (3), F. AMIN (4), etc. */
-    /* Quindi: dispari = compensi (blu), pari = fatture (arancione) */
+    /* Colonne: N°(1), Cliente(2), Bene(3), Valore(4), Stato(5), C.FE(6), F.FE(7), C.AMIN(8), F.AMIN(9)... */
+    /* Compensi (pari dopo stato): 6, 8, 10, 12, 14, 16, 18, 20, 22 - azzurrino */
+    /* Fatture (dispari dopo stato): 7, 9, 11, 13, 15, 17, 19, 21, 23 - arancione */
     #focusTable tbody tr td.gruppo-interni:nth-child(6),
     #focusTable tbody tr td.gruppo-interni:nth-child(8),
     #focusTable tbody tr td.gruppo-interni:nth-child(10),
     #focusTable tbody tr td.gruppo-interni:nth-child(12),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(15),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(17),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(19),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(21) {
+    #focusTable tbody tr td.gruppo-esterni:nth-child(14),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(16),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(18),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(20),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(22) {
         background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
     }
     
@@ -218,10 +247,11 @@
     #focusTable tbody tr td.gruppo-interni:nth-child(9),
     #focusTable tbody tr td.gruppo-interni:nth-child(11),
     #focusTable tbody tr td.gruppo-interni:nth-child(13),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(16),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(18),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(20),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(22) {
+    #focusTable tbody tr td.gruppo-esterni:nth-child(15),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(17),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(19),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(21),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(23) {
         background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
     }
     
@@ -230,10 +260,11 @@
     #focusTable thead th.gruppo-interni:nth-child(8),
     #focusTable thead th.gruppo-interni:nth-child(10),
     #focusTable thead th.gruppo-interni:nth-child(12),
-    #focusTable thead th.gruppo-esterni:nth-child(15),
-    #focusTable thead th.gruppo-esterni:nth-child(17),
-    #focusTable thead th.gruppo-esterni:nth-child(19),
-    #focusTable thead th.gruppo-esterni:nth-child(21) {
+    #focusTable thead th.gruppo-esterni:nth-child(14),
+    #focusTable thead th.gruppo-esterni:nth-child(16),
+    #focusTable thead th.gruppo-esterni:nth-child(18),
+    #focusTable thead th.gruppo-esterni:nth-child(20),
+    #focusTable thead th.gruppo-esterni:nth-child(22) {
         background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
     }
     
@@ -241,10 +272,11 @@
     #focusTable thead th.gruppo-interni:nth-child(9),
     #focusTable thead th.gruppo-interni:nth-child(11),
     #focusTable thead th.gruppo-interni:nth-child(13),
-    #focusTable thead th.gruppo-esterni:nth-child(16),
-    #focusTable thead th.gruppo-esterni:nth-child(18),
-    #focusTable thead th.gruppo-esterni:nth-child(20),
-    #focusTable thead th.gruppo-esterni:nth-child(22) {
+    #focusTable thead th.gruppo-esterni:nth-child(15),
+    #focusTable thead th.gruppo-esterni:nth-child(17),
+    #focusTable thead th.gruppo-esterni:nth-child(19),
+    #focusTable thead th.gruppo-esterni:nth-child(21),
+    #focusTable thead th.gruppo-esterni:nth-child(23) {
         background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
     }
 </style>
@@ -265,9 +297,9 @@
                 <th>Cliente</th>
                 <th>Bene</th>
                 <th>Valore</th>
-                <th>Data Offerta</th>
-                <th>Data Firma</th>
                 <th>Importo</th>
+                <th class="col-data-offerta">Data Offerta</th>
+                <th class="col-data-firma">Data Firma</th>
 
                 <th>Revisore</th>
                 <th>Caric.</th>
@@ -279,59 +311,93 @@
             </tr>
         </thead>
         <tbody>
-            {% for l in lavori %}
-            <tr data-id="{{ l.id }}" oncontextmenu="showContextMenu(event, {{ l.id }})">
-                <td>{{ l.numero }}</td>
-                <td>{{ l.cliente_nome }}</td>
-                <td class="text-truncate">{{ l.bene }}</td>
-                <td>€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-
-                <td>{{ l.data_offerta.strftime('%d/%m/%Y') if l.data_offerta else '-' }}</td>
-                <td>{{ l.data_firma.strftime('%d/%m/%Y') if l.data_firma else '-' }}</td>
-
-                <td>€ {{ "{:,.2f}".format(l.importo_offerta).replace(",", "X").replace(".", ",").replace("X", ".") }}
+            {% if lavori_with_beni %}
+            {% for item in lavori_with_beni %}
+            {% set l = item.lavoro %}
+            {% set num_beni = item.beni|length %}
+            {% for bene in item.beni %}
+            {% set bene_idx = loop.index0 %}
+            <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                {% if bene_idx == 0 %}
+                data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
+                data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
+                data-offerta-rev="{{ l.offerta_revision or 0 }}"
+                data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% endif %}>
+                {% if bene_idx == 0 %}
+                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
+                {% endif %}
+                <td class="col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
+                <td class="col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                {% if bene_idx == 0 %}
+                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;">
+                    {% if l.data_offerta %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {% if l.offerta_revision and l.offerta_revision > 0 %}R{{ l.offerta_revision }} {% endif %}
+                        {{ l.data_offerta.strftime('%d') }}-{{ mesi[l.data_offerta.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
                 </td>
-
-                <td>
-                    {% if l.c_revisore > 0 %}
-                    € {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}
+                <td rowspan="{{ num_beni }}" class="cell-data-firma col-data-firma" style="vertical-align: middle; text-align: center;" ondblclick="openFirmaMenu(event, {{ l.id }})">
+                    {% if l.firma_esito %}
+                        {{ l.firma_esito }}
+                    {% elif l.data_firma %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ l.data_firma.strftime('%d') }}-{{ mesi[l.data_firma.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="col-imp-rev" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_revisione and l.importo_revisione > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_revisione).replace(",", ".") }}
                     {% else %}
                     -
                     {% endif %}
                 </td>
-                <td>
-                    {% if l.c_caricamento > 0 %}
-                    € {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}
+                <td class="col-imp-car" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_caricamento and l.importo_caricamento > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_caricamento).replace(",", ".") }}
                     {% else %}
                     -
                     {% endif %}
                 </td>
-
-                <td>{{ l.origine or '-' }}</td>
-                <td>{{ l.redattore or '-' }}</td>
-                <td>{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
+                <td class="col-origine" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.origine or '-' }}</td>
+                <td class="col-redattore" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.redattore or '-' }}</td>
+                {% endif %}
+                <td class="col-data-pec" style="text-align: center;" {% if bene.id %}ondblclick="editDataPec(event, {{ bene.id }})"{% endif %}>
+                    {% if bene.data_pec %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ bene.data_pec.strftime('%d') }}-{{ mesi[bene.data_pec.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
                 <td>
-                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
-                        onchange="updateStato(this, {{ l.id }})">
-                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
-                            Inviare</option>
-                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
-                        </option>
-                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
-                        </option>
-                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
+                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
                     </select>
                 </td>
             </tr>
+            {% endfor %}
+            {% endfor %}
             {% else %}
             <tr>
-                <td colspan="13" style="text-align:center; color:#999; padding: 30px;">
+                <td colspan="14" style="text-align:center; color:#999; padding: 30px;">
                     Nessun lavoro presente. Clicca + per aggiungere.
                 </td>
             </tr>
-            {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 
@@ -347,32 +413,37 @@
                     <th>GALVAN</th>
                     <th>FH</th>
                     <th>BIANC</th>
+                    <th>DEL</th>
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
-                    <th style="text-align: right;">
-                        <button class="btn-close-header" onclick="closeOverlay('compensi')"><i
-                                class="bi bi-x-lg"></i></button>
-                    </th>
                 </tr>
             </thead>
             <tbody>
-                {% for l in lavori %}
+                {% if lavori_with_beni %}
+                {% for item in lavori_with_beni %}
+                {% set l = item.lavoro %}
+                {% set num_beni = item.beni|length %}
+                {% for bene in item.beni %}
+                {% set bene_idx = loop.index0 %}
                 <tr>
-                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
-                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
-
-                    <td>€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
-                    <td></td>
+                    {% if bene_idx == 0 %}
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
+                {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -389,32 +460,37 @@
                     <th>GALVAN</th>
                     <th>FH</th>
                     <th>BIANC</th>
+                    <th>DEL</th>
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
-                    <th style="text-align: right;">
-                        <button class="btn-close-header" onclick="closeOverlay('fatture')"><i
-                                class="bi bi-x-lg"></i></button>
-                    </th>
                 </tr>
             </thead>
             <tbody>
-                {% for l in lavori %}
+                {% if lavori_with_beni %}
+                {% for item in lavori_with_beni %}
+                {% set l = item.lavoro %}
+                {% set num_beni = item.beni|length %}
+                {% for bene in item.beni %}
+                {% set bene_idx = loop.index0 %}
                 <tr>
-                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
-                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
-
-                    <td>{{ l.f_fe or '-' }}</td>
-                    <td>{{ l.f_amin or '-' }}</td>
-                    <td>{{ l.f_galvan or '-' }}</td>
-                    <td>{{ l.f_fh or '-' }}</td>
-                    <td>{{ l.f_bianc or '-' }}</td>
-                    <td>{{ l.f_ext or '-' }}</td>
-                    <td>{{ l.f_revisore or '-' }}</td>
-                    <td>{{ l.f_caricamento or '-' }}</td>
-                    <td></td>
+                    {% if bene_idx == 0 %}
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_deloitte or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
+                {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -447,10 +523,10 @@
                 <th class="col-fixed">Cliente</th>
                 <th class="col-fixed">Bene</th>
                 <th class="col-fixed">Valore</th>
-
-                <th>Data Offerta</th>
-                <th>Data Firma</th>
                 <th>Importo</th>
+
+                <th class="col-data-offerta">Data Offerta</th>
+                <th class="col-data-firma">Data Firma</th>
 
                 <th>Revisore</th>
                 <th>Caric.</th>
@@ -458,13 +534,13 @@
                 <th>Origine</th>
                 <th>Redattore</th>
                 <th>Data PEC</th>
-                <th>Stato</th>
 
                 <th class="col-compensi">C. FE</th>
                 <th class="col-compensi">C. AMIN</th>
                 <th class="col-compensi">C. GALVAN</th>
                 <th class="col-compensi">C. FH</th>
                 <th class="col-compensi">C. BIANC</th>
+                <th class="col-compensi">C. DELOITTE</th>
                 <th class="col-compensi">C. Ext</th>
                 <th class="col-compensi">C. Rev</th>
                 <th class="col-compensi">C. Car</th>
@@ -474,88 +550,125 @@
                 <th class="col-fatture">F. GALVAN</th>
                 <th class="col-fatture">F. FH</th>
                 <th class="col-fatture">F. BIANC</th>
+                <th class="col-fatture">F. DEL</th>
                 <th class="col-fatture">F. Ext</th>
                 <th class="col-fatture">F. Rev</th>
                 <th class="col-fatture">F. Car</th>
+                
+                <th>Stato</th>
             </tr>
         </thead>
         <tbody>
-            {% for l in lavori %}
-            <tr data-id="{{ l.id }}">
-                <td class="col-fixed">{{ l.numero }}</td>
-                <td class="col-fixed">{{ l.cliente_nome }}</td>
-                <td class="col-fixed text-truncate">{{ l.bene }}</td>
-                <td class="col-fixed">€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".",
+            {% if lavori_with_beni %}
+            {% for item in lavori_with_beni %}
+            {% set l = item.lavoro %}
+            {% set num_beni = item.beni|length %}
+            {% for bene in item.beni %}
+            {% set bene_idx = loop.index0 %}
+            <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                {% if bene_idx == 0 %}
+                data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
+                data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
+                data-offerta-rev="{{ l.offerta_revision or 0 }}"
+                data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% endif %}>
+                {% if bene_idx == 0 %}
+                <td class="col-fixed col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-fixed col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
+                {% endif %}
+                <td class="col-fixed col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
+                <td class="col-fixed col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".",
                     ",").replace("X", ".") }}</td>
+                <td class="col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
 
-                <td>{{ l.data_offerta.strftime('%d/%m/%Y') if l.data_offerta else '-' }}</td>
-                <td>{{ l.data_firma.strftime('%d/%m/%Y') if l.data_firma else '-' }}</td>
-                <td>€ {{ "{:,.2f}".format(l.importo_offerta).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                {% if bene_idx == 0 %}
+                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;">
+                    {% if l.data_offerta %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {% if l.offerta_revision and l.offerta_revision > 0 %}R{{ l.offerta_revision }} {% endif %}
+                        {{ l.data_offerta.strftime('%d') }}-{{ mesi[l.data_offerta.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
                 </td>
-
-                <td>
-                    {% if l.c_revisore > 0 %}
-                    € {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}
+                <td rowspan="{{ num_beni }}" class="cell-data-firma col-data-firma" style="vertical-align: middle; text-align: center;" ondblclick="openFirmaMenu(event, {{ l.id }})">
+                    {% if l.firma_esito %}
+                        {{ l.firma_esito }}
+                    {% elif l.data_firma %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ l.data_firma.strftime('%d') }}-{{ mesi[l.data_firma.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="col-imp-rev" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_revisione and l.importo_revisione > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_revisione).replace(",", ".") }}
                     {% else %}
                     -
                     {% endif %}
                 </td>
-                <td>
-                    {% if l.c_caricamento > 0 %}
-                    € {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}
+                <td class="col-imp-car" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_caricamento and l.importo_caricamento > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_caricamento).replace(",", ".") }}
                     {% else %}
                     -
                     {% endif %}
                 </td>
-
-                <td>{{ l.origine or '-' }}</td>
-                <td>{{ l.redattore or '-' }}</td>
-                <td>{{ l.data_pec.strftime('%d/%m') if l.data_pec else '-' }}</td>
+                <td class="col-origine" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.origine or '-' }}</td>
+                <td class="col-redattore" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.redattore or '-' }}</td>
+                {% endif %}
+                <td class="col-data-pec" style="text-align: center;" {% if bene.id %}ondblclick="editDataPec(event, {{ bene.id }})"{% endif %}>
+                    {% if bene.data_pec %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ bene.data_pec.strftime('%d') }}-{{ mesi[bene.data_pec.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                {% if bene_idx == 0 %}
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_deloitte or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
+                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                {% endif %}
                 <td>
-                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
-                        onchange="updateStato(this, {{ l.id }})">
-                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
-                            Inviare</option>
-                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
-                        </option>
-                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
-                        </option>
-                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
+                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
                     </select>
                 </td>
-
-                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X",
-                    ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X",
-                    ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                <td class="col-compensi">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
-
-                <td class="col-fatture">{{ l.f_fe or '-' }}</td>
-                <td class="col-fatture">{{ l.f_amin or '-' }}</td>
-                <td class="col-fatture">{{ l.f_galvan or '-' }}</td>
-                <td class="col-fatture">{{ l.f_fh or '-' }}</td>
-                <td class="col-fatture">{{ l.f_bianc or '-' }}</td>
-                <td class="col-fatture">{{ l.f_ext or '-' }}</td>
-                <td class="col-fatture">{{ l.f_revisore or '-' }}</td>
-                <td class="col-fatture">{{ l.f_caricamento or '-' }}</td>
             </tr>
+            {% endfor %}
+            {% endfor %}
             {% else %}
             <tr>
                 <td colspan="29" style="text-align:center; color:#999; padding: 30px;">
                     Nessun lavoro presente. Clicca + per aggiungere.
                 </td>
             </tr>
-            {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 </div>
@@ -589,6 +702,8 @@
                 <th class="gruppo-interni">F. FH</th>
                 <th class="gruppo-esterni" style="display:none;">C. BIANC</th>
                 <th class="gruppo-esterni" style="display:none;">F. BIANC</th>
+                <th class="gruppo-esterni" style="display:none;">C. DEL</th>
+                <th class="gruppo-esterni" style="display:none;">F. DEL</th>
                 <th class="gruppo-esterni" style="display:none;">C. Ext</th>
                 <th class="gruppo-esterni" style="display:none;">F. Ext</th>
                 <th class="gruppo-esterni" style="display:none;">C. Rev</th>
@@ -598,58 +713,67 @@
             </tr>
         </thead>
         <tbody>
-            {% for l in lavori %}
-            <tr data-id="{{ l.id }}">
-                <td>{{ l.numero }}</td>
-                <td>{{ l.cliente_nome }}</td>
-                <td class="text-truncate">{{ l.bene }}</td>
-                <td>€ {{ "{:,.2f}".format(l.valore_bene).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+            {% if lavori_with_beni %}
+            {% for item in lavori_with_beni %}
+            {% set l = item.lavoro %}
+            {% set num_beni = item.beni|length %}
+            {% for bene in item.beni %}
+            {% set bene_idx = loop.index0 %}
+            <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                {% if bene_idx == 0 %}
+                data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
+                data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
+                data-offerta-rev="{{ l.offerta_revision or 0 }}"
+                data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% endif %}>
+                {% if bene_idx == 0 %}
+                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
+                {% endif %}
+                <td class="col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
+                <td class="col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td>
-                    <select class="status-select stato-{{ l.stato|replace(' ', '-') }}"
-                        onchange="updateStato(this, {{ l.id }})">
-                        <option value="vuoto" {% if l.stato=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if l.stato=='pec da inviare' %}selected{% endif %}>Pec da
-                            Inviare</option>
-                        <option value="da fatturare" {% if l.stato=='da fatturare' %}selected{% endif %}>Da Fatturare
-                        </option>
-                        <option value="da incassare" {% if l.stato=='da incassare' %}selected{% endif %}>Da Incassare
-                        </option>
-                        <option value="incassata" {% if l.stato=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if l.stato=='chiusa' %}selected{% endif %}>Chiusa</option>
+                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
                     </select>
                 </td>
-                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni">{{ l.f_fe or '-' }}</td>
-                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni">{{ l.f_amin or '-' }}</td>
-                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni">{{ l.f_galvan or '-' }}</td>
-                <td class="gruppo-interni">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".",
-                    ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni">{{ l.f_fh or '-' }}</td>
-                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",",
-                    "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-esterni" style="display:none;">{{ l.f_bianc or '-' }}</td>
-                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}
-                </td>
-                <td class="gruppo-esterni" style="display:none;">{{ l.f_ext or '-' }}</td>
-                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".")
-                    }}</td>
-                <td class="gruppo-esterni" style="display:none;">{{ l.f_revisore or '-' }}</td>
-                <td class="gruppo-esterni" style="display:none;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",",
-                    ".") }}</td>
-                <td class="gruppo-esterni" style="display:none;">{{ l.f_caricamento or '-' }}</td>
+                {% if bene_idx == 0 %}
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                {% endif %}
             </tr>
+            {% endfor %}
+            {% endfor %}
             {% else %}
             <tr>
                 <td colspan="21" style="text-align:center; color:#999; padding: 30px;">
                     Nessun lavoro presente. Clicca + per aggiungere.
                 </td>
             </tr>
-            {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 
@@ -668,28 +792,32 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
-                    <th style="text-align: right;">
-                        <button class="btn-close-header" onclick="closeOverlay('compensi')"><i
-                                class="bi bi-x-lg"></i></button>
-                    </th>
                 </tr>
             </thead>
             <tbody>
-                {% for l in lavori %}
+                {% if lavori_with_beni %}
+                {% for item in lavori_with_beni %}
+                {% set l = item.lavoro %}
+                {% set num_beni = item.beni|length %}
+                {% for bene in item.beni %}
+                {% set bene_idx = loop.index0 %}
                 <tr>
-                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
-                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                    <td>€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
-                    <td></td>
+                    {% if bene_idx == 0 %}
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
+                {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -709,28 +837,32 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
-                    <th style="text-align: right;">
-                        <button class="btn-close-header" onclick="closeOverlay('fatture')"><i
-                                class="bi bi-x-lg"></i></button>
-                    </th>
                 </tr>
             </thead>
             <tbody>
-                {% for l in lavori %}
+                {% if lavori_with_beni %}
+                {% for item in lavori_with_beni %}
+                {% set l = item.lavoro %}
+                {% set num_beni = item.beni|length %}
+                {% for bene in item.beni %}
+                {% set bene_idx = loop.index0 %}
                 <tr>
-                    <td style="font-weight:bold; width: 40px; background:#f9f9f9;">{{ l.numero }}</td>
-                    <td class="text-truncate" style="max-width: 120px; background:#f9f9f9;">{{ l.cliente_nome }}</td>
-                    <td>{{ l.f_fe or '-' }}</td>
-                    <td>{{ l.f_amin or '-' }}</td>
-                    <td>{{ l.f_galvan or '-' }}</td>
-                    <td>{{ l.f_fh or '-' }}</td>
-                    <td>{{ l.f_bianc or '-' }}</td>
-                    <td>{{ l.f_ext or '-' }}</td>
-                    <td>{{ l.f_revisore or '-' }}</td>
-                    <td>{{ l.f_caricamento or '-' }}</td>
-                    <td></td>
+                    {% if bene_idx == 0 %}
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
+                {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -750,7 +882,7 @@
 <div id="addModal" class="modal-overlay">
     <div class="modal-glass modal-large">
         <div class="modal-header">
-            <h3>Nuovo Lavoro</h3>
+            <h3 id="modalTitle">Nuovo Lavoro</h3>
             <button class="btn-close" onclick="closeAddModal()"><i class="bi bi-x-lg"></i></button>
         </div>
 
@@ -761,6 +893,7 @@
 
         <form action="{{ url_for('main.add_lavoro_admin') }}" method="POST" id="formAddLavoro"
             onsubmit="return validateForm()">
+            <input type="hidden" name="lavoro_id" id="lavoroId" value="">
 
             <div class="form-section">
                 <h4><i class="bi bi-person-lines-fill"></i> Anagrafica Cliente</h4>
@@ -814,6 +947,7 @@
 
                 <div id="beniContainer">
                     <div class="bene-row form-row" data-index="0">
+                        <input type="hidden" name="beni[0][id]" class="bene-id" value="">
                         <div class="input-group flex-2">
                             <label>Bene (Descrizione)</label>
                             <input type="text" name="beni[0][descrizione]" class="one-ui-input bene-desc" required>
@@ -822,6 +956,11 @@
                             <label>Valore Bene (€)</label>
                             <input type="text" name="beni[0][valore]" class="one-ui-input currency-input bene-valore"
                                 oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                        </div>
+                        <div class="input-group flex-1">
+                            <label>Importo Offerta (€)</label>
+                            <input type="text" name="beni[0][importo_offerta]" class="one-ui-input currency-input bene-importo"
+                                oninput="formatCurrencyInput(this); calcolaTotaleOfferta();" onblur="formatCurrencyBlur(this); calcolaTotaleOfferta();">
                         </div>
                         <div class="input-group btn-remove-group" style="display:none;">
                             <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
@@ -838,13 +977,12 @@
                 <div class="form-row align-items-end">
 
                     <div class="input-group flex-1">
-                        <label>Importo Offerta</label>
+                        <label>Totale Offerta 4.0</label>
                         <div class="currency-wrapper">
                             <span class="currency-symbol">€</span>
                             <input type="text" name="importo_offerta" id="impOfferta"
                                 class="one-ui-input has-symbol currency-input"
-                                oninput="formatCurrencyInput(this); calcolaCompensi();"
-                                onblur="formatCurrencyBlur(this); calcolaCompensi();">
+                                readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                         </div>
                     </div>
 
@@ -872,6 +1010,14 @@
                         </div>
 
                         <div id="divImportoRevisione" class="sub-input" style="display:none; margin-top: 10px;">
+                            <label style="font-size: 12px; margin-bottom: 4px;">Nome Revisore</label>
+                            <div class="autocomplete-wrapper" style="margin-bottom: 8px;">
+                                <input type="text" name="nome_revisore" id="inpNomeRevisore" class="one-ui-input compact"
+                                    placeholder="Nome revisore" autocomplete="off"
+                                    oninput="searchRevisori(this.value)">
+                                <div id="revisoreSuggestions" class="suggestions-list"></div>
+                            </div>
+                            <label style="font-size: 12px; margin-bottom: 4px;">Importo</label>
                             <div class="currency-wrapper">
                                 <span class="currency-symbol">€</span>
                                 <input type="text" name="importo_revisione" id="impRevisione"
@@ -893,6 +1039,14 @@
                         </div>
 
                         <div id="divImportoCaricamento" class="sub-input" style="display:none; margin-top: 10px;">
+                            <label style="font-size: 12px; margin-bottom: 4px;">Nome Caricamento</label>
+                            <div class="autocomplete-wrapper" style="margin-bottom: 8px;">
+                                <input type="text" name="nome_caricamento" id="inpNomeCaricamento" class="one-ui-input compact"
+                                    placeholder="Nome caricamento" autocomplete="off"
+                                    oninput="searchCaricamenti(this.value)">
+                                <div id="caricamentoSuggestions" class="suggestions-list"></div>
+                            </div>
+                            <label style="font-size: 12px; margin-bottom: 4px;">Importo</label>
                             <div class="currency-wrapper">
                                 <span class="currency-symbol">€</span>
                                 <input type="text" name="importo_caricamento" id="impCaricamento"
@@ -914,6 +1068,7 @@
                             <option value="GALVAN">GALVAN</option>
                             <option value="FH">FH</option>
                             <option value="BIANC">BIANC</option>
+                            <option value="DELOITTE">DELOITTE</option>
                             <option value="ext">Esterno</option>
                         </select>
                     </div>
@@ -934,6 +1089,7 @@
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
                             <option value="BIANC">BIANC</option>
+                            <option value="DELOITTE">DELOITTE</option>
                         </select>
                     </div>
                 </div>
@@ -941,7 +1097,7 @@
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Collaboratore</label>
-                        <input type="text" name="collaboratore" class="one-ui-input">
+                        <input type="text" name="collaboratore" id="inpCollaboratore" class="one-ui-input">
                     </div>
                 </div>
             </div>
@@ -952,19 +1108,19 @@
                 <div class="form-row toggles-row" id="togglesRevCar" style="display:none; margin-bottom: 15px;">
                     <div id="revOptions" class="toggle-option" style="display:none;">
                         <span>Compenso Revisore:</span>
-                        <select id="revType" class="small-select" onchange="calcolaCompensi()">
+                        <select id="revType" name="rev_type" class="small-select" onchange="calcolaCompensi()">
                             <option value="perc">%</option>
                             <option value="euro">€</option>
                         </select>
-                        <input type="text" id="revVal" value="0" class="small-input" oninput="calcolaCompensi()">
+                        <input type="text" id="revVal" name="rev_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
                     <div id="carOptions" class="toggle-option" style="display:none;">
                         <span>Compenso Caricamento:</span>
-                        <select id="carType" class="small-select" onchange="calcolaCompensi()">
+                        <select id="carType" name="car_type" class="small-select" onchange="calcolaCompensi()">
                             <option value="perc">%</option>
                             <option value="euro">€</option>
                         </select>
-                        <input type="text" id="carVal" value="0" class="small-input" oninput="calcolaCompensi()">
+                        <input type="text" id="carVal" name="car_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
                 </div>
 
@@ -995,6 +1151,11 @@
                         <input type="text" name="c_bianc" id="c_bianc" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
                     </div>
+                    <div class="c-item" id="fieldDeloitte" style="display:none;">
+                        <label>DELOITTE</label>
+                        <input type="text" name="c_deloitte" id="c_deloitte" class="one-ui-input compact currency-input"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
                     <div class="c-item" id="fieldExt" style="display:none;">
                         <label>Esterno (10%)</label>
                         <input type="text" name="c_ext" id="c_ext" class="one-ui-input compact currency-input"
@@ -1014,19 +1175,62 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary-oneui mt-3">Salva Lavoro</button>
+            <button type="submit" class="btn-primary-oneui mt-3" id="btnSaveLavoro">Salva Lavoro</button>
+            <button type="button" class="btn-primary-oneui mt-2" id="btnRevisionaOfferta"
+                style="display:none; width:100%;"
+                onclick="revisionaOffertaDaForm()">
+                Revisiona Offerta
+            </button>
         </form>
     </div>
 </div>
 
-<div id="contextMenu" class="context-menu glass-panel">
+<div id="contextMenu" class="context-menu glass-panel" onclick="event.stopPropagation();">
     <div class="menu-item" onclick="editLavoro(currentLavoroId)">
         <i class="bi bi-pencil-fill"></i> Modifica
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="openGeneraOffertaModal(currentLavoroId)">
+        <i class="bi bi-file-earmark-word-fill"></i> <span id="menuGeneraOffertaLabel">Genera Offerta</span>
     </div>
     <div class="menu-divider"></div>
     <div class="menu-item delete" onclick="deleteLavoro(currentLavoroId)">
         <i class="bi bi-trash-fill"></i> Elimina
     </div>
+</div>
+
+<!-- Modal scelta generazione offerta -->
+<div id="generaOffertaModal" class="modal-overlay">
+    <div class="modal-glass" style="max-width: 520px;">
+        <div class="modal-header">
+            <h3>Genera Offerta</h3>
+            <button type="button" class="modal-close" onclick="closeGeneraOffertaModal()">×</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <p style="margin-top: 0;">Seleziona il tipo di offerta da generare:</p>
+            <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" class="btn-primary-oneui" style="flex:1;" onclick="confirmGeneraOfferta('old')">
+                    Industria 4.0 OLD
+                </button>
+                <button type="button" class="btn-primary-oneui" style="flex:1;" onclick="confirmGeneraOfferta('iper')">
+                    Industria 4.0 IPERAMMORTAMENTO
+                </button>
+            </div>
+            <div style="margin-top: 14px; color:#666; font-size: 0.9rem;">
+                Il sistema sceglierà automaticamente il template `_amm` se nel lavoro sono state spuntate le spese amministrative.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mini menu Data Firma -->
+<div id="firmaMenu" class="firma-menu" onclick="event.stopPropagation();">
+    <div class="menu-item" onclick="firmaSetMode('date')">Inserisci data firma</div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="firmaSetMode('OK')">OK</div>
+    <div class="menu-item" onclick="firmaSetMode('AUTORIZZ.')">AUTORIZZ.</div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="firmaSetMode('clear')">Svuota</div>
 </div>
 
 <form id="deleteForm" method="POST" style="display:none;"></form>
@@ -1214,11 +1418,85 @@
         }
     }
 
+    /* ==================== AUTOCOMPLETE REVISORI ==================== */
+    let revisoriCache = [];
+    async function searchRevisori(query) {
+        const suggestionsDiv = document.getElementById('revisoreSuggestions');
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/revisori?q=${encodeURIComponent(query)}`);
+            revisoriCache = await res.json();
+            if (revisoriCache.length > 0) {
+                suggestionsDiv.innerHTML = revisoriCache.map((nome, i) => `
+                <div class="suggestion-item" onclick="selectRevisore(${i})">
+                    <strong>${nome}</strong>
+                </div>
+            `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Errore fetch revisori:', err);
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function selectRevisore(index) {
+        const nome = revisoriCache[index];
+        if (nome) {
+            document.getElementById('inpNomeRevisore').value = nome;
+        }
+        document.getElementById('revisoreSuggestions').style.display = 'none';
+    }
+
+    /* ==================== AUTOCOMPLETE CARICAMENTI ==================== */
+    let caricamentiCache = [];
+    async function searchCaricamenti(query) {
+        const suggestionsDiv = document.getElementById('caricamentoSuggestions');
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/caricamenti?q=${encodeURIComponent(query)}`);
+            caricamentiCache = await res.json();
+            if (caricamentiCache.length > 0) {
+                suggestionsDiv.innerHTML = caricamentiCache.map((nome, i) => `
+                <div class="suggestion-item" onclick="selectCaricamento(${i})">
+                    <strong>${nome}</strong>
+                </div>
+            `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Errore fetch caricamenti:', err);
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function selectCaricamento(index) {
+        const nome = caricamentiCache[index];
+        if (nome) {
+            document.getElementById('inpNomeCaricamento').value = nome;
+        }
+        document.getElementById('caricamentoSuggestions').style.display = 'none';
+    }
+
     // Chiudi dropdown al click fuori
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.autocomplete-wrapper')) {
             document.getElementById('clienteSuggestions').style.display = 'none';
             document.getElementById('esternoSuggestions').style.display = 'none';
+            const revSug = document.getElementById('revisoreSuggestions');
+            const carSug = document.getElementById('caricamentoSuggestions');
+            if (revSug) revSug.style.display = 'none';
+            if (carSug) carSug.style.display = 'none';
         }
     });
 
@@ -1230,6 +1508,7 @@
         newRow.dataset.index = beneIndex;
 
         newRow.innerHTML = `
+        <input type="hidden" name="beni[${beneIndex}][id]" class="bene-id" value="">
         <div class="input-group flex-2">
             <label>Bene (Descrizione)</label>
             <input type="text" name="beni[${beneIndex}][descrizione]" class="one-ui-input bene-desc">
@@ -1238,6 +1517,11 @@
             <label>Valore Bene (€)</label>
             <input type="text" name="beni[${beneIndex}][valore]" class="one-ui-input currency-input bene-valore"
                    oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+        </div>
+        <div class="input-group flex-1">
+            <label>Importo Offerta (€)</label>
+            <input type="text" name="beni[${beneIndex}][importo_offerta]" class="one-ui-input currency-input bene-importo"
+                   oninput="formatCurrencyInput(this); calcolaTotaleOfferta();" onblur="formatCurrencyBlur(this); calcolaTotaleOfferta();">
         </div>
         <div class="input-group btn-remove-group">
             <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
@@ -1255,6 +1539,17 @@
         const row = btn.closest('.bene-row');
         row.remove();
         updateRemoveButtons();
+        calcolaTotaleOfferta(); // Ricalcola il totale dopo la rimozione
+    }
+    
+    // Calcola il totale offerta dalla somma degli importi offerta dei beni
+    function calcolaTotaleOfferta() {
+        let totale = 0;
+        document.querySelectorAll('.bene-importo').forEach(input => {
+            totale += parseCurrency(input.value);
+        });
+        document.getElementById('impOfferta').value = formatCurrency(totale);
+        calcolaCompensi(); // Ricalcola i compensi
     }
 
     function updateRemoveButtons() {
@@ -1269,15 +1564,22 @@
 
 	/* ==================== OVERLAY & UI ==================== */
     function openOverlay(type) {
-        // 1. Chiudi eventuali altri overlay
-        closeOverlay('compensi');
-        closeOverlay('fatture');
-        
         // 2. Trova l'overlay giusto
         const overlayId = 'overlay' + capitalize(type);
         const overlay = document.getElementById(overlayId);
         
         if (overlay) {
+            // Se l'overlay è già aperto, chiudilo
+            if (overlay.classList.contains('active')) {
+                closeOverlay(type);
+                return;
+            }
+            
+            // 1. Chiudi eventuali altri overlay
+            closeOverlay('compensi');
+            closeOverlay('fatture');
+            
+            // Apri l'overlay selezionato
             overlay.classList.add('active');
             
             // 3. FONDAMENTALE: Aggiunge la classe al BODY per mostrare la barra di scorrimento
@@ -1328,25 +1630,522 @@
         }
     }
 
-    function updateStato(select, id) {
-        updateField(id, 'stato', select.value);
+    async function updateBeneStato(select, beneId) {
+        if (!beneId) return;
+        const res = await fetch(`/update_bene_field/${beneId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: 'stato', value: select.value })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'Errore aggiornamento stato');
+            return;
+        }
         select.className = 'status-select stato-' + select.value.replace(/ /g, '-');
+    }
+
+    async function editDataPec(ev, beneId) {
+        ev.stopPropagation();
+        if (!beneId) return;
+        const raw = prompt('Inserisci data PEC (gg/mm/aa oppure gg/mm/aaaa):', '');
+        if (!raw) return;
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(raw.trim());
+        if (!m) { alert('Formato data non valido. Usa gg/mm/aa o gg/mm/aaaa.'); return; }
+        const dd = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        let yy = parseInt(m[3], 10);
+        if (yy < 100) yy = 2000 + yy;
+        const iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+
+        const res = await fetch(`/update_bene_field/${beneId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field: 'data_pec', value: iso })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'Errore aggiornamento data PEC');
+            return;
+        }
+
+        // Aggiorna UI: mostra sempre gg-mes
+        const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+        const txt = `${dd.toString().padStart(2,'0')}-${mesi[mm]}`;
+        const row = document.querySelector(`tr[data-bene-id="${beneId}"]`);
+        if (row) {
+            const cell = row.querySelector('.col-data-pec');
+            if (cell) cell.textContent = txt;
+        }
     }
 
     function showContextMenu(e, id) {
         e.preventDefault();
         currentLavoroId = id;
         const menu = document.getElementById('contextMenu');
-        menu.style.top = `${e.pageY}px`;
-        menu.style.left = `${e.pageX}px`;
+        const label = document.getElementById('menuGeneraOffertaLabel');
+        
+        // Rimuovi evidenziazione da tutte le righe
+        document.querySelectorAll('.oneui-table tbody tr.row-selected').forEach(row => {
+            row.classList.remove('row-selected');
+        });
+        
+        // Evidenzia tutte le righe del lavoro selezionato (per lavori con più beni)
+        const selectedRow = e.currentTarget.closest('tr');
+        if (selectedRow) {
+            const lavoroId = selectedRow.getAttribute('data-id');
+            // Aggiorna label Genera/Revisiona
+            if (label) {
+                const generated = selectedRow.getAttribute('data-offerta-generated') === '1';
+                label.textContent = generated ? 'Revisiona Offerta' : 'Genera Offerta';
+            }
+            // Evidenzia tutte le righe con lo stesso data-id
+            const rowsToHighlight = document.querySelectorAll(`.oneui-table tbody tr[data-id="${lavoroId}"]`);
+            rowsToHighlight.forEach(row => {
+                row.classList.add('row-selected');
+            });
+            console.log('Evidenziate', rowsToHighlight.length, 'righe per lavoro', lavoroId);
+        }
+        
+        // Usa clientX/clientY per position: fixed (relativi alla viewport)
+        let x = e.clientX;
+        let y = e.clientY;
+        
+        // Rendiamo il menu temporaneamente visibile per calcolare le dimensioni
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        menu.style.top = '0px';
+        menu.style.left = '0px';
+        
+        const menuRect = menu.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Se il menu andrebbe fuori a destra, allinealo a destra
+        if (x + menuRect.width > viewportWidth) {
+            x = viewportWidth - menuRect.width - 10;
+        }
+        
+        // Se il menu andrebbe fuori in basso, posizionalo sopra il cursore
+        if (y + menuRect.height > viewportHeight) {
+            y = e.clientY - menuRect.height;
+        }
+        
+        // Assicurati che non vada fuori a sinistra o in alto
+        if (x < 0) x = 10;
+        if (y < 0) y = 10;
+        
+        menu.style.top = `${y}px`;
+        menu.style.left = `${x}px`;
+        menu.style.visibility = 'visible';
         menu.classList.add('active');
-        document.addEventListener('click', hideContextMenu);
     }
 
     function hideContextMenu() {
-        document.getElementById('contextMenu').classList.remove('active');
-        document.removeEventListener('click', hideContextMenu);
+        const menu = document.getElementById('contextMenu');
+        if (menu) {
+            menu.classList.remove('active');
+            menu.style.display = 'none';
+            menu.style.visibility = 'hidden';
+        }
+        // Rimuovi evidenziazione da tutte le righe
+        document.querySelectorAll('.oneui-table tbody tr.row-selected').forEach(row => {
+            row.classList.remove('row-selected');
+        });
     }
+    
+    // Listener globale per chiudere il menu quando si clicca fuori
+    // Rimuovi eventuali listener precedenti
+    if (window.contextMenuClickHandler) {
+        document.removeEventListener('click', window.contextMenuClickHandler, true);
+    }
+    
+    window.contextMenuClickHandler = function(e) {
+        const menu = document.getElementById('contextMenu');
+        if (!menu || !menu.classList.contains('active')) {
+            return;
+        }
+        
+        // Se il click è dentro il menu, non fare nulla
+        if (menu.contains(e.target)) {
+            return;
+        }
+        
+        // Se il click è fuori, chiudi il menu
+        hideContextMenu();
+    };
+    
+    document.addEventListener('click', window.contextMenuClickHandler, true);
+
+    /* ==================== GENERA OFFERTA ==================== */
+    let currentOffertaLavoroId = null;
+
+    let revisioneOffertaMode = false;
+    let pendingRevisionTipoPick = false;
+
+    function openGeneraOffertaModal(id) {
+        hideContextMenu();
+        currentOffertaLavoroId = id;
+
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        const generated = row && row.getAttribute('data-offerta-generated') === '1';
+
+        if (generated) {
+            // Revisiona: apri direttamente il form di modifica lavoro
+            revisioneOffertaMode = true;
+            editLavoro(id);
+            return;
+        }
+
+        // Prima emissione: scegli il tipo dal modal
+        revisioneOffertaMode = false;
+        const modal = document.getElementById('generaOffertaModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function closeGeneraOffertaModal() {
+        const modal = document.getElementById('generaOffertaModal');
+        if (modal) modal.classList.remove('active');
+        // se era un pick per la revisione, NON azzeriamo l'id lavoro
+        if (!pendingRevisionTipoPick) {
+            currentOffertaLavoroId = null;
+        }
+    }
+
+    async function confirmGeneraOfferta(tipo) {
+        const id = currentOffertaLavoroId;
+        if (!id) return;
+
+        try {
+            // Caso: ci serve solo scegliere il tipo per la revisione (lavori legacy senza offerta_tipo)
+            if (pendingRevisionTipoPick) {
+                pendingRevisionTipoPick = false;
+                closeGeneraOffertaModal();
+                await revisionaOffertaDaForm(tipo);
+                return;
+            }
+
+            const res = await fetch(`/api/lavoro/${id}/genera_offerta`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore generazione offerta');
+            }
+
+            const dataBreve = res.headers.get('X-Offerta-Data-Breve');
+            const rev = parseInt(res.headers.get('X-Offerta-Revision') || '0', 10) || 0;
+            const blob = await res.blob();
+            const ct = res.headers.get('Content-Type') || '';
+            if (!ct.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+                const txt = await blob.text().catch(() => '');
+                throw new Error('Risposta non è un .docx. ' + (txt ? ('Dettaglio: ' + txt.slice(0, 200)) : ''));
+            }
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // Prova a usare il filename dal Content-Disposition (supporta anche filename*=UTF-8'')
+            const cd = res.headers.get('Content-Disposition') || '';
+            let fname = '';
+            const mStar = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(cd);
+            if (mStar && mStar[1]) {
+                try { fname = decodeURIComponent(mStar[1]); } catch (e) { fname = mStar[1]; }
+            }
+            if (!fname) {
+                const m = /filename=\"?([^\";]+)\"?/i.exec(cd);
+                fname = (m && m[1]) ? m[1] : '';
+            }
+            a.download = fname || `Prev. First Eng_${id}_4.0.docx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            // Aggiorna UI: Data Offerta (se presente in tabella standard/extra1)
+            if (dataBreve) {
+                const firstRow = document.querySelector(`tr[data-id="${id}"]`);
+                if (firstRow) {
+                    firstRow.setAttribute('data-offerta-generated', '1');
+                    firstRow.setAttribute('data-offerta-dirty', '0');
+                    firstRow.setAttribute('data-offerta-rev', String(rev));
+                    const cell = firstRow.querySelector('.cell-data-offerta');
+                    if (cell) cell.textContent = (rev > 0 ? `R${rev} ` : '') + dataBreve;
+                }
+            }
+        } catch (e) {
+            alert(e.message || 'Errore generazione offerta');
+        } finally {
+            closeGeneraOffertaModal();
+        }
+    }
+
+    async function revisionaOffertaDaForm(tipoOverride = null) {
+        const form = document.getElementById('formAddLavoro');
+        if (!form) return;
+
+        const fd = new FormData(form);
+        // usa l’id già presente nel form
+        const lavoroId = fd.get('lavoro_id');
+        if (!lavoroId) {
+            alert('ID lavoro mancante.');
+            return;
+        }
+
+        // Se il lavoro è legacy e non ha offerta_tipo, chiedi il tipo prima di procedere
+        if (!tipoOverride) {
+            const row = document.querySelector(`tr[data-id="${lavoroId}"]`);
+            const hasTipo = row && row.getAttribute('data-offerta-tipo') && row.getAttribute('data-offerta-tipo').trim();
+            if (!hasTipo) {
+                pendingRevisionTipoPick = true;
+                currentOffertaLavoroId = lavoroId;
+                const modal = document.getElementById('generaOffertaModal');
+                if (modal) modal.classList.add('active');
+                return;
+            }
+        }
+
+        try {
+            const requestUrl = tipoOverride
+                ? `/add_lavoro_admin?download_offerta=1&tipo=${encodeURIComponent(tipoOverride)}`
+                : `/add_lavoro_admin?download_offerta=1`;
+            const res = await fetch(requestUrl, {
+                method: 'POST',
+                body: fd
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore revisione offerta');
+            }
+
+            const dataBreve = res.headers.get('X-Offerta-Data-Breve');
+            const rev = parseInt(res.headers.get('X-Offerta-Revision') || '0', 10) || 0;
+            const blob = await res.blob();
+            const ct = res.headers.get('Content-Type') || '';
+            if (!ct.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+                const txt = await blob.text().catch(() => '');
+                throw new Error('Risposta non è un .docx. ' + (txt ? ('Dettaglio: ' + txt.slice(0, 200)) : ''));
+            }
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            const cd = res.headers.get('Content-Disposition') || '';
+            let fname = '';
+            const mStar = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(cd);
+            if (mStar && mStar[1]) {
+                try { fname = decodeURIComponent(mStar[1]); } catch (e) { fname = mStar[1]; }
+            }
+            if (!fname) {
+                const m = /filename=\"?([^\";]+)\"?/i.exec(cd);
+                fname = (m && m[1]) ? m[1] : '';
+            }
+            a.download = fname || `Prev. First Eng_${lavoroId}_4.0.docx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+
+            if (dataBreve) {
+                const firstRow = document.querySelector(`tr[data-id="${lavoroId}"]`);
+                if (firstRow) {
+                    firstRow.setAttribute('data-offerta-generated', '1');
+                    firstRow.setAttribute('data-offerta-dirty', '0');
+                    firstRow.setAttribute('data-offerta-rev', String(rev));
+                    // Se abbiamo fatto override tipo (legacy), persistilo anche nella UI
+                    if (tipoOverride) firstRow.setAttribute('data-offerta-tipo', tipoOverride);
+                    const cell = firstRow.querySelector('.cell-data-offerta');
+                    if (cell) cell.textContent = (rev > 0 ? `R${rev} ` : '') + dataBreve;
+                }
+            }
+
+            // Aggiorna subito le celle della tabella con i dati salvati (senza refresh pagina)
+            await refreshLavoroRowsFromApi(lavoroId);
+
+            // chiudi modal e reset modalità
+            closeAddModal();
+            revisioneOffertaMode = false;
+        } catch (e) {
+            alert(e.message || 'Errore revisione offerta');
+        }
+    }
+
+    function _formatDdMesFromIso(iso) {
+        if (!iso) return '-';
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso).trim());
+        if (!m) return '-';
+        const dd = parseInt(m[3], 10);
+        const mm = parseInt(m[2], 10);
+        const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+        return `${dd.toString().padStart(2,'0')}-${mesi[mm] || ''}`.trim();
+    }
+
+    function _formatEuroCell(amount, decimals = 2) {
+        const n = Number(amount || 0);
+        if (!n || n <= 0) return '-';
+        if (decimals === 0) {
+            return '€ ' + Math.round(n).toLocaleString('it-IT').replace(/\./g, '.');
+        }
+        // usa helper già presenti se esistono
+        if (typeof formatCurrency === 'function') return '€ ' + formatCurrency(n);
+        return '€ ' + n.toLocaleString('it-IT', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    async function refreshLavoroRowsFromApi(lavoroId) {
+        const res = await fetch(`/api/lavoro/${lavoroId}`);
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (!data) return;
+
+        const rows = Array.from(document.querySelectorAll(`.oneui-table tbody tr[data-id="${lavoroId}"]`));
+        if (!rows.length) return;
+
+        const beni = Array.isArray(data.beni) ? data.beni : [];
+        if (beni.length && beni.length !== rows.length) {
+            // Caso raro: cambiato numero beni. Non tocchiamo il DOM per non rompere i rowspan.
+            // L’utente può ricaricare se ha aggiunto/rimosso beni.
+            return;
+        }
+
+        // Aggiorna celle "rowspan" sulla prima riga (se presenti)
+        const first = rows[0];
+        const cNum = first.querySelector('.col-numero');
+        if (cNum) cNum.textContent = data.numero ?? cNum.textContent;
+
+        const cCli = first.querySelector('.col-cliente');
+        if (cCli) cCli.textContent = (data.cliente && data.cliente.nome) ? data.cliente.nome : (data.cliente_nome || cCli.textContent);
+
+        const cOri = first.querySelector('.col-origine');
+        if (cOri) cOri.textContent = data.origine ? data.origine : '-';
+
+        const cRed = first.querySelector('.col-redattore');
+        if (cRed) cRed.textContent = data.redattore ? data.redattore : '-';
+
+        const cImpRev = first.querySelector('.col-imp-rev');
+        if (cImpRev) cImpRev.textContent = _formatEuroCell(data.importo_revisione || 0, 0);
+
+        const cImpCar = first.querySelector('.col-imp-car');
+        if (cImpCar) cImpCar.textContent = _formatEuroCell(data.importo_caricamento || 0, 0);
+
+        // Aggiorna righe bene
+        rows.forEach((row, idx) => {
+            const bene = beni[idx] || {};
+
+            const d = row.querySelector('.col-bene-desc');
+            if (d) d.textContent = bene.descrizione ? bene.descrizione : '-';
+
+            const v = row.querySelector('.col-bene-valore');
+            if (v) v.textContent = _formatEuroCell(bene.valore || 0, 2);
+
+            const i = row.querySelector('.col-bene-importo');
+            if (i) i.textContent = _formatEuroCell(bene.importo_offerta || 0, 2);
+
+            const pec = row.querySelector('.col-data-pec');
+            if (pec) pec.textContent = _formatDdMesFromIso(bene.data_pec);
+
+            const sel = row.querySelector('select.status-select');
+            if (sel && bene.stato) {
+                sel.value = bene.stato;
+                sel.className = 'status-select stato-' + String(bene.stato).replace(/ /g, '-');
+            }
+        });
+    }
+
+    /* ==================== DATA FIRMA (dblclick) ==================== */
+    let currentFirmaLavoroId = null;
+
+    function openFirmaMenu(ev, lavoroId) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        currentFirmaLavoroId = lavoroId;
+        const menu = document.getElementById('firmaMenu');
+        if (!menu) return;
+        menu.style.left = `${ev.clientX}px`;
+        menu.style.top = `${ev.clientY}px`;
+        menu.style.display = 'block';
+    }
+
+    function closeFirmaMenu() {
+        const menu = document.getElementById('firmaMenu');
+        if (menu) menu.style.display = 'none';
+        currentFirmaLavoroId = null;
+    }
+
+    async function firmaSetMode(mode) {
+        const id = currentFirmaLavoroId;
+        if (!id) return;
+
+        try {
+            if (mode === 'date') {
+                const raw = prompt('Inserisci data firma (gg/mm/aa oppure gg/mm/aaaa):', '');
+                if (!raw) { closeFirmaMenu(); return; }
+                const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(raw.trim());
+                if (!m) throw new Error('Formato data non valido. Usa gg/mm/aa o gg/mm/aaaa.');
+                const dd = parseInt(m[1], 10);
+                const mm = parseInt(m[2], 10);
+                let yy = parseInt(m[3], 10);
+                if (yy < 100) yy = 2000 + yy;
+                const iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+                await updateFirma(id, { field: 'data_firma', value: iso });
+            } else if (mode === 'OK' || mode === 'AUTORIZZ.') {
+                await updateFirma(id, { field: 'firma_esito', value: mode });
+            } else if (mode === 'clear') {
+                await updateFirma(id, { field: 'firma_esito', value: '' });
+                await updateFirma(id, { field: 'data_firma', value: '' });
+            }
+        } catch (e) {
+            alert(e.message || 'Errore aggiornamento firma');
+        } finally {
+            closeFirmaMenu();
+        }
+    }
+
+    async function updateFirma(id, payload) {
+        const res = await fetch(`/update_lavoro_field/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Errore aggiornamento');
+        }
+
+        // Aggiorna UI cella Data Firma in tutte le righe dello stesso lavoro
+        const rows = document.querySelectorAll(`tr[data-id="${id}"] .cell-data-firma`);
+        if (!rows.length) return;
+
+        // Calcola testo display: OK / AUTORIZZ. / gg-mes / '-'
+        let display = null;
+        if (payload.field === 'firma_esito') {
+            display = (payload.value || '').trim() || '-';
+        } else if (payload.field === 'data_firma') {
+            if (!payload.value) {
+                display = '-';
+            } else {
+                const parts = payload.value.split('-');
+                const dd = parts[2];
+                const mm = parseInt(parts[1], 10);
+                const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+                display = `${dd}-${mesi[mm]}`;
+            }
+        }
+
+        if (display !== null) {
+            rows.forEach(el => { el.textContent = display; });
+        }
+    }
+
+    // Chiudi menu Data Firma al click fuori
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('firmaMenu');
+        if (!menu) return;
+        if (menu.style.display === 'block' && !menu.contains(e.target)) {
+            closeFirmaMenu();
+        }
+    }, true);
 
     function deleteLavoro(id) {
         if (confirm('Sei sicuro di voler eliminare il lavoro #' + id + '?')) {
@@ -1356,9 +2155,271 @@
         }
     }
 
-    function editLavoro(id) {
-        // Per ora non fa nulla o ricarica, in futuro potrebbe aprire modale di edit
-        alert('Funzione modifica rapida non ancora implementata per ID: ' + id);
+    async function editLavoro(id) {
+        // Chiudi il menu contestuale
+        hideContextMenu();
+        
+        try {
+            // Recupera i dati del lavoro
+            const response = await fetch(`/api/lavoro/${id}`);
+            if (!response.ok) {
+                throw new Error('Errore nel recupero dei dati');
+            }
+            const data = await response.json();
+            
+            // Apri il modal
+            document.getElementById('addModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Cambia il titolo
+            document.getElementById('modalTitle').textContent = `Modifica Lavoro #${data.numero}`;
+            
+            // Imposta l'ID del lavoro da modificare
+            document.getElementById('lavoroId').value = data.id;
+            
+            // Reset del form
+            document.getElementById('formAddLavoro').reset();
+            document.getElementById('alertCompensi').style.display = 'none';
+            
+            // Compila anagrafica cliente
+            document.getElementById('inpCliente').value = data.cliente.nome;
+            document.getElementById('inpPiva').value = data.cliente.p_iva || '';
+            document.getElementById('inpIndirizzo').value = data.cliente.indirizzo || '';
+            document.getElementById('inpCivico').value = data.cliente.civico || '';
+            document.getElementById('inpCap').value = data.cliente.cap || '';
+            document.getElementById('inpComune').value = data.cliente.comune || '';
+            document.getElementById('inpProv').value = data.cliente.provincia || '';
+            document.getElementById('inpPec').value = data.cliente.pec || '';
+            
+            // Compila beni
+            const container = document.getElementById('beniContainer');
+            // Rimuovi tutte le righe esistenti
+            container.innerHTML = '';
+            beneIndex = 0;
+            
+            // Aggiungi tutte le righe beni
+            data.beni.forEach((bene, idx) => {
+                if (idx === 0) {
+                    // Prima riga: crea direttamente
+                    const firstRow = document.createElement('div');
+                    firstRow.className = 'bene-row form-row';
+                    firstRow.dataset.index = 0;
+                    firstRow.innerHTML = `
+                        <input type="hidden" name="beni[0][id]" class="bene-id" value="${bene.id || ''}">
+                        <div class="input-group flex-2">
+                            <label>Bene (Descrizione)</label>
+                            <input type="text" name="beni[0][descrizione]" class="one-ui-input bene-desc" required value="${(bene.descrizione || '').replace(/"/g, '&quot;')}">
+                        </div>
+                        <div class="input-group flex-1">
+                            <label>Valore Bene (€)</label>
+                            <input type="text" name="beni[0][valore]" class="one-ui-input currency-input bene-valore"
+                                value="${formatCurrency(bene.valore || 0)}"
+                                oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                        </div>
+                        <div class="input-group flex-1">
+                            <label>Importo Offerta (€)</label>
+                            <input type="text" name="beni[0][importo_offerta]" class="one-ui-input currency-input bene-importo"
+                                value="${formatCurrency(bene.importo_offerta || 0)}"
+                                oninput="formatCurrencyInput(this); calcolaTotaleOfferta();" onblur="formatCurrencyBlur(this); calcolaTotaleOfferta();">
+                        </div>
+                        <div class="input-group btn-remove-group" style="display:none;">
+                            <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(firstRow);
+                    beneIndex = 1;
+                } else {
+                    // Aggiungi nuove righe
+                    addBene();
+                    const rows = container.querySelectorAll('.bene-row');
+                    const newRow = rows[rows.length - 1];
+                    newRow.querySelector('.bene-desc').value = bene.descrizione || '';
+                    newRow.querySelector('.bene-valore').value = formatCurrency(bene.valore || 0);
+                    newRow.querySelector('.bene-importo').value = formatCurrency(bene.importo_offerta || 0);
+                    const hid = newRow.querySelector('.bene-id');
+                    if (hid) hid.value = bene.id || '';
+                }
+            });
+            
+            // Calcola il totale offerta dopo aver popolato i beni
+            calcolaTotaleOfferta();
+            
+            // Se non ci sono beni, crea almeno una riga vuota
+            if (data.beni.length === 0) {
+                const firstRow = document.createElement('div');
+                firstRow.className = 'bene-row form-row';
+                firstRow.dataset.index = 0;
+                firstRow.innerHTML = `
+                    <input type="hidden" name="beni[0][id]" class="bene-id" value="">
+                    <div class="input-group flex-2">
+                        <label>Bene (Descrizione)</label>
+                        <input type="text" name="beni[0][descrizione]" class="one-ui-input bene-desc" required>
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Valore Bene (€)</label>
+                        <input type="text" name="beni[0][valore]" class="one-ui-input currency-input bene-valore"
+                            oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="input-group flex-1">
+                        <label>Importo Offerta (€)</label>
+                        <input type="text" name="beni[0][importo_offerta]" class="one-ui-input currency-input bene-importo"
+                            oninput="formatCurrencyInput(this); calcolaTotaleOfferta();" onblur="formatCurrencyBlur(this); calcolaTotaleOfferta();">
+                    </div>
+                    <div class="input-group btn-remove-group" style="display:none;">
+                        <button type="button" class="btn-remove-bene" onclick="removeBene(this)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(firstRow);
+                beneIndex = 1;
+            }
+            
+            updateRemoveButtons();
+            
+            // Compila importi revisione e caricamento
+            if (data.has_revisore && data.importo_revisione) {
+                document.getElementById('impRevisione').value = formatCurrency(data.importo_revisione || 0);
+            } else {
+                document.getElementById('impRevisione').value = formatCurrency(0);
+            }
+            
+            if (data.has_caricamento && data.importo_caricamento) {
+                document.getElementById('impCaricamento').value = formatCurrency(data.importo_caricamento || 0);
+            } else {
+                document.getElementById('impCaricamento').value = formatCurrency(0);
+            }
+            
+            // Compila origine e redattore
+            document.getElementById('selOrigine').value = data.origine || '';
+            document.getElementById('selRedattore').value = data.redattore || '';
+            document.getElementById('inpEsterno').value = data.nome_esterno || '';
+            document.getElementById('inpCollaboratore').value = data.collaboratore || '';
+
+            // Compila checkbox e importi
+            document.getElementById('chkRevisione').checked = data.has_revisore;
+            document.getElementById('chkCaricamento').checked = data.has_caricamento;
+            document.getElementById('chkSpeseAmm').checked = !!data.spese_amministrative;
+            
+            // Compila nomi revisore e caricamento
+            document.getElementById('inpNomeRevisore').value = data.nome_revisore || '';
+            document.getElementById('inpNomeCaricamento').value = data.nome_caricamento || '';
+
+            // Se siamo entrati da "Revisiona Offerta", mostra il bottone dedicato
+            const revBtn = document.getElementById('btnRevisionaOfferta');
+            const saveBtn = document.getElementById('btnSaveLavoro');
+            if (revBtn) {
+                const generated = !!data.data_offerta; // offerta già emessa
+                revBtn.style.display = (revisioneOffertaMode && generated) ? 'block' : 'none';
+            }
+            if (saveBtn) {
+                const generated = !!data.data_offerta;
+                saveBtn.style.display = (revisioneOffertaMode && generated) ? 'none' : 'inline-block';
+            }
+
+            // Aggiorna toggle PRIMA di impostare i valori (per mostrare i campi)
+            // Ma NON chiamare calcolaCompensi() ancora, lo faremo dopo aver impostato i valori
+            const hasRev = data.has_revisore;
+            const hasCar = data.has_caricamento;
+            
+            document.getElementById('chkRevisione').checked = hasRev;
+            document.getElementById('chkCaricamento').checked = hasCar;
+            
+            // Mostra/nascondi i campi senza ricalcolare
+            document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
+            document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
+            document.getElementById('revOptions').style.display = hasRev ? 'flex' : 'none';
+            document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
+            document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
+            document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
+            document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
+            
+            toggleExtInput();
+            
+            // Imposta i valori per revisore e caricamento dai dati salvati DOPO aver mostrato i campi
+            // Usa setTimeout per assicurarsi che i campi siano visibili
+            setTimeout(() => {
+                console.log('Dati ricevuti dall\'API:', {
+                    has_revisore: data.has_revisore,
+                    rev_type: data.rev_type,
+                    rev_value: data.rev_value,
+                    has_caricamento: data.has_caricamento,
+                    car_type: data.car_type,
+                    car_value: data.car_value
+                });
+                
+                if (data.has_revisore) {
+                    const revType = data.rev_type || 'perc';
+                    const revValue = parseFloat(data.rev_value) || 0;
+                    console.log('Imposto revisore - tipo:', revType, 'valore:', revValue);
+                    document.getElementById('revType').value = revType;
+                    if (revType === 'euro') {
+                        const formatted = formatCurrency(revValue);
+                        console.log('Valore formattato (euro):', formatted);
+                        document.getElementById('revVal').value = formatted;
+                    } else {
+                        // Per percentuali, mostra il valore come numero intero se possibile
+                        const valStr = (revValue % 1 === 0) ? Math.round(revValue).toString() : revValue.toString();
+                        console.log('Valore (percentuale):', valStr);
+                        document.getElementById('revVal').value = valStr;
+                    }
+                    console.log('Valore finale nel campo revVal:', document.getElementById('revVal').value);
+                } else {
+                    document.getElementById('revType').value = 'perc';
+                    document.getElementById('revVal').value = '0';
+                }
+                
+                if (data.has_caricamento) {
+                    const carType = data.car_type || 'perc';
+                    const carValue = parseFloat(data.car_value) || 0;
+                    console.log('Imposto caricamento - tipo:', carType, 'valore:', carValue);
+                    document.getElementById('carType').value = carType;
+                    if (carType === 'euro') {
+                        const formatted = formatCurrency(carValue);
+                        console.log('Valore formattato (euro):', formatted);
+                        document.getElementById('carVal').value = formatted;
+                    } else {
+                        // Per percentuali, mostra il valore come numero intero se possibile
+                        const valStr = (carValue % 1 === 0) ? Math.round(carValue).toString() : carValue.toString();
+                        console.log('Valore (percentuale):', valStr);
+                        document.getElementById('carVal').value = valStr;
+                    }
+                    console.log('Valore finale nel campo carVal:', document.getElementById('carVal').value);
+                } else {
+                    document.getElementById('carType').value = 'perc';
+                    document.getElementById('carVal').value = '0';
+                }
+                
+                // Assicurati che gli importi di revisione e caricamento siano impostati prima di ricalcolare
+                // (potrebbero essere stati sovrascritti da calcolaCompensi se chiamato prima)
+                if (data.has_revisore && data.importo_revisione) {
+                    document.getElementById('impRevisione').value = formatCurrency(data.importo_revisione || 0);
+                }
+                if (data.has_caricamento && data.importo_caricamento) {
+                    document.getElementById('impCaricamento').value = formatCurrency(data.importo_caricamento || 0);
+                }
+                
+                // Ricalcola i compensi dopo aver impostato tutti i valori
+                calcolaCompensi();
+            }, 100);
+            
+            // Compila compensi (senza ricalcolare, usa i valori salvati)
+            setCurrencyValue('c_fe', data.c_fe || 0);
+            setCurrencyValue('c_amin', data.c_amin || 0);
+            setCurrencyValue('c_galvan', data.c_galvan || 0);
+            setCurrencyValue('c_fh', data.c_fh || 0);
+            setCurrencyValue('c_bianc', data.c_bianc || 0);
+            setCurrencyValue('c_deloitte', data.c_deloitte || 0);
+            setCurrencyValue('c_ext', data.c_ext || 0);
+            setCurrencyValue('c_revisore', data.c_revisore || 0);
+            setCurrencyValue('c_caricamento', data.c_caricamento || 0);
+            
+        } catch (error) {
+            console.error('Errore nel caricamento del lavoro:', error);
+            alert('Errore nel caricamento dei dati del lavoro');
+        }
     }
 
     function updateField(id, field, value) {
@@ -1376,8 +2437,20 @@
         document.body.style.overflow = 'hidden';
         // -------------------------------------------------
 
+        // Reset titolo
+        document.getElementById('modalTitle').textContent = 'Nuovo Lavoro';
+        
+        // Reset ID lavoro (per nuovo lavoro)
+        document.getElementById('lavoroId').value = '';
+
         document.getElementById('formAddLavoro').reset();
         document.getElementById('alertCompensi').style.display = 'none';
+        // Reset pulsanti revisione
+        revisioneOffertaMode = false;
+        const revBtn = document.getElementById('btnRevisionaOfferta');
+        const saveBtn = document.getElementById('btnSaveLavoro');
+        if (revBtn) revBtn.style.display = 'none';
+        if (saveBtn) saveBtn.style.display = 'inline-block';
 
         // Reset beni
         const container = document.getElementById('beniContainer');
@@ -1418,6 +2491,7 @@
     }
 
     function calcolaCompensi() {
+        // Totale Offerta 4.0 (somma importi offerta dei beni)
         const importoOfferta = parseCurrency(document.getElementById('impOfferta').value);
         const importoRevisione = parseCurrency(document.getElementById('impRevisione').value);
         const importoCaricamento = parseCurrency(document.getElementById('impCaricamento').value);
@@ -1428,71 +2502,83 @@
         const hasRevisione = document.getElementById('chkRevisione').checked;
         const hasCaricamento = document.getElementById('chkCaricamento').checked;
 
-        const totale = importoOfferta + importoRevisione + importoCaricamento;
-        let resto = totale;
+        // Totale Lavoro = Totale Offerta 4.0 + Offerta Revisione + Offerta Caricamento
+        const totaleLavoro = importoOfferta + importoRevisione + importoCaricamento;
 
-        // 1. ESTERNO
-        let valExt = 0;
-        if (origine === 'ext') {
-            valExt = totale * 0.10;
-            resto -= valExt;
+        // 1. SPESE AMM (6%) - calcolate su Totale Lavoro
+        let speseAmm = 0;
+        if (hasSpeseAmm) {
+            speseAmm = totaleLavoro * 0.06;
         }
 
-        // 2. REVISORE
+        // 2. ESTERNO (10%) - calcolato su Totale Offerta 4.0 (NON su totale lavoro)
+        let valExt = 0;
+        if (origine === 'ext') {
+            valExt = importoOfferta * 0.10;
+        }
+
+        // 3. REVISORE - calcola il compenso
         let valRev = 0;
+        let diffRevisione = 0; // Differenza tra importo revisione e compenso revisore → va a FE
         if (hasRevisione) {
             const revType = document.getElementById('revType').value;
             let rawRevVal = document.getElementById('revVal').value;
-            let revVal = 0;
 
             if (revType === 'euro') {
-                revVal = parseCurrency(rawRevVal);
-                valRev = revVal;
+                valRev = parseCurrency(rawRevVal);
             } else {
-                revVal = parseFloat(rawRevVal.replace(',', '.')) || 0;
-                valRev = (totale * revVal / 100);
+                const revPerc = parseFloat(rawRevVal.replace(',', '.')) || 0;
+                valRev = (totaleLavoro * revPerc / 100);
             }
-            resto -= valRev;
+            
+            // Calcola la differenza tra importo revisione e compenso revisore
+            diffRevisione = importoRevisione - valRev;
+            if (diffRevisione < 0) diffRevisione = 0; // Non consideriamo differenze negative
         }
 
-        // 3. CARICAMENTO
+        // 4. CARICAMENTO - calcola il compenso
         let valCar = 0;
+        let diffCaricamento = 0; // Differenza tra importo caricamento e compenso caricamento → va a FE
         if (hasCaricamento) {
             const carType = document.getElementById('carType').value;
             let rawCarVal = document.getElementById('carVal').value;
-            let carVal = 0;
 
             if (carType === 'euro') {
-                carVal = parseCurrency(rawCarVal);
-                valCar = carVal;
+                valCar = parseCurrency(rawCarVal);
             } else {
-                carVal = parseFloat(rawCarVal.replace(',', '.')) || 0;
-                valCar = (totale * carVal / 100);
+                const carPerc = parseFloat(rawCarVal.replace(',', '.')) || 0;
+                valCar = (totaleLavoro * carPerc / 100);
             }
-            resto -= valCar;
+            
+            // Calcola la differenza tra importo caricamento e compenso caricamento
+            diffCaricamento = importoCaricamento - valCar;
+            if (diffCaricamento < 0) diffCaricamento = 0; // Non consideriamo differenze negative
         }
 
-        // 4. SPESE AMM (6%)
-        let speseAmm = 0;
-        if (hasSpeseAmm) {
-            speseAmm = totale * 0.06;
-        }
+        // 5. Calcola BASE per il 15% FE
+        // Base = Totale Lavoro - C.Rev - C.Car - DiffRev - DiffCar - C.Ext
+        let basePer15 = totaleLavoro - valRev - valCar - diffRevisione - diffCaricamento - valExt;
 
-        // 5. FE
-        const fe15 = resto * 0.15;
-        let valFE = fe15 + speseAmm;
-        resto -= fe15;
+        // 6. FE 15% - calcolato sulla base
+        const fe15 = basePer15 * 0.15;
+        
+        // 7. C.FE totale = Differenze + Spese Amm + 15%
+        let valFE = diffRevisione + diffCaricamento + speseAmm + fe15;
 
-        // 6. SPLIT RESTO
-        let valAmin = 0, valGalvan = 0, valFH = 0, valBianc = 0;
+        // 8. Resto per lo split = Base - 15%
+        let resto = basePer15 - fe15;
 
-        if (origine === 'BIANC') {
+        // 9. SPLIT RESTO
+        let valAmin = 0, valGalvan = 0, valFH = 0, valBianc = 0, valDeloitte = 0;
+
+        if (origine === 'BIANC' || origine === 'DELOITTE') {
             // Manuale
         } else if (origine === 'ext') {
             valFH = resto * 0.30;
             if (redattore === 'AMIN') valAmin = resto * 0.70;
             else if (redattore === 'GALVAN') valGalvan = resto * 0.70;
             else if (redattore === 'BIANC') valBianc = resto * 0.70;
+            else if (redattore === 'DELOITTE') valDeloitte = resto * 0.70;
         } else if (origine === 'AMIN' && redattore === 'AMIN') {
             valAmin = resto * 0.70;
             valFH = resto * 0.30;
@@ -1510,6 +2596,7 @@
         setCurrencyValue('c_galvan', valGalvan);
         setCurrencyValue('c_fh', valFH);
         setCurrencyValue('c_bianc', valBianc);
+        setCurrencyValue('c_deloitte', valDeloitte);
         setCurrencyValue('c_ext', valExt);
         setCurrencyValue('c_revisore', valRev);
         setCurrencyValue('c_caricamento', valCar);
@@ -1531,10 +2618,13 @@
         const redattore = document.getElementById('selRedattore').value;
         const isExt = origine === 'ext';
         const isBianc = origine === 'BIANC' || redattore === 'BIANC';
+        const isDeloitte = origine === 'DELOITTE' || redattore === 'DELOITTE';
 
         document.getElementById('divNomeEsterno').style.display = isExt ? 'block' : 'none';
         document.getElementById('fieldExt').style.display = isExt ? 'block' : 'none';
         document.getElementById('fieldBianc').style.display = isBianc ? 'block' : 'none';
+        const deoField = document.getElementById('fieldDeloitte');
+        if (deoField) deoField.style.display = isDeloitte ? 'block' : 'none';
     }
 
     function validateForm() {
@@ -1567,12 +2657,81 @@
         document.querySelectorAll('.currency-input').forEach(input => {
             input.value = parseCurrency(input.value);
         });
+        
+        // Converti i valori di revisore e caricamento prima di inviare
+        // Per le percentuali, mantieni il valore numerico semplice
+        // Per gli euro, converti in formato numerico (senza formattazione valuta nel campo)
+        const revType = document.getElementById('revType').value;
+        const revValInput = document.getElementById('revVal');
+        if (revType === 'euro') {
+            // Se è euro, converti in numero (rimuovi formattazione)
+            const val = parseCurrency(revValInput.value);
+            revValInput.value = val.toString().replace('.', ',');
+        } else {
+            // Se è percentuale, mantieni il valore come numero
+            const val = parseFloat(revValInput.value.replace(',', '.')) || 0;
+            revValInput.value = val.toString().replace('.', ',');
+        }
+        
+        const carType = document.getElementById('carType').value;
+        const carValInput = document.getElementById('carVal');
+        if (carType === 'euro') {
+            // Se è euro, converti in numero (rimuovi formattazione)
+            const val = parseCurrency(carValInput.value);
+            carValInput.value = val.toString().replace('.', ',');
+        } else {
+            // Se è percentuale, mantieni il valore come numero
+            const val = parseFloat(carValInput.value.replace(',', '.')) || 0;
+            carValInput.value = val.toString().replace('.', ',');
+        }
+        
         return true;
     }
 
     // Inizializzazione
     toggleExtInput();
     toggleSpese();
+    
+    // Fix per header sticky in modalità EXTRA 1
+    {% if view_mode == 'extra1' %}
+    function updateStickyHeaderTop() {
+        const headerSection = document.querySelector('.header-section');
+        const tableHeaders = document.querySelectorAll('.table-scroll-horizontal .table-expanded thead th');
+        
+        if (headerSection && tableHeaders.length > 0) {
+            // Calcola l'altezza totale: nav (circa 60px) + header-section
+            const navHeight = 60; // Altezza approssimativa della nav floating
+            const headerHeight = headerSection.offsetHeight;
+            const stickyTop = navHeight + headerHeight;
+            
+            // Applica il top a tutti gli header della tabella
+            tableHeaders.forEach(th => {
+                th.style.top = stickyTop + 'px';
+            });
+        }
+    }
+    
+    // Esegui al caricamento e al resize
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateStickyHeaderTop);
+    } else {
+        updateStickyHeaderTop();
+    }
+    
+    window.addEventListener('resize', updateStickyHeaderTop);
+    
+    // Aggiorna anche durante lo scroll per gestire il caso in cui l'header sia sticky
+    let ticking = false;
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                updateStickyHeaderTop();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+    {% endif %}
 
 
 </script>

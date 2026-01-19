@@ -1,11 +1,114 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import func
 from app import db 
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import Lavoro40, Lavoro50, LavoroAdmin, User, Cliente
+from app.models import Lavoro40, Lavoro50, LavoroAdmin, User, Cliente, Bene
 from dateutil.relativedelta import relativedelta
+from pathlib import Path
+
+from app.utils.offerta_docx import generate_offerta_docx, format_date_it_long
+
+
+def _build_beni_list_for_offerta(lavoro: LavoroAdmin) -> list[dict]:
+    beni_list: list[dict] = []
+    if lavoro.beni_list:
+        for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+            beni_list.append({
+                'id': bene.id,
+                'descrizione': bene.descrizione,
+                'valore': bene.valore,
+                'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
+                'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
+                'data_pec': bene.data_pec.strftime('%Y-%m-%d') if getattr(bene, 'data_pec', None) else None
+            })
+    else:
+        if lavoro.bene and ' | ' in lavoro.bene:
+            beni_parts = lavoro.bene.split(' | ')
+            valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
+            importo_per_bene = lavoro.importo_offerta / len(beni_parts) if len(beni_parts) > 0 else lavoro.importo_offerta
+            for desc in beni_parts:
+                beni_list.append({'id': None, 'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None})
+        else:
+            beni_list.append({'id': None, 'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None})
+    return beni_list
+
+
+def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
+    cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
+
+    suffix = "_amm" if getattr(lavoro, 'spese_amministrative', False) else ""
+    template_name = f"off_{tipo}{suffix}.docx"
+    template_path = Path(current_app.root_path) / "doc_templates" / "offerte" / template_name
+    if not template_path.exists():
+        return jsonify({'error': f"Template mancante: {template_name}"}), 404
+
+    beni_list = _build_beni_list_for_offerta(lavoro)
+
+    today = datetime.now().date()
+
+    current_rev = int(getattr(lavoro, 'offerta_revision', 0) or 0)
+    dirty = bool(getattr(lavoro, 'offerta_dirty', False))
+    has_prev_offerta = bool(lavoro.data_offerta)
+
+    rev_to_use = current_rev
+    if has_prev_offerta and dirty:
+        rev_to_use = current_rev + 1
+
+    data_emissione_text = format_date_it_long(today)
+    if rev_to_use > 0:
+        data_emissione_text = f"{data_emissione_text} (rev. {rev_to_use})"
+
+    cliente_nome = lavoro.cliente_nome or (cliente.nome if cliente else "")
+
+    buf = generate_offerta_docx(
+        template_path,
+        cliente_nome=cliente_nome,
+        indirizzo=(cliente.indirizzo if cliente else ""),
+        civico=(cliente.civico if cliente else ""),
+        cap=(cliente.cap if cliente else ""),
+        comune=(cliente.comune if cliente else ""),
+        prov=(cliente.provincia if cliente else ""),
+        piva=(cliente.p_iva if cliente else ""),
+        data_emissione_text=data_emissione_text,
+        importo_caricamento=getattr(lavoro, 'importo_caricamento', 0) or 0,
+        importo_revisione=getattr(lavoro, 'importo_revisione', 0) or 0,
+        beni=beni_list,
+    )
+
+    lavoro.data_offerta = today
+    lavoro.data_offerta_check = True
+    lavoro.offerta_tipo = tipo
+    if has_prev_offerta and dirty:
+        lavoro.offerta_revision = rev_to_use
+    lavoro.offerta_dirty = False
+    db.session.commit()
+
+    mesi = ["", "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
+    data_breve = f"{today.day:02d}-{mesi[today.month]}"
+
+    def sanitize_filename(s: str) -> str:
+        s = (s or "").strip()
+        for ch in ['<', '>', ':', '\"', '/', '\\\\', '|', '?', '*']:
+            s = s.replace(ch, ' ')
+        s = " ".join(s.split())
+        return s
+
+    base_name = f"Prev. First Eng_{sanitize_filename(cliente_nome)}_4.0"
+    if rev_to_use > 0:
+        base_name = f"{base_name} (Rev. {rev_to_use})"
+    download_name = f"{base_name}.docx"
+
+    resp = send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        as_attachment=True,
+        download_name=download_name,
+    )
+    resp.headers["X-Offerta-Data-Breve"] = data_breve
+    resp.headers["X-Offerta-Revision"] = str(rev_to_use)
+    return resp
 
 bp = Blueprint('main', __name__)
 
@@ -146,7 +249,36 @@ def lavori_admin():
     # MODIFICA: .asc() invece di .desc()
     lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
     
-    return render_template('main/lavori_admin.html', lavori=lavori, view_mode=view_mode)
+    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
+    lavori_with_beni = []
+    for lavoro in lavori:
+        beni_list = []
+        if lavoro.beni_list:
+            # Usa i beni dalla tabella separata
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append({
+                    'id': bene.id,
+                    'descrizione': bene.descrizione,
+                    'valore': bene.valore,
+                    'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
+                    'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
+                    'data_pec': bene.data_pec
+                })
+        else:
+            # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
+            if lavoro.bene and ' | ' in lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ')
+                valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
+                importo_per_bene = lavoro.importo_offerta / len(beni_parts) if len(beni_parts) > 0 else lavoro.importo_offerta
+                for desc in beni_parts:
+                    beni_list.append({'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene})
+            else:
+                # Un solo bene
+                beni_list.append({'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta})
+        
+        lavori_with_beni.append({'lavoro': lavoro, 'beni': beni_list})
+    
+    return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode=view_mode)
     
 # NUOVA ROTTA SPECIALE (Sostituto Firma - Solo per Extra 2)
 @bp.route('/lavori_focus')
@@ -157,7 +289,151 @@ def lavori_focus():
     
     lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
     
-    return render_template('main/lavori_admin.html', lavori=lavori, view_mode='focus_special')
+    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
+    lavori_with_beni = []
+    for lavoro in lavori:
+        beni_list = []
+        if lavoro.beni_list:
+            # Usa i beni dalla tabella separata
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append({
+                    'id': bene.id,
+                    'descrizione': bene.descrizione,
+                    'valore': bene.valore,
+                    'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
+                    'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
+                    'data_pec': bene.data_pec
+                })
+        else:
+            # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
+            if lavoro.bene and ' | ' in lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ')
+                valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
+                importo_per_bene = lavoro.importo_offerta / len(beni_parts) if len(beni_parts) > 0 else lavoro.importo_offerta
+                for desc in beni_parts:
+                    beni_list.append({'id': None, 'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec})
+            else:
+                # Un solo bene
+                beni_list.append({'id': None, 'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec})
+        
+        lavori_with_beni.append({'lavoro': lavoro, 'beni': beni_list})
+    
+    return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode='focus_special')
+
+@bp.route('/api/lavoro/<int:id>', methods=['GET'])
+@login_required
+def get_lavoro_admin(id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    lavoro = LavoroAdmin.query.get_or_404(id)
+    
+    # Debug: verifica valori letti dal database
+    if lavoro.has_revisore:
+        print(f"[DEBUG API] Revisore letto - tipo: {getattr(lavoro, 'rev_type', 'N/A')}, valore: {getattr(lavoro, 'rev_value', 'N/A')}")
+    if lavoro.has_caricamento:
+        print(f"[DEBUG API] Caricamento letto - tipo: {getattr(lavoro, 'car_type', 'N/A')}, valore: {getattr(lavoro, 'car_value', 'N/A')}")
+    cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
+    
+    # Recupera i beni
+    beni_list = []
+    if lavoro.beni_list:
+        for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+            beni_list.append({
+                'id': bene.id,
+                'descrizione': bene.descrizione,
+                'valore': bene.valore,
+                'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
+                'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
+                'data_pec': bene.data_pec.strftime('%Y-%m-%d') if getattr(bene, 'data_pec', None) else None
+            })
+    else:
+        # Fallback: parsare dal campo concatenato
+        if lavoro.bene and ' | ' in lavoro.bene:
+            beni_parts = lavoro.bene.split(' | ')
+            valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
+            importo_per_bene = lavoro.importo_offerta / len(beni_parts) if len(beni_parts) > 0 else lavoro.importo_offerta
+            for desc in beni_parts:
+                beni_list.append({'id': None, 'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None})
+        else:
+            beni_list.append({'id': None, 'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None})
+    
+    return jsonify({
+        'id': lavoro.id,
+        'numero': lavoro.numero,
+        'cliente': {
+            'nome': lavoro.cliente_nome,
+            'p_iva': cliente.p_iva if cliente else '',
+            'indirizzo': cliente.indirizzo if cliente else '',
+            'civico': cliente.civico if cliente else '',
+            'cap': cliente.cap if cliente else '',
+            'comune': cliente.comune if cliente else '',
+            'provincia': cliente.provincia if cliente else '',
+            'pec': cliente.pec if cliente else ''
+        },
+        'beni': beni_list,
+        'importo_offerta': lavoro.importo_offerta,
+        'origine': lavoro.origine or '',
+        'nome_esterno': lavoro.nome_esterno or '',
+        'redattore': lavoro.redattore or '',
+        'collaboratore': lavoro.collaboratore or '',
+        'has_revisore': lavoro.has_revisore,
+        'has_caricamento': lavoro.has_caricamento,
+        'nome_revisore': lavoro.nome_revisore or '',
+        'nome_caricamento': lavoro.nome_caricamento or '',
+        'rev_type': getattr(lavoro, 'rev_type', 'perc') if lavoro.has_revisore else 'perc',
+        'rev_value': float(getattr(lavoro, 'rev_value', 0)) if lavoro.has_revisore else 0,
+        'car_type': getattr(lavoro, 'car_type', 'perc') if lavoro.has_caricamento else 'perc',
+        'car_value': float(getattr(lavoro, 'car_value', 0)) if lavoro.has_caricamento else 0,
+        'importo_revisione': getattr(lavoro, 'importo_revisione', 0) if lavoro.has_revisore else 0,
+        'importo_caricamento': getattr(lavoro, 'importo_caricamento', 0) if lavoro.has_caricamento else 0,
+        'spese_amministrative': getattr(lavoro, 'spese_amministrative', False),
+        'offerta_revision': getattr(lavoro, 'offerta_revision', 0),
+        'offerta_dirty': getattr(lavoro, 'offerta_dirty', False),
+        'offerta_tipo': getattr(lavoro, 'offerta_tipo', '') or '',
+        'c_fe': lavoro.c_fe,
+        'c_amin': lavoro.c_amin,
+        'c_galvan': lavoro.c_galvan,
+        'c_fh': lavoro.c_fh,
+        'c_bianc': lavoro.c_bianc,
+        'c_deloitte': getattr(lavoro, 'c_deloitte', 0.0),
+        'c_ext': lavoro.c_ext,
+        'c_revisore': lavoro.c_revisore,
+        'c_caricamento': lavoro.c_caricamento,
+        'data_offerta': lavoro.data_offerta.strftime('%Y-%m-%d') if lavoro.data_offerta else None,
+        'data_firma': lavoro.data_firma.strftime('%Y-%m-%d') if lavoro.data_firma else None,
+        'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None,
+        'firma_esito': getattr(lavoro, 'firma_esito', '') or '',
+        'stato': lavoro.stato,
+        'f_fe': lavoro.f_fe or '',
+        'f_amin': lavoro.f_amin or '',
+        'f_galvan': lavoro.f_galvan or '',
+        'f_fh': lavoro.f_fh or '',
+        'f_bianc': lavoro.f_bianc or '',
+        'f_deloitte': getattr(lavoro, 'f_deloitte', '') or '',
+        'f_ext': lavoro.f_ext or '',
+        'f_revisore': lavoro.f_revisore or '',
+        'f_caricamento': lavoro.f_caricamento or ''
+    })
+
+
+@bp.route('/api/lavoro/<int:id>/genera_offerta', methods=['POST'])
+@login_required
+def genera_offerta(id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    lavoro = LavoroAdmin.query.get_or_404(id)
+    cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
+
+    payload = request.get_json(silent=True) or {}
+    tipo = (payload.get('tipo') or '').strip().lower()  # 'old' | 'iper'
+    if not tipo:
+        tipo = (getattr(lavoro, 'offerta_tipo', '') or '').strip().lower()
+    if tipo not in ('old', 'iper'):
+        return jsonify({'error': 'Tipo offerta non valido'}), 400
+
+    return _generate_offerta_response(lavoro=lavoro, tipo=tipo)
 
 @bp.route('/add_lavoro_admin', methods=['POST'])
 @login_required
@@ -183,11 +459,24 @@ def add_lavoro_admin():
         db.session.add(cliente)
         db.session.flush() # Per avere l'ID subito
     
-    # 2. NUMERO SEQUENZIALE
-    last = LavoroAdmin.query.order_by(LavoroAdmin.numero.desc()).first()
-    new_num = (last.numero + 1) if (last and last.numero) else 1
+    # 2. VERIFICA SE È UN UPDATE O UN NUOVO LAVORO
+    lavoro_id = request.form.get('lavoro_id')
+    is_update = lavoro_id and lavoro_id.strip()
+    
+    if is_update:
+        # UPDATE: recupera il lavoro esistente
+        lavoro = LavoroAdmin.query.get_or_404(int(lavoro_id))
+        new_num = lavoro.numero  # Mantieni lo stesso numero
+        had_prev_offerta = bool(lavoro.data_offerta)
+    else:
+        # NUOVO: calcola il nuovo numero
+        last = LavoroAdmin.query.order_by(LavoroAdmin.numero.desc()).first()
+        new_num = (last.numero + 1) if (last and last.numero) else 1
+        lavoro = None
 
-    # 3. CREAZIONE LAVORO
+    download_offerta = (request.args.get('download_offerta') == '1')
+
+    # 3. CREAZIONE/AGGIORNAMENTO LAVORO
     try:
         # Helper per convertire float
         def to_float(val):
@@ -200,14 +489,17 @@ def add_lavoro_admin():
                 return 0.0
 
         # --- GESTIONE BENI MULTIPLI ---
-        beni_descrizioni = []
+        beni_data = []  # Lista di tuple (bene_id, descrizione, valore, importo_offerta)
         valore_totale_beni = 0.0
+        importo_totale_offerta = 0.0
         
         # Itera sui beni inviati dal form (beni[0], beni[1], ecc.)
         i = 0
         while True:
             desc_key = f'beni[{i}][descrizione]'
             val_key = f'beni[{i}][valore]'
+            imp_key = f'beni[{i}][importo_offerta]'
+            id_key = f'beni[{i}][id]'
             
             # Se non esiste la chiave per l'indice corrente, interrompi il ciclo
             if desc_key not in request.form:
@@ -215,20 +507,25 @@ def add_lavoro_admin():
                 
             descrizione = request.form.get(desc_key, '').strip()
             valore_str = request.form.get(val_key, '0')
+            importo_str = request.form.get(imp_key, '0')
+            bene_id_str = request.form.get(id_key, '').strip()
             
-            # Converti valore
+            # Converti valori
             valore = to_float(valore_str)
+            importo_offerta = to_float(importo_str)
+            bene_id = int(bene_id_str) if bene_id_str.isdigit() else None
             
             if descrizione:
-                beni_descrizioni.append(descrizione)
+                beni_data.append((bene_id, descrizione, valore, importo_offerta))
                 valore_totale_beni += valore
+                importo_totale_offerta += importo_offerta
                 
             i += 1
 
-        # Genera stringa concatenata (es. "Appartamento A | Box Auto")
-        # Se non ci sono beni multipli, tenta un fallback sul campo singolo 'bene' vecchio stile, se presente
-        if beni_descrizioni:
-            bene_concatenato = ' | '.join(beni_descrizioni)
+        # Genera stringa concatenata per retrocompatibilità (es. "Appartamento A | Box Auto")
+        if beni_data:
+            # beni_data: (bene_id, descrizione, valore, importo_offerta)
+            bene_concatenato = ' | '.join([b[1] for b in beni_data])
         else:
             bene_concatenato = request.form.get('bene', '') # Fallback
 
@@ -236,44 +533,182 @@ def add_lavoro_admin():
         if valore_totale_beni == 0.0 and request.form.get('valore_bene'):
             valore_totale_beni = to_float(request.form.get('valore_bene'))
 
-        # Creazione Oggetto DB
-        nuovo = LavoroAdmin(
-            numero=new_num,
-            cliente_id=cliente.id,
-            cliente_nome=nome_cliente,
+        if is_update:
+            # AGGIORNA LAVORO ESISTENTE
+            lavoro.numero = new_num
+            lavoro.cliente_id = cliente.id
+            lavoro.cliente_nome = nome_cliente
+            lavoro.bene = bene_concatenato
+            lavoro.valore_bene = valore_totale_beni
+            lavoro.importo_offerta = to_float(request.form.get('importo_offerta'))
+            lavoro.origine = request.form.get('origine')
+            lavoro.nome_esterno = request.form.get('nome_esterno')
+            lavoro.redattore = request.form.get('redattore')
+            lavoro.collaboratore = request.form.get('collaboratore')
+            lavoro.has_revisore = (request.form.get('has_revisore') == 'on')
+            lavoro.has_caricamento = (request.form.get('has_caricamento') == 'on')
+            lavoro.spese_amministrative = (request.form.get('spese_amministrative') == 'on')
+            # Qualsiasi salvataggio dopo emissione offerta rende l’offerta "da revisionare"
+            if had_prev_offerta:
+                lavoro.offerta_dirty = True
+            lavoro.nome_revisore = request.form.get('nome_revisore') if lavoro.has_revisore else None
+            lavoro.nome_caricamento = request.form.get('nome_caricamento') if lavoro.has_caricamento else None
             
-            # --- CAMPI MODIFICATI ---
-            bene=bene_concatenato, 
-            valore_bene=valore_totale_beni,
-            # ------------------------
-
-            importo_offerta=to_float(request.form.get('importo_offerta')),
+            # Salva valori originali revisore e caricamento
+            if lavoro.has_revisore:
+                rev_type_val = request.form.get('rev_type', 'perc')
+                rev_val_val = to_float(request.form.get('rev_val', '0'))
+                lavoro.rev_type = rev_type_val
+                lavoro.rev_value = rev_val_val
+                print(f"[DEBUG UPDATE] Revisore salvato - tipo: {rev_type_val}, valore: {rev_val_val}")
+            else:
+                lavoro.rev_type = 'perc'
+                lavoro.rev_value = 0.0
+                
+            if lavoro.has_caricamento:
+                car_type_val = request.form.get('car_type', 'perc')
+                car_val_val = to_float(request.form.get('car_val', '0'))
+                lavoro.car_type = car_type_val
+                lavoro.car_value = car_val_val
+                print(f"[DEBUG UPDATE] Caricamento salvato - tipo: {car_type_val}, valore: {car_val_val}")
+            else:
+                lavoro.car_type = 'perc'
+                lavoro.car_value = 0.0
             
-            origine=request.form.get('origine'),
-            nome_esterno=request.form.get('nome_esterno'),
-            redattore=request.form.get('redattore'),
-            collaboratore=request.form.get('collaboratore'),
+            lavoro.c_fe = to_float(request.form.get('c_fe'))
+            lavoro.c_amin = to_float(request.form.get('c_amin'))
+            lavoro.c_galvan = to_float(request.form.get('c_galvan'))
+            lavoro.c_fh = to_float(request.form.get('c_fh'))
+            lavoro.c_bianc = to_float(request.form.get('c_bianc'))
+            lavoro.c_deloitte = to_float(request.form.get('c_deloitte'))
+            lavoro.c_ext = to_float(request.form.get('c_ext'))
+            lavoro.c_revisore = to_float(request.form.get('c_revisore'))
+            lavoro.c_caricamento = to_float(request.form.get('c_caricamento'))
+            
+            # Salva gli importi per l'offerta al cliente (sezione Ordine di Lavoro)
+            lavoro.importo_revisione = to_float(request.form.get('importo_revisione', '0'))
+            lavoro.importo_caricamento = to_float(request.form.get('importo_caricamento', '0'))
+            
+            # Aggiorna importo_offerta totale
+            lavoro.importo_offerta = importo_totale_offerta
+            
+            # Upsert beni: mantiene gli ID e quindi stato/data_pec per bene
+            existing = {b.id: b for b in lavoro.beni_list}
+            seen_ids = set()
 
-            # Checkbox Ruoli
-            has_revisore=(request.form.get('has_revisore') == 'on'),
-            has_caricamento=(request.form.get('has_caricamento') == 'on'),
+            for ordine, (bene_id, descrizione, valore, importo_off) in enumerate(beni_data):
+                if bene_id and bene_id in existing:
+                    b = existing[bene_id]
+                    b.descrizione = descrizione
+                    b.valore = valore
+                    b.importo_offerta = importo_off
+                    b.ordine = ordine
+                    seen_ids.add(bene_id)
+                else:
+                    b = Bene(
+                        lavoro_id=lavoro.id,
+                        descrizione=descrizione,
+                        valore=valore,
+                        importo_offerta=importo_off,
+                        ordine=ordine
+                    )
+                    db.session.add(b)
 
-            # Compensi
-            c_fe=to_float(request.form.get('c_fe')),
-            c_amin=to_float(request.form.get('c_amin')),
-            c_galvan=to_float(request.form.get('c_galvan')),
-            c_fh=to_float(request.form.get('c_fh')),
-            c_bianc=to_float(request.form.get('c_bianc')),
-            c_ext=to_float(request.form.get('c_ext')),
-            c_revisore=to_float(request.form.get('c_revisore')),
-            c_caricamento=to_float(request.form.get('c_caricamento')),
+            # Elimina beni rimossi
+            for b in lavoro.beni_list:
+                if b.id not in seen_ids and b.id in existing:
+                    db.session.delete(b)
+            
+            db.session.commit()
+            
+            # Debug: verifica valori salvati dopo update
+            lavoro_refreshed = LavoroAdmin.query.get(lavoro.id)
+            if lavoro_refreshed.has_revisore:
+                print(f"[DEBUG UPDATE] Revisore verificato dopo commit - tipo: {lavoro_refreshed.rev_type}, valore: {lavoro_refreshed.rev_value}")
+            if lavoro_refreshed.has_caricamento:
+                print(f"[DEBUG UPDATE] Caricamento verificato dopo commit - tipo: {lavoro_refreshed.car_type}, valore: {lavoro_refreshed.car_value}")
+            
+            # Se richiesto, genera e scarica subito la revisione offerta (senza passare dal menu "Modifica")
+            if download_offerta:
+                # Permetti override del tipo via querystring (per casi legacy dove offerta_tipo non è valorizzato)
+                tipo = (request.args.get('tipo') or '').strip().lower() or (getattr(lavoro, 'offerta_tipo', '') or '').strip().lower()
+                if tipo not in ('old', 'iper'):
+                    return jsonify({'error': 'Tipo offerta non impostato (genera la prima offerta prima).'}), 400
+                return _generate_offerta_response(lavoro=lavoro, tipo=tipo)
 
-            stato='In corso' # Default
-        )
-        
-        db.session.add(nuovo)
-        db.session.commit()
-        flash('Lavoro Admin aggiunto con successo!', 'success')
+            flash(f'Lavoro #{lavoro.numero} modificato con successo!', 'success')
+        else:
+            # CREA NUOVO LAVORO
+            nuovo = LavoroAdmin(
+                numero=new_num,
+                cliente_id=cliente.id,
+                cliente_nome=nome_cliente,
+                bene=bene_concatenato, 
+                valore_bene=valore_totale_beni,
+                importo_offerta=importo_totale_offerta,
+                origine=request.form.get('origine'),
+                nome_esterno=request.form.get('nome_esterno'),
+                redattore=request.form.get('redattore'),
+                collaboratore=request.form.get('collaboratore'),
+                has_revisore=(request.form.get('has_revisore') == 'on'),
+                has_caricamento=(request.form.get('has_caricamento') == 'on'),
+                spese_amministrative=(request.form.get('spese_amministrative') == 'on'),
+                nome_revisore=request.form.get('nome_revisore') if (request.form.get('has_revisore') == 'on') else None,
+                nome_caricamento=request.form.get('nome_caricamento') if (request.form.get('has_caricamento') == 'on') else None,
+                rev_type=request.form.get('rev_type', 'perc') if (request.form.get('has_revisore') == 'on') else 'perc',
+                rev_value=to_float(request.form.get('rev_val', '0')) if (request.form.get('has_revisore') == 'on') else 0.0,
+                car_type=request.form.get('car_type', 'perc') if (request.form.get('has_caricamento') == 'on') else 'perc',
+                car_value=to_float(request.form.get('car_val', '0')) if (request.form.get('has_caricamento') == 'on') else 0.0,
+                c_fe=to_float(request.form.get('c_fe')),
+                c_amin=to_float(request.form.get('c_amin')),
+                c_galvan=to_float(request.form.get('c_galvan')),
+                c_fh=to_float(request.form.get('c_fh')),
+                c_bianc=to_float(request.form.get('c_bianc')),
+                c_deloitte=to_float(request.form.get('c_deloitte')),
+                c_ext=to_float(request.form.get('c_ext')),
+                c_revisore=to_float(request.form.get('c_revisore')),
+                c_caricamento=to_float(request.form.get('c_caricamento')),
+                importo_revisione=to_float(request.form.get('importo_revisione', '0')),
+                importo_caricamento=to_float(request.form.get('importo_caricamento', '0')),
+                stato='In corso' # Default
+            )
+            
+            # Debug: verifica valori prima di salvare
+            has_rev = (request.form.get('has_revisore') == 'on')
+            has_car = (request.form.get('has_caricamento') == 'on')
+            if has_rev:
+                rev_t = request.form.get('rev_type', 'perc')
+                rev_v = to_float(request.form.get('rev_val', '0'))
+                print(f"[DEBUG CREATE] Revisore da salvare - tipo: {rev_t}, valore: {rev_v}")
+            if has_car:
+                car_t = request.form.get('car_type', 'perc')
+                car_v = to_float(request.form.get('car_val', '0'))
+                print(f"[DEBUG CREATE] Caricamento da salvare - tipo: {car_t}, valore: {car_v}")
+            
+            db.session.add(nuovo)
+            db.session.flush()  # Per avere l'ID del lavoro
+
+            # Salva i beni come record separati
+            for ordine, (_bene_id, descrizione, valore, importo_off) in enumerate(beni_data):
+                bene = Bene(
+                    lavoro_id=nuovo.id,
+                    descrizione=descrizione,
+                    valore=valore,
+                    importo_offerta=importo_off,
+                    ordine=ordine
+                )
+                db.session.add(bene)
+            
+            db.session.commit()
+            
+            # Debug: verifica valori salvati dopo commit
+            nuovo_refreshed = LavoroAdmin.query.get(nuovo.id)
+            if nuovo_refreshed.has_revisore:
+                print(f"[DEBUG CREATE] Revisore verificato dopo commit - tipo: {nuovo_refreshed.rev_type}, valore: {nuovo_refreshed.rev_value}")
+            if nuovo_refreshed.has_caricamento:
+                print(f"[DEBUG CREATE] Caricamento verificato dopo commit - tipo: {nuovo_refreshed.car_type}, valore: {nuovo_refreshed.car_value}")
+            
+            flash('Lavoro Admin aggiunto con successo!', 'success')
 
     except Exception as e:
         db.session.rollback()
@@ -314,12 +749,57 @@ def update_lavoro_field(id):
     elif field == 'data_firma_check':
         lavoro.data_firma_check = value
     elif field == 'data_firma':
-        if value: lavoro.data_firma = datetime.strptime(value, '%Y-%m-%d').date()
-        else: lavoro.data_firma = None
+        if value:
+            lavoro.data_firma = datetime.strptime(value, '%Y-%m-%d').date()
+            lavoro.data_firma_check = True
+        else:
+            lavoro.data_firma = None
+            lavoro.data_firma_check = False
+        lavoro.firma_esito = None
+    elif field == 'firma_esito':
+        # 'OK' | 'AUTORIZZ.' | '' (svuota)
+        val = (value or '').strip()
+        lavoro.firma_esito = val if val else None
+        if lavoro.firma_esito:
+            lavoro.data_firma = None
+            lavoro.data_firma_check = False
     elif field == 'data_pec':
         if value: lavoro.data_pec = datetime.strptime(value, '%Y-%m-%d').date()
     
     # Eventuale gestione altri campi inline...
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/update_bene_field/<int:id>', methods=['POST'])
+@login_required
+def update_bene_field(id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    bene = Bene.query.get_or_404(id)
+    data = request.json or {}
+    field = data.get('field')
+    value = data.get('value')
+
+    if field == 'stato':
+        bene.stato = value or 'vuoto'
+    elif field == 'data_pec':
+        if value:
+            bene.data_pec = datetime.strptime(value, '%Y-%m-%d').date()
+        else:
+            bene.data_pec = None
+    else:
+        return jsonify({'error': 'Campo non supportato'}), 400
+
+    # Se l'offerta è già stata generata, qualsiasi modifica post-emissione rende l'offerta "da revisionare"
+    try:
+        lavoro = bene.lavoro
+        if lavoro and getattr(lavoro, 'data_offerta', None):
+            lavoro.offerta_dirty = True
+    except Exception:
+        pass
 
     db.session.commit()
     return jsonify({'success': True})
@@ -332,10 +812,23 @@ def delete_lavoro_admin(id):
         return redirect(url_for('main.dashboard'))
     
     lavoro = LavoroAdmin.query.get_or_404(id)
+    
+    # Elimina i beni associati al lavoro
+    for bene in lavoro.beni_list:
+        db.session.delete(bene)
+    
+    # Elimina il lavoro
     db.session.delete(lavoro)
     db.session.commit()
     
-    flash(f'Lavoro #{id} eliminato con successo.', 'success')
+    # Rinumerazione sequenziale di tutti i lavori rimanenti
+    lavori_rimanenti = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+    for idx, lav in enumerate(lavori_rimanenti, start=1):
+        lav.numero = idx
+    
+    db.session.commit()
+    
+    flash(f'Lavoro #{id} eliminato con successo. Numerazione aggiornata.', 'success')
     return redirect(url_for('main.lavori_admin'))
 
 
@@ -561,5 +1054,39 @@ def api_esterni():
         .distinct().limit(10).all()
     
     # Restituisce una lista semplice di stringhe ['Nome1', 'Nome2']
+    results = [n[0] for n in nomi]
+    return jsonify(results)
+
+@bp.route('/api/revisori')
+@login_required
+def api_revisori():
+    query = request.args.get('q', '')
+    if len(query) < 1:
+        return jsonify([])
+    
+    # Cerca i nomi univoci nella colonna nome_revisore
+    nomi = db.session.query(LavoroAdmin.nome_revisore)\
+        .filter(LavoroAdmin.nome_revisore.ilike(f'%{query}%'))\
+        .filter(LavoroAdmin.nome_revisore != None)\
+        .filter(LavoroAdmin.nome_revisore != '')\
+        .distinct().limit(10).all()
+    
+    results = [n[0] for n in nomi]
+    return jsonify(results)
+
+@bp.route('/api/caricamenti')
+@login_required
+def api_caricamenti():
+    query = request.args.get('q', '')
+    if len(query) < 1:
+        return jsonify([])
+    
+    # Cerca i nomi univoci nella colonna nome_caricamento
+    nomi = db.session.query(LavoroAdmin.nome_caricamento)\
+        .filter(LavoroAdmin.nome_caricamento.ilike(f'%{query}%'))\
+        .filter(LavoroAdmin.nome_caricamento != None)\
+        .filter(LavoroAdmin.nome_caricamento != '')\
+        .distinct().limit(10).all()
+    
     results = [n[0] for n in nomi]
     return jsonify(results)

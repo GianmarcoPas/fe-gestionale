@@ -19,3 +19,5 @@ SQLAlchemy==2.0.45
 typing_extensions==4.15.0
 Werkzeug==3.1.4
 WTForms==3.2.1
+lxml==6.0.2
+python-docx==1.2.0

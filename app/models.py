@@ -29,6 +29,19 @@ class Cliente(db.Model):
     provincia = db.Column(db.String(5))
     pec = db.Column(db.String(100))
 
+# --- BENI (Tabella separata per beni multipli) ---
+class Bene(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    lavoro_id = db.Column(db.Integer, db.ForeignKey('lavoro_admin.id'), nullable=False)
+    descrizione = db.Column(db.Text, nullable=False)
+    valore = db.Column(db.Float, default=0.0)
+    importo_offerta = db.Column(db.Float, default=0.0)  # Importo offerta per questo bene
+    stato = db.Column(db.String(50), default='vuoto')  # Stato per bene
+    data_pec = db.Column(db.Date, nullable=True)  # Data PEC per bene
+    ordine = db.Column(db.Integer, default=0)  # Per mantenere l'ordine di inserimento
+    
+    lavoro = db.relationship('LavoroAdmin', backref='beni_list')
+
 # --- LAVORI ADMIN (NUOVO) ---
 class LavoroAdmin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,7 +52,7 @@ class LavoroAdmin(db.Model):
     cliente_rel = db.relationship('Cliente', backref='lavori')
     cliente_nome = db.Column(db.String(150)) 
 
-    # Ordine di Lavoro
+    # Ordine di Lavoro (mantenuto per retrocompatibilità)
     bene = db.Column(db.Text)
     valore_bene = db.Column(db.Float, default=0.0)
     importo_offerta = db.Column(db.Float, default=0.0)
@@ -54,13 +67,36 @@ class LavoroAdmin(db.Model):
     data_firma_check = db.Column(db.Boolean, default=False)
     data_firma = db.Column(db.Date, nullable=True)
     data_pec = db.Column(db.Date, nullable=True)
+    firma_esito = db.Column(db.String(20))  # 'OK' | 'AUTORIZZ.' oppure None
     
     # Stato
     stato = db.Column(db.String(50), default='vuoto') 
 
+    # Offerte: revisione e "dirty" dopo modifiche
+    offerta_revision = db.Column(db.Integer, default=0)  # 0 = prima emissione (senza rev.)
+    offerta_dirty = db.Column(db.Boolean, default=False)  # True se il lavoro è stato modificato dopo l'ultima offerta
+    offerta_tipo = db.Column(db.String(10))  # 'old' | 'iper'
+
     # Checkbox Ruoli
     has_revisore = db.Column(db.Boolean, default=False)
     has_caricamento = db.Column(db.Boolean, default=False)
+
+    # Spese amministrative (flag salvato a DB)
+    spese_amministrative = db.Column(db.Boolean, default=False)
+    
+    # Nomi revisore e caricamento
+    nome_revisore = db.Column(db.String(100))
+    nome_caricamento = db.Column(db.String(100))
+    
+    # Importi per offerta al cliente (sezione Ordine di Lavoro)
+    importo_revisione = db.Column(db.Float, default=0.0)  # Importo nell'offerta
+    importo_caricamento = db.Column(db.Float, default=0.0)  # Importo nell'offerta
+    
+    # Valori originali per revisore e caricamento (per modifica - sezione Compensi)
+    rev_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
+    rev_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
+    car_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
+    car_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
 
     # Compensi
     c_fe = db.Column(db.Float, default=0.0)
@@ -68,6 +104,7 @@ class LavoroAdmin(db.Model):
     c_galvan = db.Column(db.Float, default=0.0)
     c_fh = db.Column(db.Float, default=0.0)
     c_bianc = db.Column(db.Float, default=0.0)
+    c_deloitte = db.Column(db.Float, default=0.0)
     c_ext = db.Column(db.Float, default=0.0)
     c_revisore = db.Column(db.Float, default=0.0)
     c_caricamento = db.Column(db.Float, default=0.0)
@@ -78,6 +115,7 @@ class LavoroAdmin(db.Model):
     f_galvan = db.Column(db.String(50))
     f_fh = db.Column(db.String(50))
     f_bianc = db.Column(db.String(50))
+    f_deloitte = db.Column(db.String(50))
     f_ext = db.Column(db.String(50))
     f_revisore = db.Column(db.String(50))
     f_caricamento = db.Column(db.String(50))
