@@ -19,7 +19,7 @@
                 <input type="radio" name="view_mode" value="standard" {% if current_user.admin_view_mode == 'standard' %}checked{% endif %}>
                 <div class="mode-card">
                     <div class="icon"><i class="bi bi-layout-sidebar-inset-reverse"></i></div>
-                    <strong>Standard (Default)</strong>
+                    <strong>Standard</strong>
                     <small>Fatture e Compensi in pannello laterale a scomparsa.</small>
                 </div>
             </label>
@@ -36,9 +36,9 @@
             <label class="mode-option">
                 <input type="radio" name="view_mode" value="extra2" {% if current_user.admin_view_mode == 'extra2' %}checked{% endif %}>
                 <div class="mode-card">
-                    <div class="icon"><i class="bi bi-eye-fill"></i></div>
-                    <strong>Extra 2 (Focus)</strong>
-                    <small>Attiva sezione "Focus" nella barra in alto al posto della Firma.</small>
+                    <div class="icon"><i class="bi bi-receipt-cutoff"></i></div>
+                    <strong>Extra 2 (Overlay)</strong>
+                    <small>Visualizza compensi e fatture nella tabella principale.</small>
                 </div>
             </label>
 

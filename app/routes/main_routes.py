@@ -803,6 +803,40 @@ def update_bene_field(id):
 
     db.session.commit()
     return jsonify({'success': True})
+
+
+@bp.route('/update_fattura/<int:id>', methods=['POST'])
+@login_required
+def update_fattura(id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    lavoro = LavoroAdmin.query.get_or_404(id)
+    data = request.json
+    fattura_type = data.get('fattura_type')
+    value = data.get('value')
+    
+    # Mappa il tipo di fattura al campo del modello
+    fattura_field_map = {
+        'fe': 'f_fe',
+        'amin': 'f_amin',
+        'galvan': 'f_galvan',
+        'fh': 'f_fh',
+        'bianc': 'f_bianc',
+        'deloitte': 'f_deloitte',
+        'ext': 'f_ext',
+        'revisore': 'f_revisore',
+        'caricamento': 'f_caricamento'
+    }
+    
+    if fattura_type not in fattura_field_map:
+        return jsonify({'error': 'Tipo fattura non supportato'}), 400
+    
+    field_name = fattura_field_map[fattura_type]
+    setattr(lavoro, field_name, value)
+    
+    db.session.commit()
+    return jsonify({'success': True})
     
 @bp.route('/delete_lavoro_admin/<int:id>', methods=['POST'])
 @login_required

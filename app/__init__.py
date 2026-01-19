@@ -40,7 +40,7 @@ def create_app():
         
         # Crea utenti admin/base di default se non esistono
         if not User.query.filter_by(username='Carmela').first():
-            admin = User(username='Carmela', role='admin', admin_view_mode='standard')
+            admin = User(username='Carmela', role='admin', admin_view_mode='extra2')
             admin.set_password('Ciao1234')
             db.session.add(admin)
         

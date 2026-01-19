@@ -18,6 +18,7 @@
     /* 2. Assicuriamo che il main-content non forzi larghezze strane */
     .main-content {
         max-width: 100vw !important; /* Forza a non superare la larghezza finestra */
+        padding-top: 0 !important; /* Rimuoviamo il padding-top per avere più spazio */
         padding-left: 10px !important; 
         padding-right: 10px !important;
         box-sizing: border-box; /* Include il padding nel calcolo larghezza */
@@ -36,6 +37,9 @@
         position: relative !important; 
         overflow: visible !important; 
         padding-bottom: 0 !important; 
+    }
+    /* Evita spazio “vuoto” extra in extra1 (scroll) */
+    .table-container:not(.table-scroll-horizontal) {
         min-height: 600px;
     }
 
@@ -55,19 +59,88 @@
     /* ECCEZIONE EXTRA 1: Scroll orizzontale interno */
     .table-scroll-horizontal {
         overflow-x: auto !important;
-        /* Assicura che lo sticky funzioni correttamente */
-        position: relative;
+        /* NON usare position: relative per permettere a sticky di funzionare rispetto al viewport */
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        padding-bottom: 0 !important;
     }
     
-    /* Fix per header sticky in modalità EXTRA 1 */
+    /* Assicura che il container extra1 non abbia padding che sposta l'intestazione */
+    #extra1TableScroll {
+        padding: 0 !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Rimuovi il padding della card per extra1 */
+    #extra1TableScroll.oneui-card {
+        padding: 0 !important;
+    }
+    
+    /* EXTRA 1: sticky header come standard, ma con top dinamico sotto l'header pagina */
+    .table-scroll-horizontal .table-expanded {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Extra1: header NON sticky (gestito da JavaScript con header fisso) */
     .table-scroll-horizontal .table-expanded thead th {
-        position: -webkit-sticky !important;
-        position: sticky !important;
-        top: 0 !important; /* Verrà calcolato dinamicamente via JavaScript */
+        position: static !important; /* Non sticky, gestito da JS */
         z-index: 10 !important;
         background-color: #F0F2F5 !important;
         color: #000 !important;
-        border-bottom: 3px solid #bbb !important;
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
+        background-clip: padding-box;
+        height: 50px !important;
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+    }
+    
+    /* Header fisso per extra1 */
+    #extra1StickyHeader {
+        position: fixed;
+        z-index: 100;
+        display: none;
+        background: #F0F2F5;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    #extra1StickyHeaderScroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        /* Nascondi la scrollbar */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE e Edge */
+    }
+    
+    #extra1StickyHeaderScroll::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    
+    /* Nel header fisso extra1: i 5 th "col-fixed" devono restare sticky (left),
+       gli altri possono restare static. */
+    #extra1StickyHeader .table-expanded thead th {
+        position: static !important;
+        background-color: #F0F2F5 !important;
+        color: #000 !important;
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
+        background-clip: padding-box;
+        height: 50px !important;
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+    }
+
+    #extra1StickyHeader .table-expanded thead th.col-fixed {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+        background-color: #F0F2F5 !important;
     }
     
     /* Le colonne fisse devono avere z-index maggiore per stare sopra le altre */
@@ -101,13 +174,22 @@
         box-sizing: border-box; 
     }
 
+    /* Standard + Extra1: separatori più sottili (lavori e beni) */
+    .lavori-admin-standard-table tbody td {
+        border-bottom: 1px solid #ddd !important;
+    }
+    .table-scroll-horizontal .table-expanded tbody td {
+        /* in extra1 la linea è un box-shadow: qui solo per coerenza (colore) */
+        border-bottom: none !important;
+    }
+
     /* ============================================================
        3. HEADER TABLE (MAIN TABLE)
        ============================================================ */
     .table-container > .oneui-table > thead > tr > th {
         position: -webkit-sticky;
         position: sticky;
-        top: 100px; 
+        top: 160px; /* Spazio per header-section con barra ricerca/filtri */
         z-index: 10; 
         background-color: #F0F2F5 !important; 
         color: #000 !important;
@@ -117,6 +199,170 @@
         vertical-align: middle !important;
         box-sizing: border-box;
         margin: 0 !important;
+    }
+
+    /* Standard: linea sotto header sempre "attaccata" (come extra1) */
+    .table-container > .lavori-admin-standard-table > thead > tr > th {
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
+        background-clip: padding-box;
+        z-index: 20;
+    }
+    
+    /* Assicura che extra1 abbia lo stesso stile del bordo sticky */
+    .table-scroll-horizontal .table-expanded thead th {
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb !important;
+        background-clip: padding-box !important;
+    }
+    
+    /* Focus Table: stesso comportamento sticky */
+    #focusTable thead th {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 160px !important; /* Allineato con standard */
+        z-index: 10;
+        background-color: #F0F2F5 !important;
+        color: #000 !important;
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
+        background-clip: padding-box;
+        height: 50px !important;
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+    }
+    
+    /* ============================================================
+       5. BARRA RICERCA E FILTRI
+       ============================================================ */
+    .search-filters-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 20px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .search-bar {
+        flex: 1;
+        min-width: 200px;
+        max-width: 400px;
+        transition: all 0.3s ease;
+        display: none;
+    }
+    
+    .search-bar.active {
+        display: block;
+    }
+    
+    .search-bar input {
+        width: 100%;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        background: #fff;
+    }
+    
+    .filter-badge {
+        display: inline-block;
+        min-width: 18px;
+        text-align: center;
+        background: var(--primary);
+        color: white;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 0.75rem;
+        margin-left: 4px;
+    }
+    
+    .filters-panel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(25px);
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border: 1px solid rgba(255,255,255,0.5);
+        margin-top: 10px;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+    
+    .filters-panel.active {
+        display: block;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    
+    .filter-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .filter-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 1001;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(25px);
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255,255,255,0.5);
+        margin-top: 5px;
+        min-width: 200px;
+        display: none;
+    }
+    
+    .filter-menu.active {
+        display: block;
+    }
+    
+    .filter-menu .menu-item {
+        padding: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    
+    .filter-menu .menu-item:hover {
+        background: rgba(0, 122, 255, 0.1);
+    }
+    
+    .filter-menu .menu-item.active {
+        background: rgba(0, 122, 255, 0.15);
+        color: var(--primary);
+        font-weight: 600;
+    }
+    
+    /* Nascondi righe filtrate */
+    .oneui-table tbody tr.filtered-out {
+        display: none !important;
     }
 
     /* ============================================================
@@ -142,7 +388,7 @@
            Quando è chiuso (width:0), diventa 'visibility: hidden' DOPO l'animazione.
            Così il browser sa che non c'è nulla da scrollare. */
         visibility: hidden;
-        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0.4s;
+        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), right 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0.4s;
         
         display: block;
         padding: 0 !important;
@@ -154,19 +400,26 @@
         
         /* Quando si apre, diventa subito visibile */
         visibility: visible;
-        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), right 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    
+    /* Override per overlay procacciatori: usa larghezza dinamica invece di 60% */
+    .overlay-procacciatori.active {
+        width: auto !important;
+        max-width: none !important;
     }
 
-    /* Header Overlay */
+    /* Header Overlay - Allineato con la tabella principale */
     .side-overlay .overlay-table thead th {
         position: -webkit-sticky;
         position: sticky;
-        top: 100px !important; 
+        top: 160px !important; /* Stesso top della tabella principale */
         z-index: 60; 
         height: 50px !important; 
         padding: 0 10px !important;
         vertical-align: middle !important;
-        border-bottom: 3px solid #bbb; 
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
         box-sizing: border-box;
         margin: 0 !important;
         background-clip: padding-box;
@@ -200,6 +453,27 @@
         background-color: #fff3e0 !important;
         color: #e67e22 !important;
     }
+    
+    /* Overlay Procacciatori - Colori Blu chiaro */
+    #overlayProcacciatori .overlay-table thead th {
+        background-color: #f0f4ff !important;
+    }
+    
+    #overlayProcacciatori .overlay-table thead th:first-child {
+        background-color: #e3f2fd !important;
+        color: var(--primary) !important;
+    }
+    
+    #overlayProcacciatori .overlay-table tbody td {
+        background-color: #f0f4ff !important;
+        text-align: center !important;
+    }
+    
+    /* Overlay Procacciatori: larghezza dinamica - override della regola .side-overlay.active */
+    #overlayProcacciatori.side-overlay.active {
+        width: auto !important;
+        max-width: none !important;
+    }
 
     .side-overlay .overlay-table tbody tr {
         height: 50px !important;
@@ -208,7 +482,7 @@
         height: 50px !important;
         padding: 0 10px !important;
         vertical-align: middle !important;
-        border-bottom: 2px solid #ddd;
+        border-bottom: 1px solid #ddd !important;
     }
 
     /* UI Elements */
@@ -226,6 +500,14 @@
     .text-truncate { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 50px !important; }
     .gruppo-interni { background-color: rgba(0, 122, 255, 0.03); }
     .gruppo-esterni { background-color: rgba(255, 159, 67, 0.05); }
+    
+    /* Stile celle fatture editabili */
+    .cell-fattura {
+        transition: background-color 0.2s ease;
+    }
+    .cell-fattura:hover {
+        background-color: rgba(255, 159, 67, 0.15) !important;
+    }
     
     /* Colori celle compensi e fatture in Focus Table */
     /* Colonne: N°(1), Cliente(2), Bene(3), Valore(4), Stato(5), C.FE(6), F.FE(7), C.AMIN(8), F.AMIN(9)... */
@@ -282,7 +564,131 @@
 </style>
 
 <div class="header-section">
-    <h1>Lavori Admin</h1>
+    <h1>{% if view_mode == 'extra2' or view_mode == 'focus_special' %}Compensi e fatture{% else %}Lavori Admin{% endif %}</h1>
+    
+    <!-- Barra Ricerca e Filtri -->
+    <div class="search-filters-bar">
+        <!-- Pulsante Ricerca -->
+        <button class="pill-btn" id="btnSearch" onclick="toggleSearchBar()" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.9rem;">
+            <i class="bi bi-search"></i> <span class="btn-text">Ricerca</span>
+        </button>
+        
+        <!-- Barra di ricerca (nascosta inizialmente) -->
+        <div id="searchBar" class="search-bar">
+            <input type="text" id="searchInput" class="one-ui-input" placeholder="Cerca cliente o bene..." 
+                   oninput="performSearch(this.value)" style="width: 100%;">
+        </div>
+        
+        <!-- Pulsante Filtri -->
+        <button class="pill-btn" id="btnFilters" onclick="toggleFiltersPanel()" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.9rem;">
+            <i class="bi bi-funnel"></i> <span class="btn-text">Filtri</span>
+            <span id="filterBadge" class="filter-badge" style="display: none;">0</span>
+        </button>
+        
+        <!-- Pulsante Filtro Redattore -->
+        <button class="pill-btn" id="btnRedattore" onclick="toggleRedattoreFilter()" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.9rem; position: relative;">
+            <i class="bi bi-person-badge"></i> <span class="btn-text">Redattore</span>
+            <span id="redattoreFilterText" style="font-weight: normal; color: #666; font-size: 0.85rem;">Tutti</span>
+        </button>
+        
+        <!-- Pulsante Reset Filtri -->
+        <button class="pill-btn" id="btnResetFilters" onclick="resetAllFilters()" style="display: none; background: #f5f5f5; color: #666; padding: 8px 16px; font-size: 0.9rem;">
+            <i class="bi bi-x-circle"></i> <span class="btn-text">Reset</span>
+        </button>
+        
+        <!-- Pannello Filtri -->
+        <div id="filtersPanel" class="filters-panel">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                <!-- Filtro Stato -->
+                <div class="filter-group">
+                    <label>Stato</label>
+                    <select id="filterStato" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutti</option>
+                        <option value="vuoto">Vuoto</option>
+                        <option value="pec da inviare">Pec da Inviare</option>
+                        <option value="da fatturare">Da Fatturare</option>
+                        <option value="da incassare">Da Incassare</option>
+                        <option value="incassata">Incassata</option>
+                        <option value="chiusa">Chiusa</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Collaboratore -->
+                <div class="filter-group">
+                    <label>Collaboratore</label>
+                    <input type="text" id="filterCollaboratore" class="one-ui-input" placeholder="Cerca collaboratore..." 
+                           oninput="applyFilters()" style="width: 100%;">
+                </div>
+                
+                <!-- Filtro Origine -->
+                <div class="filter-group">
+                    <label>Origine</label>
+                    <select id="filterOrigine" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutte</option>
+                        <option value="ext">Esterno</option>
+                        <option value="AMIN">AMIN</option>
+                        <option value="GALVAN">GALVAN</option>
+                        <option value="FH">FH</option>
+                        <option value="BIANC">BIANC</option>
+                        <option value="DELOITTE">DELOITTE</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Con/Senza Revisore -->
+                <div class="filter-group">
+                    <label>Revisore</label>
+                    <select id="filterRevisore" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutti</option>
+                        <option value="si">Con Revisore</option>
+                        <option value="no">Senza Revisore</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Con/Senza Caricamento -->
+                <div class="filter-group">
+                    <label>Caricamento</label>
+                    <select id="filterCaricamento" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutti</option>
+                        <option value="si">Con Caricamento</option>
+                        <option value="no">Senza Caricamento</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Spese Amministrative -->
+                <div class="filter-group">
+                    <label>Spese Amm.</label>
+                    <select id="filterSpeseAmm" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutti</option>
+                        <option value="si">Con Spese</option>
+                        <option value="no">Senza Spese</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Menu Filtro Redattore -->
+        <div id="redattoreFilterMenu" class="filter-menu">
+            <div class="menu-item" onclick="setRedattoreFilter('')">
+                <i class="bi bi-check2"></i> Tutti
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" onclick="setRedattoreFilter('AMIN')">
+                <i class="bi bi-person"></i> AMIN
+            </div>
+            <div class="menu-item" onclick="setRedattoreFilter('GALVAN')">
+                <i class="bi bi-person"></i> GALVAN
+            </div>
+            <div class="menu-item" onclick="setRedattoreFilter('FH')">
+                <i class="bi bi-person"></i> FH
+            </div>
+            <div class="menu-item" onclick="setRedattoreFilter('BIANC')">
+                <i class="bi bi-person"></i> BIANC
+            </div>
+            <div class="menu-item" onclick="setRedattoreFilter('DELOITTE')">
+                <i class="bi bi-person"></i> DELOITTE
+            </div>
+        </div>
+    </div>
 </div>
 
 {# ==================== MODALITÀ STANDARD (Default) ==================== #}
@@ -290,7 +696,7 @@
 
 <div class="table-container oneui-card">
 
-    <table class="oneui-table">
+    <table class="oneui-table lavori-admin-standard-table">
         <thead>
             <tr>
                 <th>N°</th>
@@ -323,8 +729,17 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-cliente="{{ (l.cliente_nome or '')|lower }}"
+                data-redattore="{{ (l.redattore or '')|upper }}"
+                data-collaboratore="{{ (l.collaboratore or '')|lower }}"
+                data-origine="{{ (l.origine or '')|lower }}"
+                data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
+                data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
+                data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
                 oncontextmenu="showContextMenu(event, {{ l.id }})"
-                {% endif %}>
+                {% endif %}
+                data-bene="{{ (bene.descrizione or '')|lower }}"
+                data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
                 <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                 <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
@@ -494,6 +909,41 @@
             </tbody>
         </table>
     </div>
+
+    <div id="overlayProcacciatori" class="side-overlay overlay-procacciatori">
+        <table class="oneui-table overlay-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th style="background-color: #e3f2fd; color: var(--primary);">
+                        <span class="overlay-title"><i class="bi bi-person-badge"></i> Procacciatori</span>
+                    </th>
+                    <th>Nome Esterno</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if lavori_with_beni %}
+                {% for item in lavori_with_beni %}
+                {% set l = item.lavoro %}
+                {% set num_beni = item.beni|length %}
+                {% for bene in item.beni %}
+                {% set bene_idx = loop.index0 %}
+                <tr>
+                    {% if bene_idx == 0 %}
+                    <td colspan="2" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                        {% if l.origine and l.origine.lower() == 'ext' %}
+                            {{ l.nome_esterno or '-' }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <div class="bottom-floating-bar">
@@ -508,6 +958,10 @@
     <button class="pill-btn" onclick="openOverlay('fatture')">
         <i class="bi bi-receipt"></i> Fatture
     </button>
+
+    <button class="pill-btn" onclick="openOverlay('procacciatori')">
+        <i class="bi bi-person-badge"></i> Procacc.
+    </button>
 </div>
 
 
@@ -515,15 +969,15 @@
 {# ==================== MODALITÀ EXTRA 1 (Scroll Orizzontale) ==================== #}
 {% elif view_mode == 'extra1' %}
 
-<div class="table-container oneui-card table-scroll-horizontal">
+<div id="extra1TableScroll" class="table-container oneui-card table-scroll-horizontal">
     <table class="oneui-table table-expanded">
         <thead>
             <tr>
-                <th class="col-fixed">N°</th>
-                <th class="col-fixed">Cliente</th>
-                <th class="col-fixed">Bene</th>
-                <th class="col-fixed">Valore</th>
-                <th>Importo</th>
+                <th class="col-fixed col-numero">N°</th>
+                <th class="col-fixed col-cliente">Cliente</th>
+                <th class="col-fixed col-bene-desc">Bene</th>
+                <th class="col-fixed col-bene-valore">Valore</th>
+                <th class="col-fixed col-bene-importo">Importo</th>
 
                 <th class="col-data-offerta">Data Offerta</th>
                 <th class="col-data-firma">Data Firma</th>
@@ -555,7 +1009,7 @@
                 <th class="col-fatture">F. Rev</th>
                 <th class="col-fatture">F. Car</th>
                 
-                <th>Stato</th>
+                <th class="col-stato">Stato</th>
             </tr>
         </thead>
         <tbody>
@@ -571,8 +1025,17 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-cliente="{{ (l.cliente_nome or '')|lower }}"
+                data-redattore="{{ (l.redattore or '')|upper }}"
+                data-collaboratore="{{ (l.collaboratore or '')|lower }}"
+                data-origine="{{ (l.origine or '')|lower }}"
+                data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
+                data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
+                data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
                 oncontextmenu="showContextMenu(event, {{ l.id }})"
-                {% endif %}>
+                {% endif %}
+                data-bene="{{ (bene.descrizione or '')|lower }}"
+                data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
                 <td class="col-fixed col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                 <td class="col-fixed col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
@@ -580,7 +1043,7 @@
                 <td class="col-fixed col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
                 <td class="col-fixed col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".",
                     ",").replace("X", ".") }}</td>
-                <td class="col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-fixed col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
 
                 {% if bene_idx == 0 %}
                 <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;">
@@ -634,21 +1097,20 @@
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_deloitte or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
-                <td class="col-fatture" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fh')" data-fattura-type="fh" data-lavoro-id="{{ l.id }}">{{ l.f_fh or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'bianc')" data-fattura-type="bianc" data-lavoro-id="{{ l.id }}">{{ l.f_bianc or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'deloitte')" data-fattura-type="deloitte" data-lavoro-id="{{ l.id }}">{{ l.f_deloitte or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'ext')" data-fattura-type="ext" data-lavoro-id="{{ l.id }}">{{ l.f_ext or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
                 {% endif %}
-                <td>
+                <td class="col-stato">
                     <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
                         onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
                         <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
@@ -664,13 +1126,23 @@
             {% endfor %}
             {% else %}
             <tr>
-                <td colspan="29" style="text-align:center; color:#999; padding: 30px;">
+                <td colspan="31" style="text-align:center; color:#999; padding: 30px;">
                     Nessun lavoro presente. Clicca + per aggiungere.
                 </td>
             </tr>
             {% endif %}
         </tbody>
     </table>
+</div>
+
+<!-- Header fisso per extra1 (gestito da JavaScript) -->
+<div id="extra1StickyHeader" style="display: none;">
+    <div id="extra1StickyHeaderScroll"></div>
+</div>
+
+<!-- Scrollbar orizzontale fissa in basso (sempre visibile) -->
+<div id="extra1FixedHScroll" class="fixed-hscroll" aria-hidden="true">
+    <div id="extra1FixedHScrollInner"></div>
 </div>
 
 <div class="bottom-floating-bar">
@@ -725,8 +1197,17 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-cliente="{{ (l.cliente_nome or '')|lower }}"
+                data-redattore="{{ (l.redattore or '')|upper }}"
+                data-collaboratore="{{ (l.collaboratore or '')|lower }}"
+                data-origine="{{ (l.origine or '')|lower }}"
+                data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
+                data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
+                data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
                 oncontextmenu="showContextMenu(event, {{ l.id }})"
-                {% endif %}>
+                {% endif %}
+                data-bene="{{ (bene.descrizione or '')|lower }}"
+                data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
                 <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                 <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
@@ -746,23 +1227,23 @@
                 </td>
                 {% if bene_idx == 0 %}
                 <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
+                <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
                 <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
+                <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
                 <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_galvan or '-' }}</td>
+                <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
                 <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fh or '-' }}</td>
+                <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fh')" data-fattura-type="fh" data-lavoro-id="{{ l.id }}">{{ l.f_fh or '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_bianc or '-' }}</td>
+                <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'bianc')" data-fattura-type="bianc" data-lavoro-id="{{ l.id }}">{{ l.f_bianc or '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
+                <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'ext')" data-fattura-type="ext" data-lavoro-id="{{ l.id }}">{{ l.f_ext or '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
+                <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
                 {% endif %}
             </tr>
             {% endfor %}
@@ -877,7 +1358,11 @@
 
 {% endif %}
 
+{% if view_mode == 'extra1' %}
+<div style="height: 0;"></div>
+{% else %}
 <div style="height: 120px;"></div>
+{% endif %}
 
 <div id="addModal" class="modal-overlay">
     <div class="modal-glass modal-large">
@@ -1578,9 +2063,41 @@
             // 1. Chiudi eventuali altri overlay
             closeOverlay('compensi');
             closeOverlay('fatture');
+            closeOverlay('procacciatori');
+            
+            // Per l'overlay procacciatori, calcola e imposta la larghezza PRIMA di aprire
+            if (type === 'procacciatori') {
+                // Calcola la larghezza quando l'overlay è ancora chiuso
+                const calculatedWidth = calculateProcacciatoriOverlayWidth();
+                // Imposta la larghezza inline PRIMA di aggiungere la classe active
+                // Questo ha priorità sul CSS
+                if (calculatedWidth > 0) {
+                    overlay.style.width = calculatedWidth + 'px';
+                    overlay.style.setProperty('width', calculatedWidth + 'px', 'important');
+                }
+            }
             
             // Apri l'overlay selezionato
             overlay.classList.add('active');
+            
+            // Per l'overlay procacciatori, ricalcola e riapplica la larghezza dopo che la classe active è stata aggiunta
+            if (type === 'procacciatori') {
+                // Usa requestAnimationFrame per assicurarsi che il CSS sia applicato
+                requestAnimationFrame(() => {
+                    const recalculatedWidth = calculateProcacciatoriOverlayWidth();
+                    if (recalculatedWidth > 0) {
+                        overlay.style.setProperty('width', recalculatedWidth + 'px', 'important');
+                    }
+                    // Ricalcola anche dopo un breve delay per sicurezza
+                    setTimeout(() => {
+                        const finalWidth = calculateProcacciatoriOverlayWidth();
+                        if (finalWidth > 0) {
+                            overlay.style.setProperty('width', finalWidth + 'px', 'important');
+                        }
+                        syncProcacciatoriScroll();
+                    }, 100);
+                });
+            }
             
             // 3. FONDAMENTALE: Aggiunge la classe al BODY per mostrare la barra di scorrimento
             document.body.classList.add('overlay-open');
@@ -1592,11 +2109,463 @@
         const overlay = document.getElementById(overlayId);
         
         if (overlay) {
+            // Per l'overlay procacciatori, rimuovi la larghezza inline per permettere la chiusura immediata
+            if (type === 'procacciatori') {
+                overlay.style.removeProperty('width');
+            }
+            
             overlay.classList.remove('active');
             
             // 4. Rimuove la classe dal BODY (nasconde la barra)
             document.body.classList.remove('overlay-open');
         }
+    }
+
+    function calculateProcacciatoriOverlayWidth() {
+        // Trova la colonna "Redattore" nella tabella principale (standard o extra1)
+        const mainTable = document.querySelector('.lavori-admin-standard-table') || 
+                         document.querySelector('.table-expanded');
+        const overlay = document.getElementById('overlayProcacciatori');
+        
+        if (!mainTable || !overlay) {
+            return 200; // Larghezza di fallback
+        }
+        
+        const headerRow = mainTable.querySelector('thead tr');
+        if (!headerRow) {
+            return 200;
+        }
+        
+        const headers = Array.from(headerRow.querySelectorAll('th'));
+        const redattoreIndex = headers.findIndex(th => th.textContent.trim() === 'Redattore');
+        
+        if (redattoreIndex === -1) {
+            return 200;
+        }
+        
+        // Calcola la larghezza usando le colonne dell'header
+        // Forza un reflow per assicurarsi che le dimensioni siano aggiornate
+        void mainTable.offsetHeight;
+        
+        let widthFromRedattore = 0;
+        for (let i = redattoreIndex; i < headers.length; i++) {
+            const header = headers[i];
+            const rect = header.getBoundingClientRect();
+            widthFromRedattore += rect.width;
+        }
+        
+        // Se il calcolo dall'header non funziona, prova con le celle del body
+        if (widthFromRedattore === 0 || widthFromRedattore < 50) {
+            const tbody = mainTable.querySelector('tbody');
+            if (tbody) {
+                const firstRow = tbody.querySelector('tr');
+                if (firstRow) {
+                    const cells = Array.from(firstRow.querySelectorAll('td'));
+                    if (redattoreIndex < cells.length) {
+                        widthFromRedattore = 0;
+                        for (let i = redattoreIndex; i < cells.length; i++) {
+                            const cell = cells[i];
+                            const rect = cell.getBoundingClientRect();
+                            widthFromRedattore += rect.width;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Se non riusciamo a calcolare, usa una larghezza di default
+        if (widthFromRedattore === 0 || widthFromRedattore < 150) {
+            widthFromRedattore = 200; // Larghezza minima
+        }
+        
+        // Imposta anche la larghezza inline (verrà sovrascritta dal chiamante se necessario)
+        overlay.style.right = '0px'; // Sempre parte da destra
+        overlay.style.maxWidth = 'none';
+        
+        // Ritorna la larghezza calcolata
+        return widthFromRedattore;
+    }
+
+    /* ==================== RICERCA E FILTRI ==================== */
+    let currentSearchTerm = '';
+    let currentRedattoreFilter = '';
+    let activeFilters = {
+        stato: '',
+        collaboratore: '',
+        origine: '',
+        revisore: '',
+        caricamento: '',
+        speseAmm: ''
+    };
+    
+    function toggleSearchBar() {
+        const searchBar = document.getElementById('searchBar');
+        const btnSearch = document.getElementById('btnSearch');
+        if (searchBar.style.display === 'none' || !searchBar.style.display) {
+            searchBar.style.display = 'flex';
+            document.getElementById('searchInput').focus();
+            btnSearch.style.background = 'var(--primary)';
+            btnSearch.style.color = 'white';
+        } else {
+            searchBar.style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            currentSearchTerm = '';
+            btnSearch.style.background = '';
+            btnSearch.style.color = '';
+            applyAllFilters();
+        }
+    }
+    
+    function performSearch(term) {
+        currentSearchTerm = term.toLowerCase().trim();
+        applyAllFilters();
+    }
+    
+    function toggleFiltersPanel() {
+        const panel = document.getElementById('filtersPanel');
+        const btnFilters = document.getElementById('btnFilters');
+        if (panel.style.display === 'none' || !panel.style.display) {
+            panel.style.display = 'block';
+            btnFilters.style.background = 'var(--primary)';
+            btnFilters.style.color = 'white';
+        } else {
+            panel.style.display = 'none';
+            btnFilters.style.background = '';
+            btnFilters.style.color = '';
+        }
+    }
+    
+    function applyFilters() {
+        activeFilters.stato = document.getElementById('filterStato').value.toLowerCase();
+        activeFilters.collaboratore = document.getElementById('filterCollaboratore').value.toLowerCase().trim();
+        activeFilters.origine = document.getElementById('filterOrigine').value.toLowerCase();
+        activeFilters.revisore = document.getElementById('filterRevisore').value;
+        activeFilters.caricamento = document.getElementById('filterCaricamento').value;
+        activeFilters.speseAmm = document.getElementById('filterSpeseAmm').value;
+        
+        updateFilterBadge();
+        applyAllFilters();
+    }
+    
+    function updateFilterBadge() {
+        const badge = document.getElementById('filterBadge');
+        const btnReset = document.getElementById('btnResetFilters');
+        let count = 0;
+        
+        if (activeFilters.stato) count++;
+        if (activeFilters.collaboratore) count++;
+        if (activeFilters.origine) count++;
+        if (activeFilters.revisore) count++;
+        if (activeFilters.caricamento) count++;
+        if (activeFilters.speseAmm) count++;
+        if (currentRedattoreFilter) count++;
+        
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+            btnReset.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+            btnReset.style.display = 'none';
+        }
+    }
+    
+    function applyAllFilters() {
+        // Prima raggruppa le righe per lavoro (data-id)
+        const lavoriRows = {};
+        const allRows = document.querySelectorAll('.oneui-table tbody tr[data-id]');
+        
+        allRows.forEach(row => {
+            const lavoroId = row.getAttribute('data-id');
+            if (!lavoriRows[lavoroId]) {
+                lavoriRows[lavoroId] = [];
+            }
+            lavoriRows[lavoroId].push(row);
+        });
+        
+        // Per ogni lavoro, applica i filtri
+        Object.keys(lavoriRows).forEach(lavoroId => {
+            const lavoroRows = lavoriRows[lavoroId];
+            
+            // Trova la prima riga del lavoro (quella con gli attributi a livello di lavoro)
+            const firstRow = lavoroRows.find(row => row.hasAttribute('data-cliente') || row.hasAttribute('data-offerta-generated')) || lavoroRows[0];
+            
+            // Controlla i filtri a livello di lavoro sulla prima riga
+            let lavoroPassaFiltri = true;
+            
+            // Ricerca (cliente)
+            if (currentSearchTerm && lavoroPassaFiltri) {
+                const cliente = (firstRow.getAttribute('data-cliente') || '').toLowerCase();
+                if (!cliente.includes(currentSearchTerm)) {
+                    // Se non matcha il cliente, controlla i beni
+                    let beneMatch = false;
+                    lavoroRows.forEach(row => {
+                        const bene = (row.getAttribute('data-bene') || '').toLowerCase();
+                        if (bene.includes(currentSearchTerm)) {
+                            beneMatch = true;
+                        }
+                    });
+                    if (!beneMatch) {
+                        lavoroPassaFiltri = false;
+                    }
+                }
+            }
+            
+            // Filtro Redattore
+            if (currentRedattoreFilter && lavoroPassaFiltri) {
+                const redattore = (firstRow.getAttribute('data-redattore') || '').toUpperCase();
+                if (redattore !== currentRedattoreFilter.toUpperCase()) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Collaboratore
+            if (activeFilters.collaboratore && lavoroPassaFiltri) {
+                const collaboratore = (firstRow.getAttribute('data-collaboratore') || '').toLowerCase();
+                if (!collaboratore.includes(activeFilters.collaboratore)) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Origine
+            if (activeFilters.origine && lavoroPassaFiltri) {
+                const origine = (firstRow.getAttribute('data-origine') || '').toLowerCase();
+                if (origine !== activeFilters.origine) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Revisore
+            if (activeFilters.revisore && lavoroPassaFiltri) {
+                const hasRevisore = firstRow.getAttribute('data-has-revisore');
+                if (hasRevisore !== activeFilters.revisore) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Caricamento
+            if (activeFilters.caricamento && lavoroPassaFiltri) {
+                const hasCaricamento = firstRow.getAttribute('data-has-caricamento');
+                if (hasCaricamento !== activeFilters.caricamento) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Spese Amministrative
+            if (activeFilters.speseAmm && lavoroPassaFiltri) {
+                const speseAmm = firstRow.getAttribute('data-spese-amm');
+                if (speseAmm !== activeFilters.speseAmm) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Se il lavoro non passa i filtri a livello di lavoro, nascondi tutte le righe
+            if (!lavoroPassaFiltri) {
+                lavoroRows.forEach(row => {
+                    row.classList.add('filtered-out');
+                });
+                return;
+            }
+            
+            // Se il lavoro passa i filtri a livello di lavoro, applica i filtri a livello di bene
+            lavoroRows.forEach(row => {
+                let benePassaFiltri = true;
+                
+                // Filtro Stato (a livello di bene)
+                if (activeFilters.stato && benePassaFiltri) {
+                    const stato = (row.getAttribute('data-stato') || '').toLowerCase();
+                    if (stato !== activeFilters.stato) {
+                        benePassaFiltri = false;
+                    }
+                }
+                
+                // Ricerca (bene) - se già non matchava il cliente
+                if (currentSearchTerm && benePassaFiltri) {
+                    const cliente = (firstRow.getAttribute('data-cliente') || '').toLowerCase();
+                    if (cliente.includes(currentSearchTerm)) {
+                        // Se matcha il cliente, mostra tutti i beni
+                        benePassaFiltri = true;
+                    } else {
+                        // Se non matcha il cliente, controlla questo specifico bene
+                        const bene = (row.getAttribute('data-bene') || '').toLowerCase();
+                        if (bene.includes(currentSearchTerm)) {
+                            benePassaFiltri = true;
+                        } else {
+                            benePassaFiltri = false;
+                        }
+                    }
+                }
+                
+                if (benePassaFiltri) {
+                    row.classList.remove('filtered-out');
+                } else {
+                    row.classList.add('filtered-out');
+                }
+            });
+        });
+        
+        // Ricalcola i rowspan dopo il filtraggio
+        recalculateRowspans();
+    }
+    
+    function recalculateRowspans() {
+        // Raggruppa le righe per lavoro (data-id)
+        const lavoriRows = {};
+        const allRows = document.querySelectorAll('.oneui-table tbody tr[data-id]');
+        
+        allRows.forEach(row => {
+            const lavoroId = row.getAttribute('data-id');
+            if (!lavoriRows[lavoroId]) {
+                lavoriRows[lavoroId] = [];
+            }
+            lavoriRows[lavoroId].push(row);
+        });
+        
+        // Per ogni lavoro, ricalcola i rowspan
+        Object.keys(lavoriRows).forEach(lavoroId => {
+            const lavoroRows = lavoriRows[lavoroId];
+            
+            // Trova la PRIMA riga originale del lavoro (quella con data-cliente o data-offerta-generated)
+            // Questa è sempre la riga che contiene le celle con rowspan
+            const firstRow = lavoroRows.find(row => row.hasAttribute('data-cliente') || row.hasAttribute('data-offerta-generated')) || lavoroRows[0];
+            
+            // Conta solo le righe visibili (non filtered-out)
+            const visibleRows = lavoroRows.filter(row => !row.classList.contains('filtered-out'));
+            const visibleCount = visibleRows.length;
+            
+            if (visibleCount === 0) {
+                // Se non ci sono righe visibili, nascondi anche la prima riga
+                firstRow.classList.add('filtered-out');
+                return;
+            }
+            
+            // Se ci sono righe visibili, la prima riga DEVE essere visibile per mostrare le celle comuni
+            // Rimuovi filtered-out dalla prima riga se presente
+            firstRow.classList.remove('filtered-out');
+            
+            // Trova tutte le celle con rowspan nella prima riga
+            const rowspanCells = firstRow.querySelectorAll('td[rowspan]');
+            
+            // Aggiorna il rowspan di tutte le celle con il numero di righe visibili
+            rowspanCells.forEach(cell => {
+                cell.setAttribute('rowspan', visibleCount);
+            });
+        });
+    }
+    
+    function toggleRedattoreFilter() {
+        const menu = document.getElementById('redattoreFilterMenu');
+        const btn = document.getElementById('btnRedattore');
+        const rect = btn.getBoundingClientRect();
+        
+        if (menu.style.display === 'none' || !menu.style.display) {
+            menu.style.display = 'block';
+            menu.style.top = (rect.bottom + 5) + 'px';
+            menu.style.right = (window.innerWidth - rect.right) + 'px';
+            menu.style.left = 'auto';
+            
+            // Evidenzia l'opzione attiva
+            menu.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+                const text = item.textContent.trim();
+                if (text === 'Tutti' && !currentRedattoreFilter) {
+                    item.classList.add('active');
+                } else if (text === currentRedattoreFilter) {
+                    item.classList.add('active');
+                }
+            });
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+    
+    function setRedattoreFilter(redattore) {
+        currentRedattoreFilter = redattore;
+        const textEl = document.getElementById('redattoreFilterText');
+        textEl.textContent = redattore || 'Tutti';
+        document.getElementById('redattoreFilterMenu').style.display = 'none';
+        updateFilterBadge();
+        applyAllFilters();
+    }
+    
+    function resetAllFilters() {
+        currentSearchTerm = '';
+        currentRedattoreFilter = '';
+        activeFilters = {
+            stato: '',
+            collaboratore: '',
+            origine: '',
+            revisore: '',
+            caricamento: '',
+            speseAmm: ''
+        };
+        
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterStato').value = '';
+        document.getElementById('filterCollaboratore').value = '';
+        document.getElementById('filterOrigine').value = '';
+        document.getElementById('filterRevisore').value = '';
+        document.getElementById('filterCaricamento').value = '';
+        document.getElementById('filterSpeseAmm').value = '';
+        document.getElementById('redattoreFilterText').textContent = 'Tutti';
+        
+        document.getElementById('searchBar').style.display = 'none';
+        document.getElementById('filtersPanel').style.display = 'none';
+        document.getElementById('btnSearch').style.background = '';
+        document.getElementById('btnSearch').style.color = '';
+        document.getElementById('btnFilters').style.background = '';
+        document.getElementById('btnFilters').style.color = '';
+        
+        updateFilterBadge();
+        applyAllFilters();
+    }
+    
+    // Chiudi menu quando si clicca fuori
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('redattoreFilterMenu');
+        const btn = document.getElementById('btnRedattore');
+        const panel = document.getElementById('filtersPanel');
+        const btnFilters = document.getElementById('btnFilters');
+        
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+        
+        if (panel && btnFilters && !panel.contains(e.target) && !btnFilters.contains(e.target)) {
+            panel.style.display = 'none';
+            btnFilters.style.background = '';
+            btnFilters.style.color = '';
+        }
+    });
+
+    function syncProcacciatoriScroll() {
+        // Sincronizza lo scroll verticale tra la tabella principale e l'overlay
+        const mainTable = document.querySelector('.lavori-admin-standard-table') || 
+                         document.querySelector('.table-expanded');
+        const overlayTable = document.querySelector('#overlayProcacciatori .overlay-table');
+        
+        if (!mainTable || !overlayTable) return;
+        
+        // Trova i container scrollabili
+        const mainContainer = mainTable.closest('.table-container') || 
+                             document.querySelector('#extra1TableScroll');
+        const overlayContainer = overlayTable.closest('#overlayProcacciatori');
+        
+        if (!mainContainer || !overlayContainer) return;
+        
+        // Rimuovi eventuali listener precedenti
+        const syncScroll = () => {
+            overlayContainer.scrollTop = mainContainer.scrollTop || window.scrollY;
+        };
+        
+        // Sincronizza quando la tabella principale scrolla
+        mainContainer.addEventListener('scroll', syncScroll, { passive: true });
+        window.addEventListener('scroll', syncScroll, { passive: true });
+        
+        // Sincronizza anche quando l'overlay scrolla (bidirezionale)
+        overlayContainer.addEventListener('scroll', () => {
+            mainContainer.scrollTop = overlayContainer.scrollTop;
+        }, { passive: true });
     }
 
     function capitalize(str) {
@@ -1677,6 +2646,84 @@
             const cell = row.querySelector('.col-data-pec');
             if (cell) cell.textContent = txt;
         }
+    }
+
+    async function editFattura(event, lavoroId, fatturaType) {
+        event.stopPropagation();
+        const cell = event.currentTarget;
+        const currentValue = cell.textContent.trim() === '-' ? '' : cell.textContent.trim();
+        
+        // Crea un input inline
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        input.className = 'one-ui-input compact';
+        input.style.width = '100%';
+        input.style.textAlign = 'center';
+        input.style.padding = '4px 8px';
+        input.style.fontSize = '0.9rem';
+        input.style.margin = '0';
+        input.style.border = '2px solid var(--primary)';
+        input.style.borderRadius = '8px';
+        
+        // Salva il contenuto originale della cella
+        const originalContent = cell.innerHTML;
+        
+        // Sostituisci il contenuto della cella con l'input
+        cell.innerHTML = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+        
+        // Funzione per salvare
+        const saveFattura = async () => {
+            const newValue = input.value.trim();
+            const valueToSave = newValue || null;
+            const displayValue = newValue || '-';
+            
+            try {
+                const res = await fetch(`/update_fattura/${lavoroId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        fattura_type: fatturaType,
+                        value: valueToSave
+                    })
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.error || 'Errore aggiornamento fattura');
+                    cell.innerHTML = originalContent;
+                    return;
+                }
+                
+                // Aggiorna tutte le celle con lo stesso data-fattura-type e data-lavoro-id
+                const allCells = document.querySelectorAll(`td.cell-fattura[data-fattura-type="${fatturaType}"][data-lavoro-id="${lavoroId}"]`);
+                allCells.forEach(c => {
+                    c.textContent = displayValue;
+                });
+                
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Errore durante il salvataggio');
+                cell.innerHTML = originalContent;
+            }
+        };
+        
+        // Salva quando si preme Enter o quando l'input perde il focus
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveFattura();
+            } else if (e.key === 'Escape') {
+                cell.innerHTML = originalContent;
+            }
+        });
+        
+        input.addEventListener('blur', () => {
+            saveFattura();
+        });
     }
 
     function showContextMenu(e, id) {
@@ -2694,43 +3741,132 @@
     
     // Fix per header sticky in modalità EXTRA 1
     {% if view_mode == 'extra1' %}
-    function updateStickyHeaderTop() {
+    function initExtra1FixedScrollbar() {
+        const scroller = document.getElementById('extra1TableScroll');
+        const bar = document.getElementById('extra1FixedHScroll');
+        const inner = document.getElementById('extra1FixedHScrollInner');
+        const table = document.querySelector('#extra1TableScroll .table-expanded');
+        if (!scroller || !bar || !inner || !table) return;
+
+        const syncSizes = () => {
+            // larghezza scrollabile reale
+            const w = table.scrollWidth;
+            inner.style.width = w + 'px';
+            // mostra la barra solo se serve
+            bar.style.display = (w > scroller.clientWidth + 2) ? 'block' : 'none';
+        };
+
+        let lock = false;
+        scroller.addEventListener('scroll', () => {
+            if (lock) return;
+            lock = true;
+            bar.scrollLeft = scroller.scrollLeft;
+            lock = false;
+        }, { passive: true });
+
+        bar.addEventListener('scroll', () => {
+            if (lock) return;
+            lock = true;
+            scroller.scrollLeft = bar.scrollLeft;
+            lock = false;
+        }, { passive: true });
+
+        // prima sync
+        syncSizes();
+        // sync dopo layout/fonts
+        window.requestAnimationFrame(syncSizes);
+        window.addEventListener('resize', syncSizes);
+    }
+
+    function initExtra1StickyHeader() {
+        const scroller = document.getElementById('extra1TableScroll');
+        const fixedHeader = document.getElementById('extra1StickyHeader');
+        const fixedScroll = document.getElementById('extra1StickyHeaderScroll');
+        const table = document.querySelector('#extra1TableScroll .table-expanded');
         const headerSection = document.querySelector('.header-section');
-        const tableHeaders = document.querySelectorAll('.table-scroll-horizontal .table-expanded thead th');
-        
-        if (headerSection && tableHeaders.length > 0) {
-            // Calcola l'altezza totale: nav (circa 60px) + header-section
-            const navHeight = 60; // Altezza approssimativa della nav floating
-            const headerHeight = headerSection.offsetHeight;
-            const stickyTop = navHeight + headerHeight;
+        if (!scroller || !fixedHeader || !fixedScroll || !table || !headerSection) return;
+
+        const thead = table.querySelector('thead');
+        if (!thead) return;
+
+        // Costruisci tabella header clonata (solo thead)
+        fixedScroll.innerHTML = '';
+        const headerTable = document.createElement('table');
+        headerTable.className = 'oneui-table table-expanded';
+        headerTable.appendChild(thead.cloneNode(true));
+        fixedScroll.appendChild(headerTable);
+
+        // Funzione per sincronizzare le larghezze delle colonne
+        const syncColumnWidths = () => {
+            const originalHeaders = thead.querySelectorAll('th');
+            const clonedHeaders = headerTable.querySelectorAll('th');
             
-            // Applica il top a tutti gli header della tabella
-            tableHeaders.forEach(th => {
-                th.style.top = stickyTop + 'px';
+            if (originalHeaders.length !== clonedHeaders.length) return;
+            
+            originalHeaders.forEach((original, index) => {
+                const cloned = clonedHeaders[index];
+                if (original && cloned) {
+                    const width = original.getBoundingClientRect().width;
+                    cloned.style.width = `${width}px`;
+                    cloned.style.minWidth = `${width}px`;
+                    cloned.style.maxWidth = `${width}px`;
+                }
             });
-        }
+        };
+
+        const syncH = () => {
+            // sync orizzontale
+            fixedScroll.scrollLeft = scroller.scrollLeft;
+        };
+
+        const update = () => {
+            const headerRect = headerSection.getBoundingClientRect();
+            const scrollerRect = scroller.getBoundingClientRect();
+            const theadHeight = thead.getBoundingClientRect().height || 50;
+
+            const top = Math.ceil(headerRect.bottom);
+            const shouldShow = (scrollerRect.top <= top) && (scrollerRect.bottom > top + theadHeight);
+
+            if (!shouldShow) {
+                fixedHeader.style.display = 'none';
+                return;
+            }
+
+            // Sincronizza le larghezze delle colonne prima di mostrare
+            syncColumnWidths();
+            
+            fixedHeader.style.display = 'block';
+            fixedHeader.style.top = `${top}px`;
+            fixedHeader.style.left = `${Math.ceil(scrollerRect.left)}px`;
+            fixedHeader.style.width = `${Math.ceil(scrollerRect.width)}px`;
+            syncH();
+        };
+
+        // listeners
+        scroller.addEventListener('scroll', syncH, { passive: true });
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', () => {
+            syncColumnWidths();
+            update();
+        });
+
+        // prima render
+        setTimeout(() => {
+            syncColumnWidths();
+            update();
+        }, 100);
     }
     
-    // Esegui al caricamento e al resize
+    // Esegui al caricamento
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateStickyHeaderTop);
+        document.addEventListener('DOMContentLoaded', function() {
+            initExtra1FixedScrollbar();
+            initExtra1StickyHeader();
+        });
     } else {
-        updateStickyHeaderTop();
+        initExtra1FixedScrollbar();
+        initExtra1StickyHeader();
     }
-    
-    window.addEventListener('resize', updateStickyHeaderTop);
-    
-    // Aggiorna anche durante lo scroll per gestire il caso in cui l'header sia sticky
-    let ticking = false;
-    window.addEventListener('scroll', function() {
-        if (!ticking) {
-            window.requestAnimationFrame(function() {
-                updateStickyHeaderTop();
-                ticking = false;
-            });
-            ticking = true;
-        }
-    }, { passive: true });
     {% endif %}
 
 

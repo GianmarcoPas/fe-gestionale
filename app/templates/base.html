@@ -31,8 +31,8 @@
 
 		{% if current_user.role == 'admin' %}
             {% if current_user.admin_view_mode == 'extra2' %}
-            <a href="{{ url_for('main.lavori_focus') }}" class="nav-item {% if request.endpoint == 'main.lavori_focus' %}active{% endif %}" title="Focus View">
-                <i class="bi bi-eye-fill"></i> </a>
+            <a href="{{ url_for('main.lavori_focus') }}" class="nav-item {% if request.endpoint == 'main.lavori_focus' %}active{% endif %}" title="Compensi e fatture">
+                <i class="bi bi-receipt-cutoff"></i> </a>
             {% endif %}
             
         {% else %}

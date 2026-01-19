@@ -353,16 +353,17 @@ body {
 .header-section {
     position: -webkit-sticky;
     position: sticky;
-    top: 0;
+    top: 0; /* Attaccata al bordo superiore */
     z-index: 900; /* Sta sotto la pillola della nav (che è 1000) */
     
     /* Colore base uguale allo sfondo della pagina - completamente opaco */
     background-color: #F0F2F5 !important; 
     
-    /* Aumentiamo il padding sopra per centrare il testo verticalmente rispetto alla Nav */
+    /* Padding per contenere titolo e barra ricerca/filtri */
     padding-top: 10px; 
     padding-bottom: 10px;
-    padding-left: 10px; /* Un po' di aria a sinistra */
+    padding-left: 20px;
+    padding-right: 20px;
     
     /* Transizione fluida */
     transition: all 0.3s ease;
@@ -1631,28 +1632,57 @@ input:checked + .slider:before { transform: translateX(22px); }
 .table-scroll-horizontal {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    /* nascondi la scrollbar “in fondo alla tabella” (useremo quella fissa) */
+    scrollbar-width: none; /* Firefox */
 }
+.table-scroll-horizontal::-webkit-scrollbar { height: 0; }
 
-.table-scroll-horizontal::-webkit-scrollbar {
-    height: 8px;
+/* Scrollbar fissa in basso (solo extra1: l'elemento esiste solo lì) */
+.fixed-hscroll {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: rgba(240, 242, 245, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    z-index: 1200; /* sopra contenuti, sotto modali (2000) */
 }
-
-.table-scroll-horizontal::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 4px;
+.fixed-hscroll #extra1FixedHScrollInner {
+    height: 1px; /* basta per creare la larghezza scrollabile */
 }
-
-.table-scroll-horizontal::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
+.fixed-hscroll::-webkit-scrollbar { height: 10px; }
+.fixed-hscroll::-webkit-scrollbar-track { background: transparent; }
+.fixed-hscroll::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.25);
+    border-radius: 999px;
 }
-
-.table-scroll-horizontal::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
-}
+.fixed-hscroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
 
 .table-expanded {
     min-width: 2000px;
+    /* Con sticky + rowspan, border-collapse: collapse può creare “buchi” sui separatori.
+       Usiamo separate per avere celle opache e linee consistenti. */
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+/* Extra1: evita effetto "trasparente" sui separatori tra righe */
+.table-expanded tbody tr,
+.table-expanded tbody td {
+    background: #fff;
+}
+
+/* Extra1: disegna la linea di separazione dentro la cella (non “sotto”),
+   così non si vede scorrere contenuto tra due beni dello stesso lavoro. */
+.table-expanded tbody td {
+    border-bottom: none !important;
+    box-shadow: inset 0 -1px #ddd;
+    background-clip: padding-box;
 }
 
 .table-expanded .col-fixed {
@@ -1661,10 +1691,28 @@ input:checked + .slider:before { transform: translateX(22px); }
     z-index: 5;
 }
 
-.table-expanded .col-fixed:nth-child(1) { left: 0; min-width: 50px; }
-.table-expanded .col-fixed:nth-child(2) { left: 50px; min-width: 150px; }
-.table-expanded .col-fixed:nth-child(3) { left: 200px; min-width: 120px; }
-.table-expanded .col-fixed:nth-child(4) { left: 320px; min-width: 100px; border-right: 2px solid #e0e0e0; }
+/* Sticky colonne FIX robuste anche con rowspan (multi-bene): usare classi, non nth-child */
+.table-expanded .col-fixed.col-numero { left: 0; min-width: 50px; }
+.table-expanded .col-fixed.col-cliente { left: 50px; min-width: 150px; }
+.table-expanded .col-fixed.col-bene-desc { left: 200px; min-width: 120px; }
+.table-expanded .col-fixed.col-bene-valore { left: 320px; min-width: 120px; text-align: right; }
+.table-expanded .col-fixed.col-bene-importo { left: 440px; min-width: 120px; text-align: right; border-right: 2px solid #e0e0e0; }
+
+/* Colonna Stato: neutra e abbastanza larga per la pill */
+.table-expanded th.col-stato,
+.table-expanded td.col-stato {
+    background: #fff !important;
+    min-width: 160px;
+}
+.table-expanded td.col-stato .status-select {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Focus: separatori più sottili (lavori e beni) */
+#focusTable tbody td {
+    border-bottom: 1px solid #ddd !important;
+}
 
 .table-expanded thead .col-fixed {
     background: #fafafa;
@@ -1694,12 +1742,12 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* Colonne Compensi */
 .col-compensi {
-    background: #f0f7ff;
+    background: #f0f7ff !important;
 }
 
 /* Colonne Fatture */
 .col-fatture {
-    background: #fff8f0;
+    background: #fff8f0 !important;
 }
 
 /* --- FORM MODALE ADMIN --- */

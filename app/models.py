@@ -9,7 +9,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(20), default='base')
-    admin_view_mode = db.Column(db.String(20), default='standard')
+    admin_view_mode = db.Column(db.String(20), default='extra2')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
