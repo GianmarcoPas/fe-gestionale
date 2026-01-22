@@ -38,10 +38,13 @@ def create_app():
     with app.app_context():
         db.create_all()
         
-        # Crea utenti admin/base di default se non esistono
+        # Crea utenti admin/base di default SOLO se non esistono
+        # NOTA: Non resettiamo le password degli utenti esistenti per evitare problemi su PythonAnywhere
+        # Usa init_users.py per resettare manualmente le password quando necessario
+        
         default_pass = 'Ciao1234'
         
-        # Admin users
+        # Admin users - crea solo se non esistono
         admins = ['Roberto', 'Lucio', 'Giuseppe', 'Carmela']
         for username in admins:
             if not User.query.filter_by(username=username).first():
@@ -49,7 +52,7 @@ def create_app():
                 admin.set_password(default_pass)
                 db.session.add(admin)
         
-        # Base users
+        # Base users - crea solo se non esistono
         base_users = ['Gianmarco', 'Francescos', 'Francescou', 'Giovanni', 'Marco']
         for username in base_users:
             if not User.query.filter_by(username=username).first():
