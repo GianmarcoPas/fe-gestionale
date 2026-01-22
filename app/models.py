@@ -92,11 +92,13 @@ class LavoroAdmin(db.Model):
     importo_revisione = db.Column(db.Float, default=0.0)  # Importo nell'offerta
     importo_caricamento = db.Column(db.Float, default=0.0)  # Importo nell'offerta
     
-    # Valori originali per revisore e caricamento (per modifica - sezione Compensi)
+    # Valori originali per revisore, caricamento e esterno (per modifica - sezione Compensi)
     rev_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
     rev_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
     car_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
     car_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
+    ext_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
+    ext_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
 
     # Compensi
     c_fe = db.Column(db.Float, default=0.0)

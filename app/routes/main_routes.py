@@ -385,6 +385,8 @@ def get_lavoro_admin(id):
         'rev_value': float(getattr(lavoro, 'rev_value', 0)) if lavoro.has_revisore else 0,
         'car_type': getattr(lavoro, 'car_type', 'perc') if lavoro.has_caricamento else 'perc',
         'car_value': float(getattr(lavoro, 'car_value', 0)) if lavoro.has_caricamento else 0,
+        'ext_type': getattr(lavoro, 'ext_type', 'perc') if lavoro.origine == 'ext' else 'perc',
+        'ext_value': float(getattr(lavoro, 'ext_value', 0)) if lavoro.origine == 'ext' else 0,
         'importo_revisione': getattr(lavoro, 'importo_revisione', 0) if lavoro.has_revisore else 0,
         'importo_caricamento': getattr(lavoro, 'importo_caricamento', 0) if lavoro.has_caricamento else 0,
         'spese_amministrative': getattr(lavoro, 'spese_amministrative', False),
@@ -581,6 +583,17 @@ def add_lavoro_admin():
             else:
                 lavoro.car_type = 'perc'
                 lavoro.car_value = 0.0
+            
+            # Salva valori originali esterno
+            if lavoro.origine == 'ext':
+                ext_type_val = request.form.get('ext_type', 'perc')
+                ext_val_val = to_float(request.form.get('ext_val', '0'))
+                lavoro.ext_type = ext_type_val
+                lavoro.ext_value = ext_val_val
+                print(f"[DEBUG UPDATE] Esterno salvato - tipo: {ext_type_val}, valore: {ext_val_val}")
+            else:
+                lavoro.ext_type = 'perc'
+                lavoro.ext_value = 0.0
             
             lavoro.c_fe = to_float(request.form.get('c_fe'))
             lavoro.c_amin = to_float(request.form.get('c_amin'))

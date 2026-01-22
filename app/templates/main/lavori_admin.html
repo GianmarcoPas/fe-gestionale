@@ -1569,7 +1569,7 @@
 
                     <div class="input-group flex-1">
                         <label>Redattore</label>
-                        <select name="redattore" id="selRedattore" class="one-ui-input" onchange="calcolaCompensi()">
+                        <select name="redattore" id="selRedattore" class="one-ui-input" onchange="toggleExtInput(); calcolaCompensi();">
                             <option value="">-- Seleziona --</option>
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
@@ -1607,25 +1607,33 @@
                         </select>
                         <input type="text" id="carVal" name="car_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
+                    <div id="extOptions" class="toggle-option" style="display:none;">
+                        <span>Compenso Esterno:</span>
+                        <select id="extType" name="ext_type" class="small-select" onchange="calcolaCompensi()">
+                            <option value="perc">%</option>
+                            <option value="euro">€</option>
+                        </select>
+                        <input type="text" id="extVal" name="ext_val" value="0" class="small-input" oninput="calcolaCompensi()">
+                    </div>
                 </div>
 
                 <div class="compensi-grid">
-                    <div class="c-item">
+                    <div class="c-item" id="fieldFE">
                         <label>FE (15% + Sp.Amm.)</label>
                         <input type="text" name="c_fe" id="c_fe" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
                     </div>
-                    <div class="c-item">
+                    <div class="c-item" id="fieldAmin">
                         <label>AMIN</label>
                         <input type="text" name="c_amin" id="c_amin" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
                     </div>
-                    <div class="c-item">
+                    <div class="c-item" id="fieldGalvan">
                         <label>GALVAN</label>
                         <input type="text" name="c_galvan" id="c_galvan" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
                     </div>
-                    <div class="c-item">
+                    <div class="c-item" id="fieldFH">
                         <label>FH</label>
                         <input type="text" name="c_fh" id="c_fh" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
@@ -3439,6 +3447,25 @@
                     document.getElementById('carVal').value = '0';
                 }
                 
+                // Imposta i valori per esterno se origine è 'ext'
+                if (data.origine === 'ext') {
+                    const extType = data.ext_type || 'perc';
+                    const extValue = parseFloat(data.ext_value) || 0;
+                    console.log('Imposto esterno - tipo:', extType, 'valore:', extValue);
+                    document.getElementById('extType').value = extType;
+                    if (extType === 'euro') {
+                        const formatted = formatCurrency(extValue);
+                        document.getElementById('extVal').value = formatted;
+                    } else {
+                        const valStr = extValue.toString().replace('.', ',');
+                        document.getElementById('extVal').value = valStr;
+                    }
+                    console.log('Valore finale nel campo extVal:', document.getElementById('extVal').value);
+                } else {
+                    document.getElementById('extType').value = 'perc';
+                    document.getElementById('extVal').value = '0';
+                }
+                
                 // Assicurati che gli importi di revisione e caricamento siano impostati prima di ricalcolare
                 // (potrebbero essere stati sovrascritti da calcolaCompensi se chiamato prima)
                 if (data.has_revisore && data.importo_revisione) {
@@ -3457,11 +3484,28 @@
             setCurrencyValue('c_amin', data.c_amin || 0);
             setCurrencyValue('c_galvan', data.c_galvan || 0);
             setCurrencyValue('c_fh', data.c_fh || 0);
+            // Per BIANC e DELOITTE, imposta 0,00 se vuoto o null
             setCurrencyValue('c_bianc', data.c_bianc || 0);
             setCurrencyValue('c_deloitte', data.c_deloitte || 0);
             setCurrencyValue('c_ext', data.c_ext || 0);
             setCurrencyValue('c_revisore', data.c_revisore || 0);
             setCurrencyValue('c_caricamento', data.c_caricamento || 0);
+            
+            // Assicurati che BIANC e DELOITTE mostrino 0,00 se vuoti quando sono selezionati
+            const origine = document.getElementById('selOrigine').value;
+            const redattore = document.getElementById('selRedattore').value;
+            if (origine === 'BIANC' || redattore === 'BIANC') {
+                const biancInput = document.getElementById('c_bianc');
+                if (biancInput && (!biancInput.value || biancInput.value === '')) {
+                    biancInput.value = '0,00';
+                }
+            }
+            if (origine === 'DELOITTE' || redattore === 'DELOITTE') {
+                const deloitteInput = document.getElementById('c_deloitte');
+                if (deloitteInput && (!deloitteInput.value || deloitteInput.value === '')) {
+                    deloitteInput.value = '0,00';
+                }
+            }
             
         } catch (error) {
             console.error('Errore nel caricamento del lavoro:', error);
@@ -3522,6 +3566,8 @@
     function toggleSpese() {
         const hasRev = document.getElementById('chkRevisione').checked;
         const hasCar = document.getElementById('chkCaricamento').checked;
+        const origine = document.getElementById('selOrigine').value;
+        const isExt = origine === 'ext';
 
         document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
         document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
@@ -3532,19 +3578,41 @@
         document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
         document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
 
-        document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
+        // Aggiorna la visibilità del toggle row includendo anche ext
+        document.getElementById('togglesRevCar').style.display = (hasRev || hasCar || isExt) ? 'flex' : 'none';
 
         calcolaCompensi();
     }
 
     function calcolaCompensi() {
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        
+        // Non calcolare i compensi finché origine e redattore non sono entrambi selezionati
+        if (!origine || !redattore) {
+            // Nascondi eventuali alert e esci senza calcolare
+            const alertDiv = document.getElementById('alertCompensi');
+            if (alertDiv) {
+                alertDiv.style.display = 'none';
+            }
+            return; // Esci dalla funzione senza calcolare
+        }
+
+        // Se c'è BIANC o DELOITTE in origine o redattore, inserimento manuale (non calcolare automaticamente)
+        if (origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE') {
+            // Non calcolare i compensi, lasciare i valori esistenti (inserimento manuale)
+            const alertDiv = document.getElementById('alertCompensi');
+            if (alertDiv) {
+                alertDiv.style.display = 'none'; // Nascondi eventuali alert precedenti
+            }
+            return; // Esci dalla funzione senza calcolare
+        }
+
         // Totale Offerta 4.0 (somma importi offerta dei beni)
         const importoOfferta = parseCurrency(document.getElementById('impOfferta').value);
         const importoRevisione = parseCurrency(document.getElementById('impRevisione').value);
         const importoCaricamento = parseCurrency(document.getElementById('impCaricamento').value);
 
-        const origine = document.getElementById('selOrigine').value;
-        const redattore = document.getElementById('selRedattore').value;
         const hasSpeseAmm = document.getElementById('chkSpeseAmm').checked;
         const hasRevisione = document.getElementById('chkRevisione').checked;
         const hasCaricamento = document.getElementById('chkCaricamento').checked;
@@ -3558,10 +3626,19 @@
             speseAmm = totaleLavoro * 0.06;
         }
 
-        // 2. ESTERNO (10%) - calcolato su Totale Offerta 4.0 (NON su totale lavoro)
+        // 2. ESTERNO - calcola il compenso (percentuale o euro)
         let valExt = 0;
         if (origine === 'ext') {
-            valExt = importoOfferta * 0.10;
+            const extType = document.getElementById('extType').value;
+            let rawExtVal = document.getElementById('extVal').value;
+
+            if (extType === 'euro') {
+                valExt = parseCurrency(rawExtVal);
+            } else {
+                const extPerc = parseFloat(rawExtVal.replace(',', '.')) || 0;
+                // Calcolato su Totale Offerta 4.0 (NON su totale lavoro)
+                valExt = (importoOfferta * extPerc / 100);
+            }
         }
 
         // 3. REVISORE - calcola il compenso
@@ -3648,6 +3725,9 @@
         setCurrencyValue('c_revisore', valRev);
         setCurrencyValue('c_caricamento', valCar);
 
+        // Aggiorna la visibilità dei campi in base ai valori calcolati
+        updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar);
+
         const allValues = [valFE, valAmin, valGalvan, valFH, valBianc, valExt, valRev, valCar, resto];
         const hasNegative = allValues.some(v => v < -0.01);
 
@@ -3668,10 +3748,101 @@
         const isDeloitte = origine === 'DELOITTE' || redattore === 'DELOITTE';
 
         document.getElementById('divNomeEsterno').style.display = isExt ? 'block' : 'none';
+        
+        // Mostra/nascondi il campo per il compenso esterno
+        const extOptions = document.getElementById('extOptions');
+        if (extOptions) {
+            extOptions.style.display = isExt ? 'flex' : 'none';
+            // Se è la prima volta che si seleziona ext e il valore è 0, imposta il default a 10%
+            if (isExt) {
+                const extValInput = document.getElementById('extVal');
+                if (extValInput && (!extValInput.value || extValInput.value === '0' || extValInput.value === '0,00')) {
+                    extValInput.value = '10';
+                    document.getElementById('extType').value = 'perc';
+                }
+            }
+        }
+        
+        // Aggiorna la visibilità del toggle row
+        const togglesRow = document.getElementById('togglesRevCar');
+        if (togglesRow) {
+            const hasRev = document.getElementById('chkRevisione').checked;
+            const hasCar = document.getElementById('chkCaricamento').checked;
+            togglesRow.style.display = (hasRev || hasCar || isExt) ? 'flex' : 'none';
+        }
+        
+        // Per BIANC e DELOITTE, mostra sempre i campi e imposta 0,00 se vuoti
+        if (isBianc) {
+            const biancField = document.getElementById('fieldBianc');
+            if (biancField) {
+                biancField.style.display = 'block';
+                const biancInput = document.getElementById('c_bianc');
+                if (biancInput && !biancInput.value) {
+                    biancInput.value = '0,00';
+                }
+            }
+        } else {
+            document.getElementById('fieldBianc').style.display = 'none';
+        }
+        
+        if (isDeloitte) {
+            const deloitteField = document.getElementById('fieldDeloitte');
+            if (deloitteField) {
+                deloitteField.style.display = 'block';
+                const deloitteInput = document.getElementById('c_deloitte');
+                if (deloitteInput && !deloitteInput.value) {
+                    deloitteInput.value = '0,00';
+                }
+            }
+        } else {
+            const deoField = document.getElementById('fieldDeloitte');
+            if (deoField) deoField.style.display = 'none';
+        }
+        
+        // Per Ext, mostra solo se origine è ext (gestito da updateCompensiFieldsVisibility per i calcoli)
+        // Ma qui lo mostriamo sempre se origine è ext
         document.getElementById('fieldExt').style.display = isExt ? 'block' : 'none';
-        document.getElementById('fieldBianc').style.display = isBianc ? 'block' : 'none';
+    }
+    
+    function updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar) {
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        const isManual = origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE';
+        
+        // Se è modalità manuale (BIANC o DELOITTE), mostra solo i campi rilevanti
+        if (isManual) {
+            // Mostra sempre FE
+            document.getElementById('fieldFE').style.display = 'block';
+            // Mostra Ext solo se origine è ext
+            document.getElementById('fieldExt').style.display = (origine === 'ext') ? 'block' : 'none';
+            // Mostra Revisore e Caricamento solo se hanno valore > 0
+            const revField = document.getElementById('fieldRev');
+            if (revField) revField.style.display = valRev > 0 ? 'block' : 'none';
+            const carField = document.getElementById('fieldCar');
+            if (carField) carField.style.display = valCar > 0 ? 'block' : 'none';
+            // Nascondi gli altri campi che non sono rilevanti
+            document.getElementById('fieldAmin').style.display = 'none';
+            document.getElementById('fieldGalvan').style.display = 'none';
+            document.getElementById('fieldFH').style.display = 'none';
+            // BIANC e DELOITTE vengono gestiti da toggleExtInput
+            toggleExtInput();
+            return;
+        }
+        
+        // Modalità calcolo automatico: mostra solo i campi con valore > 0
+        document.getElementById('fieldFE').style.display = valFE > 0 ? 'block' : 'none';
+        document.getElementById('fieldAmin').style.display = valAmin > 0 ? 'block' : 'none';
+        document.getElementById('fieldGalvan').style.display = valGalvan > 0 ? 'block' : 'none';
+        document.getElementById('fieldFH').style.display = valFH > 0 ? 'block' : 'none';
+        document.getElementById('fieldExt').style.display = valExt > 0 ? 'block' : 'none';
+        const revField = document.getElementById('fieldRev');
+        if (revField) revField.style.display = valRev > 0 ? 'block' : 'none';
+        const carField = document.getElementById('fieldCar');
+        if (carField) carField.style.display = valCar > 0 ? 'block' : 'none';
+        // BIANC e DELOITTE non vengono mostrati in modalità automatica (solo se selezionati manualmente)
+        document.getElementById('fieldBianc').style.display = 'none';
         const deoField = document.getElementById('fieldDeloitte');
-        if (deoField) deoField.style.display = isDeloitte ? 'block' : 'none';
+        if (deoField) deoField.style.display = 'none';
     }
 
     function validateForm() {
@@ -3734,6 +3905,22 @@
             // Se è percentuale, mantieni il valore come numero con virgola decimale
             const val = parseFloat(carValInput.value.replace(',', '.')) || 0;
             carValInput.value = val.toString().replace('.', ',');
+        }
+        
+        // Converti anche il valore esterno se presente
+        const origine = document.getElementById('selOrigine').value;
+        if (origine === 'ext') {
+            const extType = document.getElementById('extType').value;
+            const extValInput = document.getElementById('extVal');
+            if (extType === 'euro') {
+                // Se è euro, converti in formato italiano (numero puro con virgola decimale)
+                const val = parseCurrency(extValInput.value);
+                extValInput.value = val.toFixed(2).replace('.', ',');
+            } else {
+                // Se è percentuale, mantieni il valore come numero con virgola decimale
+                const val = parseFloat(extValInput.value.replace(',', '.')) || 0;
+                extValInput.value = val.toString().replace('.', ',');
+            }
         }
         
         return true;
