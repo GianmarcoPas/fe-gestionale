@@ -2300,7 +2300,7 @@
                     // Se non matcha il cliente, controlla i beni
                     let beneMatch = false;
                     lavoroRows.forEach(row => {
-                        const bene = (row.getAttribute('data-bene') || '').toLowerCase();
+                const bene = (row.getAttribute('data-bene') || '').toLowerCase();
                         if (bene.includes(currentSearchTerm)) {
                             beneMatch = true;
                         }
@@ -2376,9 +2376,9 @@
                     const stato = (row.getAttribute('data-stato') || '').toLowerCase();
                     if (stato !== activeFilters.stato) {
                         benePassaFiltri = false;
-                    }
                 }
-                
+            }
+            
                 // Ricerca (bene) - se già non matchava il cliente
                 if (currentSearchTerm && benePassaFiltri) {
                     const cliente = (firstRow.getAttribute('data-cliente') || '').toLowerCase();
@@ -2397,10 +2397,10 @@
                 }
                 
                 if (benePassaFiltri) {
-                    row.classList.remove('filtered-out');
-                } else {
-                    row.classList.add('filtered-out');
-                }
+                row.classList.remove('filtered-out');
+            } else {
+                row.classList.add('filtered-out');
+            }
             });
         });
         
@@ -3701,8 +3701,12 @@
             }
         }
 
+        // Converti tutti i valori currency in formato italiano (numero puro con virgola decimale)
+        // Esempio: "1.170,75" -> "1170,75" (rimuove separatori migliaia, mantiene virgola decimale)
         document.querySelectorAll('.currency-input').forEach(input => {
-            input.value = parseCurrency(input.value);
+            const numValue = parseCurrency(input.value); // Converte in numero (es. 1170.75)
+            // Converti in formato italiano: numero puro con virgola decimale (es. "1170,75")
+            input.value = numValue.toFixed(2).replace('.', ',');
         });
         
         // Converti i valori di revisore e caricamento prima di inviare
@@ -3711,11 +3715,11 @@
         const revType = document.getElementById('revType').value;
         const revValInput = document.getElementById('revVal');
         if (revType === 'euro') {
-            // Se è euro, converti in numero (rimuovi formattazione)
+            // Se è euro, converti in formato italiano (numero puro con virgola decimale)
             const val = parseCurrency(revValInput.value);
-            revValInput.value = val.toString().replace('.', ',');
+            revValInput.value = val.toFixed(2).replace('.', ',');
         } else {
-            // Se è percentuale, mantieni il valore come numero
+            // Se è percentuale, mantieni il valore come numero con virgola decimale
             const val = parseFloat(revValInput.value.replace(',', '.')) || 0;
             revValInput.value = val.toString().replace('.', ',');
         }
@@ -3723,11 +3727,11 @@
         const carType = document.getElementById('carType').value;
         const carValInput = document.getElementById('carVal');
         if (carType === 'euro') {
-            // Se è euro, converti in numero (rimuovi formattazione)
+            // Se è euro, converti in formato italiano (numero puro con virgola decimale)
             const val = parseCurrency(carValInput.value);
-            carValInput.value = val.toString().replace('.', ',');
+            carValInput.value = val.toFixed(2).replace('.', ',');
         } else {
-            // Se è percentuale, mantieni il valore come numero
+            // Se è percentuale, mantieni il valore come numero con virgola decimale
             const val = parseFloat(carValInput.value.replace(',', '.')) || 0;
             carValInput.value = val.toString().replace('.', ',');
         }

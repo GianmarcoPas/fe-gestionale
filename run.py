@@ -48,5 +48,8 @@ def initialize_users():
         print("\n✅ Tutti gli utenti sono stati inizializzati/resettati!")
 
 if __name__ == '__main__':
-    initialize_users() # Lancia la creazione utenti
+    # NOTA: initialize_users() NON viene chiamata automaticamente
+    # Per inizializzare/resettare gli utenti, esegui manualmente:
+    # python -c "from run import initialize_users, app; initialize_users()"
+    # Oppure usa: python init_users.py
     app.run(debug=True)

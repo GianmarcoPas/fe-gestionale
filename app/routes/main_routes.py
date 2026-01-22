@@ -481,9 +481,16 @@ def add_lavoro_admin():
         # Helper per convertire float
         def to_float(val):
             try:
-                # Gestione stringhe con formattazione italiana (es. 1.234,56)
                 if isinstance(val, str):
-                    val = val.replace('.', '').replace(',', '.')
+                    val = val.strip()
+                    # Se contiene sia punto che virgola, assume formato italiano (1.234,56)
+                    if '.' in val and ',' in val:
+                        val = val.replace('.', '').replace(',', '.')
+                    # Se contiene solo virgola, assume formato italiano (1170,75)
+                    elif ',' in val:
+                        val = val.replace(',', '.')
+                    # Se contiene solo punto, assume formato internazionale (1170.75)
+                    # (non fa nulla, il punto è già il separatore decimale)
                 return float(val)
             except: 
                 return 0.0
@@ -803,7 +810,7 @@ def update_bene_field(id):
 
     db.session.commit()
     return jsonify({'success': True})
-
+    
 
 @bp.route('/update_fattura/<int:id>', methods=['POST'])
 @login_required
