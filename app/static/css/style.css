@@ -486,6 +486,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     min-width: 600px; /* Forza scroll se troppo stretta */
+    table-layout: auto; /* Permette alle colonne di adattarsi al contenuto */
 }
 
 .oneui-table th {
@@ -1854,6 +1855,219 @@ input:checked + .slider:before { transform: translateX(22px); }
 /* Colonne Fatture */
 .col-fatture {
     background: #fff8f0 !important;
+}
+
+/* ============================================================
+   OTTIMIZZAZIONE LARGHEZZE COLONNE - SCHERMI GRANDI (>= 1920px)
+   ============================================================ */
+@media (min-width: 1920px) {
+    /* Vista Standard: colonne compatte, più spazio per Cliente e Bene */
+    .lavori-admin-standard-table {
+        table-layout: auto;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(1),
+    .lavori-admin-standard-table td.col-numero {
+        width: 50px;
+        min-width: 50px;
+        max-width: 50px;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(2),
+    .lavori-admin-standard-table td.col-cliente {
+        min-width: 200px;
+        width: auto;
+        max-width: none;
+        white-space: normal; /* Permette il wrap se necessario */
+        word-wrap: break-word;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(3),
+    .lavori-admin-standard-table td.col-bene-desc {
+        min-width: 250px;
+        width: auto;
+        max-width: none;
+        white-space: normal; /* Permette il wrap se necessario */
+        word-wrap: break-word;
+    }
+    
+    /* Rimuove text-truncate su schermi grandi per Cliente e Bene */
+    .lavori-admin-standard-table td.col-cliente.text-truncate,
+    .lavori-admin-standard-table td.col-bene-desc.text-truncate {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(4),
+    .lavori-admin-standard-table td.col-bene-valore {
+        width: auto;
+        min-width: 100px;
+        max-width: 120px;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(5),
+    .lavori-admin-standard-table td.col-bene-importo {
+        width: auto;
+        min-width: 100px;
+        max-width: 120px;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    
+    /* Colonne date e dati: adattate al contenuto */
+    .lavori-admin-standard-table th:nth-child(6),
+    .lavori-admin-standard-table td.col-data-offerta {
+        width: auto;
+        min-width: 90px;
+        max-width: 110px;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(7),
+    .lavori-admin-standard-table td.col-data-firma {
+        width: auto;
+        min-width: 95px;
+        max-width: 115px;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(8),
+    .lavori-admin-standard-table td.col-imp-rev {
+        width: auto;
+        min-width: 80px;
+        max-width: 100px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(9),
+    .lavori-admin-standard-table td.col-imp-car {
+        width: auto;
+        min-width: 80px;
+        max-width: 100px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(10),
+    .lavori-admin-standard-table td.col-origine {
+        width: auto;
+        min-width: 70px;
+        max-width: 90px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(11),
+    .lavori-admin-standard-table td.col-redattore {
+        width: auto;
+        min-width: 80px;
+        max-width: 100px;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(12),
+    .lavori-admin-standard-table td.col-data-pec {
+        width: auto;
+        min-width: 90px;
+        max-width: 110px;
+    }
+    
+    /* Stato: all'estremo destro */
+    .lavori-admin-standard-table th:nth-child(13),
+    .lavori-admin-standard-table td.col-stato {
+        width: auto;
+        min-width: 140px;
+        max-width: 180px;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    
+    /* Vista Extra1: ottimizzazione colonne fisse */
+    .table-expanded {
+        table-layout: auto;
+    }
+    
+    .table-expanded .col-fixed.col-numero {
+        min-width: 50px;
+        width: 50px;
+    }
+    
+    .table-expanded .col-fixed.col-cliente {
+        min-width: 200px;
+        width: auto;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    
+    .table-expanded .col-fixed.col-bene-desc {
+        min-width: 250px;
+        width: auto;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    
+    .table-expanded .col-fixed.col-bene-valore {
+        min-width: 100px;
+        width: 120px;
+    }
+    
+    .table-expanded .col-fixed.col-bene-importo {
+        min-width: 100px;
+        width: 120px;
+    }
+    
+    /* Rimuove text-truncate su schermi grandi per Cliente e Bene nella vista extra1 */
+    .table-expanded .col-fixed.col-cliente.text-truncate,
+    .table-expanded .col-fixed.col-bene-desc.text-truncate {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+    
+    /* Colonne dinamiche nella vista extra1: adattate al contenuto */
+    .table-expanded th:not(.col-fixed),
+    .table-expanded td:not(.col-fixed) {
+        width: auto;
+        min-width: fit-content;
+    }
+    
+    .table-expanded th.col-stato,
+    .table-expanded td.col-stato {
+        min-width: 140px;
+        max-width: 180px;
+    }
+}
+
+/* ============================================================
+   OTTIMIZZAZIONE LARGHEZZE COLONNE - SCHERMI MEDI (768px - 1919px)
+   ============================================================ */
+@media (min-width: 768px) and (max-width: 1919px) {
+    /* Vista Standard: distribuzione più equilibrata */
+    .lavori-admin-standard-table th:nth-child(2),
+    .lavori-admin-standard-table td.col-cliente {
+        min-width: 150px;
+        width: auto;
+    }
+    
+    .lavori-admin-standard-table th:nth-child(3),
+    .lavori-admin-standard-table td.col-bene-desc {
+        min-width: 180px;
+        width: auto;
+    }
+    
+    /* Vista Extra1: colonne fisse più compatte */
+    .table-expanded .col-fixed.col-cliente {
+        min-width: 150px;
+    }
+    
+    .table-expanded .col-fixed.col-bene-desc {
+        min-width: 180px;
+    }
 }
 
 /* --- FORM MODALE ADMIN --- */
