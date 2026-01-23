@@ -1588,7 +1588,17 @@
             </div>
 
             <div class="form-section result-section">
-                <h4><i class="bi bi-calculator"></i> Ripartizione Compensi</h4>
+                <h4 style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="bi bi-calculator"></i> Ripartizione Compensi</span>
+                    <span style="display: flex; gap: 15px; font-size: 14px; font-weight: normal;">
+                        <a href="#" onclick="azzeraCompensi(); return false;" style="color: #666; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#666'">
+                            <i class="bi bi-x-circle"></i> Azzera
+                        </a>
+                        <a href="#" onclick="ricalcolaCompensi(); return false;" style="color: #666; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#666'">
+                            <i class="bi bi-arrow-clockwise"></i> Ricalcola
+                        </a>
+                    </span>
+                </h4>
 
                 <div class="form-row toggles-row" id="togglesRevCar" style="display:none; margin-bottom: 15px;">
                     <div id="revOptions" class="toggle-option" style="display:none;">
@@ -1800,11 +1810,12 @@
             input.value = '0,00';
         }
 
-        // Ricalcola totali se necessario
+        // Ricalcola totali se necessario (sempre, per aggiornamento live)
         if (input.name === 'importo_offerta' ||
             input.name === 'importo_revisione' ||
             input.name === 'importo_caricamento' ||
-            input.classList.contains('bene-valore')) {
+            input.classList.contains('bene-valore') ||
+            input.classList.contains('bene-importo')) {
             calcolaCompensi();
         }
     }
@@ -3475,37 +3486,53 @@
                     document.getElementById('impCaricamento').value = formatCurrency(data.importo_caricamento || 0);
                 }
                 
-                // Ricalcola i compensi dopo aver impostato tutti i valori
-                calcolaCompensi();
+                // Compila compensi PRIMA di ricalcolare - usa sempre i valori salvati
+                setCurrencyValue('c_fe', data.c_fe || 0);
+                setCurrencyValue('c_amin', data.c_amin || 0);
+                setCurrencyValue('c_galvan', data.c_galvan || 0);
+                setCurrencyValue('c_fh', data.c_fh || 0);
+                setCurrencyValue('c_bianc', data.c_bianc || 0);
+                setCurrencyValue('c_deloitte', data.c_deloitte || 0);
+                setCurrencyValue('c_ext', data.c_ext || 0);
+                setCurrencyValue('c_revisore', data.c_revisore || 0);
+                setCurrencyValue('c_caricamento', data.c_caricamento || 0);
+                
+                // Per BIANC e DELOITTE, assicurati che i campi mostrino 0,00 se vuoti
+                const origine = document.getElementById('selOrigine').value;
+                const redattore = document.getElementById('selRedattore').value;
+                if (origine === 'BIANC' || redattore === 'BIANC') {
+                    const biancInput = document.getElementById('c_bianc');
+                    if (biancInput && (!biancInput.value || biancInput.value === '')) {
+                        biancInput.value = '0,00';
+                    }
+                }
+                if (origine === 'DELOITTE' || redattore === 'DELOITTE') {
+                    const deloitteInput = document.getElementById('c_deloitte');
+                    if (deloitteInput && (!deloitteInput.value || deloitteInput.value === '')) {
+                        deloitteInput.value = '0,00';
+                    }
+                }
+                
+                // Ricalcola i compensi SOLO se non siamo in modalità manuale (BIANC/DELOITTE)
+                // Se siamo in modalità manuale, i valori salvati sono già stati impostati sopra
+                const isManual = origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE';
+                if (!isManual) {
+                    calcolaCompensi();
+                } else {
+                    // In modalità manuale, aggiorna solo la visibilità dei campi
+                    updateCompensiFieldsVisibility(
+                        parseCurrency(document.getElementById('c_fe').value) || 0,
+                        parseCurrency(document.getElementById('c_amin').value) || 0,
+                        parseCurrency(document.getElementById('c_galvan').value) || 0,
+                        parseCurrency(document.getElementById('c_fh').value) || 0,
+                        parseCurrency(document.getElementById('c_bianc').value) || 0,
+                        parseCurrency(document.getElementById('c_deloitte').value) || 0,
+                        parseCurrency(document.getElementById('c_ext').value) || 0,
+                        parseCurrency(document.getElementById('c_revisore').value) || 0,
+                        parseCurrency(document.getElementById('c_caricamento').value) || 0
+                    );
+                }
             }, 100);
-            
-            // Compila compensi (senza ricalcolare, usa i valori salvati)
-            setCurrencyValue('c_fe', data.c_fe || 0);
-            setCurrencyValue('c_amin', data.c_amin || 0);
-            setCurrencyValue('c_galvan', data.c_galvan || 0);
-            setCurrencyValue('c_fh', data.c_fh || 0);
-            // Per BIANC e DELOITTE, imposta 0,00 se vuoto o null
-            setCurrencyValue('c_bianc', data.c_bianc || 0);
-            setCurrencyValue('c_deloitte', data.c_deloitte || 0);
-            setCurrencyValue('c_ext', data.c_ext || 0);
-            setCurrencyValue('c_revisore', data.c_revisore || 0);
-            setCurrencyValue('c_caricamento', data.c_caricamento || 0);
-            
-            // Assicurati che BIANC e DELOITTE mostrino 0,00 se vuoti quando sono selezionati
-            const origine = document.getElementById('selOrigine').value;
-            const redattore = document.getElementById('selRedattore').value;
-            if (origine === 'BIANC' || redattore === 'BIANC') {
-                const biancInput = document.getElementById('c_bianc');
-                if (biancInput && (!biancInput.value || biancInput.value === '')) {
-                    biancInput.value = '0,00';
-                }
-            }
-            if (origine === 'DELOITTE' || redattore === 'DELOITTE') {
-                const deloitteInput = document.getElementById('c_deloitte');
-                if (deloitteInput && (!deloitteInput.value || deloitteInput.value === '')) {
-                    deloitteInput.value = '0,00';
-                }
-            }
             
         } catch (error) {
             console.error('Errore nel caricamento del lavoro:', error);
@@ -3598,12 +3625,26 @@
             return; // Esci dalla funzione senza calcolare
         }
 
-        // Se c'è BIANC o DELOITTE in origine o redattore, inserimento manuale (non calcolare automaticamente)
+        // Se c'è BIANC o DELOITTE in origine o redattore, inserimento manuale (azzerare tutti i campi)
         if (origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE') {
-            // Non calcolare i compensi, lasciare i valori esistenti (inserimento manuale)
+            // Azzera tutti i campi compensi a 0,00
+            setCurrencyValue('c_fe', 0);
+            setCurrencyValue('c_amin', 0);
+            setCurrencyValue('c_galvan', 0);
+            setCurrencyValue('c_fh', 0);
+            setCurrencyValue('c_bianc', 0);
+            setCurrencyValue('c_deloitte', 0);
+            setCurrencyValue('c_ext', 0);
+            setCurrencyValue('c_revisore', 0);
+            setCurrencyValue('c_caricamento', 0);
+            
+            // Aggiorna la visibilità dei campi (mostra solo quelli rilevanti per modalità manuale)
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            
+            // Nascondi eventuali alert
             const alertDiv = document.getElementById('alertCompensi');
             if (alertDiv) {
-                alertDiv.style.display = 'none'; // Nascondi eventuali alert precedenti
+                alertDiv.style.display = 'none';
             }
             return; // Esci dalla funzione senza calcolare
         }
@@ -3739,6 +3780,58 @@
             alertDiv.style.display = 'none';
         }
     }
+    
+    function azzeraCompensi() {
+        /** Azzera tutti i campi compensi a 0,00 */
+        setCurrencyValue('c_fe', 0);
+        setCurrencyValue('c_amin', 0);
+        setCurrencyValue('c_galvan', 0);
+        setCurrencyValue('c_fh', 0);
+        setCurrencyValue('c_bianc', 0);
+        setCurrencyValue('c_deloitte', 0);
+        setCurrencyValue('c_ext', 0);
+        setCurrencyValue('c_revisore', 0);
+        setCurrencyValue('c_caricamento', 0);
+        
+        // Aggiorna la visibilità dei campi
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        const isManual = origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE';
+        
+        if (isManual) {
+            // In modalità manuale, mostra tutti i campi rilevanti
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        } else {
+            // In modalità automatica, nascondi i campi a 0
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+        
+        // Nascondi eventuali alert
+        const alertDiv = document.getElementById('alertCompensi');
+        if (alertDiv) {
+            alertDiv.style.display = 'none';
+        }
+    }
+    
+    function ricalcolaCompensi() {
+        /** Ricalcola i compensi automaticamente (solo se previsti calcoli automatici) */
+        const origine = document.getElementById('selOrigine').value;
+        const redattore = document.getElementById('selRedattore').value;
+        
+        // Se c'è BIANC o DELOITTE, non fare nulla (modalità manuale)
+        if (origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE') {
+            // In modalità manuale, ricalcola non fa nulla
+            return;
+        }
+        
+        // Se origine o redattore non sono selezionati, non fare nulla
+        if (!origine || !redattore) {
+            return;
+        }
+        
+        // Ricalcola i compensi
+        calcolaCompensi();
+    }
 
     function toggleExtInput() {
         const origine = document.getElementById('selOrigine').value;
@@ -3809,22 +3902,23 @@
         const redattore = document.getElementById('selRedattore').value;
         const isManual = origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE';
         
-        // Se è modalità manuale (BIANC o DELOITTE), mostra solo i campi rilevanti
+        // Se è modalità manuale (BIANC o DELOITTE), mostra tutti i campi per inserimento manuale
         if (isManual) {
-            // Mostra sempre FE
+            // Mostra sempre tutti i campi principali per inserimento manuale
             document.getElementById('fieldFE').style.display = 'block';
+            document.getElementById('fieldAmin').style.display = 'block';
+            document.getElementById('fieldGalvan').style.display = 'block';
+            document.getElementById('fieldFH').style.display = 'block';
             // Mostra Ext solo se origine è ext
             document.getElementById('fieldExt').style.display = (origine === 'ext') ? 'block' : 'none';
-            // Mostra Revisore e Caricamento solo se hanno valore > 0
+            // Mostra Revisore e Caricamento solo se hanno valore > 0 o se sono attivi
+            const hasRev = document.getElementById('chkRevisione').checked;
+            const hasCar = document.getElementById('chkCaricamento').checked;
             const revField = document.getElementById('fieldRev');
-            if (revField) revField.style.display = valRev > 0 ? 'block' : 'none';
+            if (revField) revField.style.display = (hasRev || valRev > 0) ? 'block' : 'none';
             const carField = document.getElementById('fieldCar');
-            if (carField) carField.style.display = valCar > 0 ? 'block' : 'none';
-            // Nascondi gli altri campi che non sono rilevanti
-            document.getElementById('fieldAmin').style.display = 'none';
-            document.getElementById('fieldGalvan').style.display = 'none';
-            document.getElementById('fieldFH').style.display = 'none';
-            // BIANC e DELOITTE vengono gestiti da toggleExtInput
+            if (carField) carField.style.display = (hasCar || valCar > 0) ? 'block' : 'none';
+            // BIANC e DELOITTE vengono gestiti da toggleExtInput (mostrati se selezionati)
             toggleExtInput();
             return;
         }
