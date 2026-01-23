@@ -361,7 +361,8 @@
     }
     
     /* Nascondi righe filtrate */
-    .oneui-table tbody tr.filtered-out {
+    .oneui-table tbody tr.filtered-out,
+    .overlay-table tbody tr.filtered-out {
         display: none !important;
     }
 
@@ -748,7 +749,7 @@
                 <td class="col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td class="col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 {% if bene_idx == 0 %}
-                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;">
+                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;" {% if l.id %}ondblclick="editDataOfferta(event, {{ l.id }})"{% endif %}>
                     {% if l.data_offerta %}
                         {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
                         {% if l.offerta_revision and l.offerta_revision > 0 %}R{{ l.offerta_revision }} {% endif %}
@@ -841,19 +842,19 @@
                 {% set num_beni = item.beni|length %}
                 {% for bene in item.beni %}
                 {% set bene_idx = loop.index0 %}
-                <tr>
+                <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -888,7 +889,7 @@
                 {% set num_beni = item.beni|length %}
                 {% for bene in item.beni %}
                 {% set bene_idx = loop.index0 %}
-                <tr>
+                <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
@@ -927,7 +928,7 @@
                 {% set num_beni = item.beni|length %}
                 {% for bene in item.beni %}
                 {% set bene_idx = loop.index0 %}
-                <tr>
+                <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
                     <td colspan="2" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
                         {% if l.origine and l.origine.lower() == 'ext' %}
@@ -1046,7 +1047,7 @@
                 <td class="col-fixed col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
 
                 {% if bene_idx == 0 %}
-                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;">
+                <td rowspan="{{ num_beni }}" class="cell-data-offerta col-data-offerta" style="vertical-align: middle; text-align: center;" {% if l.id %}ondblclick="editDataOfferta(event, {{ l.id }})"{% endif %}>
                     {% if l.data_offerta %}
                         {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
                         {% if l.offerta_revision and l.offerta_revision > 0 %}R{{ l.offerta_revision }} {% endif %}
@@ -1091,15 +1092,15 @@
                     {% endif %}
                 </td>
                 {% if bene_idx == 0 %}
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
@@ -1226,23 +1227,23 @@
                     </select>
                 </td>
                 {% if bene_idx == 0 %}
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fh')" data-fattura-type="fh" data-lavoro-id="{{ l.id }}">{{ l.f_fh or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'bianc')" data-fattura-type="bianc" data-lavoro-id="{{ l.id }}">{{ l.f_bianc or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_deloitte or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'ext')" data-fattura-type="ext" data-lavoro-id="{{ l.id }}">{{ l.f_ext or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
                 {% endif %}
             </tr>
@@ -1282,18 +1283,18 @@
                 {% set num_beni = item.beni|length %}
                 {% for bene in item.beni %}
                 {% set bene_idx = loop.index0 %}
-                <tr>
+                <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_ext).replace(",", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_revisore).replace(",", ".") }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">€ {{ "{:,.0f}".format(l.c_caricamento).replace(",", ".") }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1327,7 +1328,7 @@
                 {% set num_beni = item.beni|length %}
                 {% for bene in item.beni %}
                 {% set bene_idx = loop.index0 %}
-                <tr>
+                <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
@@ -1582,7 +1583,14 @@
                 <div class="form-row">
                     <div class="input-group flex-1">
                         <label>Collaboratore</label>
-                        <input type="text" name="collaboratore" id="inpCollaboratore" class="one-ui-input">
+                        <select name="collaboratore" id="inpCollaboratore" class="one-ui-input">
+                            <option value="">-</option>
+                            <option value="Passiatore">Passiatore</option>
+                            <option value="Fortin">Fortin</option>
+                            <option value="Simonetti">Simonetti</option>
+                            <option value="Lanzillotta">Lanzillotta</option>
+                            <option value="Ulivi">Ulivi</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1734,6 +1742,31 @@
     <div class="menu-item" onclick="firmaSetMode('AUTORIZZ.')">AUTORIZZ.</div>
     <div class="menu-divider"></div>
     <div class="menu-item" onclick="firmaSetMode('clear')">Svuota</div>
+</div>
+
+<!-- Modale Data Offerta -->
+<div id="dataOffertaModal" class="data-offerta-modal-overlay" onclick="closeDataOffertaModal(event)">
+    <div class="data-offerta-modal" onclick="event.stopPropagation();">
+        <div class="data-offerta-modal-header">
+            <h3>Inserisci Data Offerta</h3>
+            <button class="data-offerta-modal-close" onclick="closeDataOffertaModal()">&times;</button>
+        </div>
+        <div class="data-offerta-modal-body">
+            <div class="data-offerta-field">
+                <label for="inputRevisione">R (Revisione):</label>
+                <input type="number" id="inputRevisione" class="one-ui-input" min="0" placeholder="Lascia vuoto se non esiste revisione">
+                <small class="data-offerta-hint">⚠️ Non inserire il numero se non esiste una revisione dell'offerta</small>
+            </div>
+            <div class="data-offerta-field">
+                <label for="inputDataOfferta">Data Offerta:</label>
+                <input type="text" id="inputDataOfferta" class="one-ui-input" placeholder="gg/mm/aa oppure gg/mm/aaaa">
+            </div>
+        </div>
+        <div class="data-offerta-modal-footer">
+            <button class="btn-secondary-oneui" onclick="closeDataOffertaModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveDataOfferta()">Salva</button>
+        </div>
+    </div>
 </div>
 
 <form id="deleteForm" method="POST" style="display:none;"></form>
@@ -2421,19 +2454,136 @@
                 row.classList.add('filtered-out');
             }
             });
+            
+            // IMPORTANTE: Assicurati che la prima riga sia sempre visibile se ci sono righe visibili
+            const visibleRows = lavoroRows.filter(row => !row.classList.contains('filtered-out'));
+            if (visibleRows.length > 0) {
+                // Se ci sono righe visibili, la prima riga DEVE essere visibile
+                firstRow.classList.remove('filtered-out');
+                // Assicurati che la prima riga sia la prima riga visibile nell'ordine DOM
+                const tbody = firstRow.closest('tbody');
+                if (tbody && visibleRows[0] !== firstRow) {
+                    // Sposta la prima riga prima della prima riga visibile
+                    tbody.insertBefore(firstRow, visibleRows[0]);
+                }
+            }
         });
         
         // Ricalcola i rowspan dopo il filtraggio
         recalculateRowspans();
+        
+        // Sincronizza gli overlay con i filtri applicati
+        syncOverlaysWithFilters();
+        
+        // Ricalcola i rowspan anche negli overlay
+        recalculateOverlayRowspans();
+    }
+    
+    function syncOverlaysWithFilters() {
+        // Raccogli tutti gli ID dei lavori visibili nella tabella principale
+        const visibleLavoroIds = new Set();
+        const mainTableRows = document.querySelectorAll('.oneui-table tbody tr[data-id]');
+        
+        mainTableRows.forEach(row => {
+            if (!row.classList.contains('filtered-out')) {
+                const lavoroId = row.getAttribute('data-id');
+                if (lavoroId) {
+                    visibleLavoroIds.add(lavoroId);
+                }
+            }
+        });
+        
+        // Applica lo stesso filtro agli overlay
+        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayProcacciatori'];
+        
+        overlayTables.forEach(overlaySelector => {
+            const overlay = document.querySelector(overlaySelector);
+            if (!overlay) return;
+            
+            // Raggruppa le righe per lavoro (data-id) per gestire correttamente i rowspan
+            const lavoriRows = {};
+            const overlayRows = overlay.querySelectorAll('tbody tr[data-id]');
+            
+            overlayRows.forEach(row => {
+                const lavoroId = row.getAttribute('data-id');
+                if (!lavoroId) return;
+                
+                if (!lavoriRows[lavoroId]) {
+                    lavoriRows[lavoroId] = [];
+                }
+                lavoriRows[lavoroId].push(row);
+            });
+            
+            // Per ogni lavoro, mostra/nascondi tutte le righe insieme
+            Object.keys(lavoriRows).forEach(lavoroId => {
+                const lavoroRows = lavoriRows[lavoroId];
+                const isVisible = visibleLavoroIds.has(lavoroId);
+                
+                lavoroRows.forEach(row => {
+                    if (isVisible) {
+                        row.classList.remove('filtered-out');
+                    } else {
+                        row.classList.add('filtered-out');
+                    }
+                });
+            });
+        });
+    }
+    
+    function recalculateOverlayRowspans() {
+        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayProcacciatori'];
+        
+        overlayTables.forEach(overlaySelector => {
+            const overlay = document.querySelector(overlaySelector);
+            if (!overlay) return;
+            
+            // Raggruppa le righe per lavoro (data-id)
+            const lavoriRows = {};
+            const overlayRows = overlay.querySelectorAll('tbody tr[data-id]');
+            
+            overlayRows.forEach(row => {
+                const lavoroId = row.getAttribute('data-id');
+                if (!lavoroId) return;
+                
+                if (!lavoriRows[lavoroId]) {
+                    lavoriRows[lavoroId] = [];
+                }
+                lavoriRows[lavoroId].push(row);
+            });
+            
+            // Per ogni lavoro, ricalcola i rowspan basandosi sulle righe visibili
+            Object.keys(lavoriRows).forEach(lavoroId => {
+                const lavoroRows = lavoriRows[lavoroId];
+                const visibleRows = lavoroRows.filter(row => !row.classList.contains('filtered-out'));
+                
+                if (visibleRows.length === 0) return;
+                
+                // Trova la prima riga (quella con le celle rowspan)
+                const firstRow = lavoroRows[0];
+                if (!firstRow) return;
+                
+                // Aggiorna tutti i rowspan nella prima riga
+                const cellsWithRowspan = firstRow.querySelectorAll('td[rowspan]');
+                cellsWithRowspan.forEach(cell => {
+                    cell.setAttribute('rowspan', visibleRows.length);
+                });
+            });
+        });
     }
     
     function recalculateRowspans() {
-        // Raggruppa le righe per lavoro (data-id)
+        // Ottieni il tbody della tabella principale (escludi gli overlay)
+        const mainTable = document.querySelector('.oneui-table:not(.overlay-table) tbody');
+        if (!mainTable) return;
+        
+        // Raggruppa le righe per lavoro (data-id) mantenendo l'ordine DOM
         const lavoriRows = {};
-        const allRows = document.querySelectorAll('.oneui-table tbody tr[data-id]');
+        const allRows = Array.from(mainTable.querySelectorAll('tr[data-id]'));
         
         allRows.forEach(row => {
             const lavoroId = row.getAttribute('data-id');
+            if (!lavoroId) return;
+            
             if (!lavoriRows[lavoroId]) {
                 lavoriRows[lavoroId] = [];
             }
@@ -2448,7 +2598,9 @@
             // Questa è sempre la riga che contiene le celle con rowspan
             const firstRow = lavoroRows.find(row => row.hasAttribute('data-cliente') || row.hasAttribute('data-offerta-generated')) || lavoroRows[0];
             
-            // Conta solo le righe visibili (non filtered-out)
+            if (!firstRow) return;
+            
+            // Conta solo le righe visibili (non filtered-out) nell'ordine DOM
             const visibleRows = lavoroRows.filter(row => !row.classList.contains('filtered-out'));
             const visibleCount = visibleRows.length;
             
@@ -2459,8 +2611,14 @@
             }
             
             // Se ci sono righe visibili, la prima riga DEVE essere visibile per mostrare le celle comuni
-            // Rimuovi filtered-out dalla prima riga se presente
             firstRow.classList.remove('filtered-out');
+            
+            // IMPORTANTE: Assicurati che la prima riga sia la prima riga visibile nell'ordine DOM
+            const firstVisibleRow = visibleRows[0];
+            if (firstVisibleRow !== firstRow) {
+                // Sposta la prima riga prima della prima riga visibile
+                mainTable.insertBefore(firstRow, firstVisibleRow);
+            }
             
             // Trova tutte le celle con rowspan nella prima riga
             const rowspanCells = firstRow.querySelectorAll('td[rowspan]');
@@ -2667,6 +2825,157 @@
         }
     }
 
+    let currentDataOffertaLavoroId = null;
+
+    function editDataOfferta(ev, lavoroId) {
+        ev.stopPropagation();
+        if (!lavoroId) return;
+        
+        currentDataOffertaLavoroId = lavoroId;
+        
+        // Trova la cella corrente per precompilare i valori
+        const row = document.querySelector(`tr[data-id="${lavoroId}"]`);
+        let currentRevision = 0;
+        
+        if (row) {
+            const cell = row.querySelector('.cell-data-offerta');
+            if (cell) {
+                const text = cell.textContent.trim();
+                if (text !== '-') {
+                    // Estrai revisione se presente (es. "R1 23-gen")
+                    const revMatch = text.match(/^R(\d+)\s+/);
+                    if (revMatch) {
+                        currentRevision = parseInt(revMatch[1], 10);
+                    }
+                }
+            }
+        }
+        
+        // Precompila solo la revisione (la data non può essere estratta dal formato "23-gen")
+        document.getElementById('inputRevisione').value = currentRevision > 0 ? currentRevision : '';
+        document.getElementById('inputDataOfferta').value = '';
+        
+        // Mostra la modale
+        document.getElementById('dataOffertaModal').classList.add('active');
+        document.getElementById('inputDataOfferta').focus();
+        
+        // Aggiungi listener per Enter ed Escape
+        const inputData = document.getElementById('inputDataOfferta');
+        const inputRev = document.getElementById('inputRevisione');
+        
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveDataOfferta();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeDataOffertaModal();
+            }
+        };
+        
+        inputData.addEventListener('keydown', handleKeyDown);
+        inputRev.addEventListener('keydown', handleKeyDown);
+        
+        // Rimuovi listener quando la modale viene chiusa
+        const modal = document.getElementById('dataOffertaModal');
+        const removeListeners = () => {
+            inputData.removeEventListener('keydown', handleKeyDown);
+            inputRev.removeEventListener('keydown', handleKeyDown);
+            modal.removeEventListener('transitionend', removeListeners);
+        };
+        modal.addEventListener('transitionend', removeListeners);
+    }
+
+    function closeDataOffertaModal(ev) {
+        if (ev && ev.target !== ev.currentTarget && !ev.target.closest('.data-offerta-modal')) {
+            return;
+        }
+        document.getElementById('dataOffertaModal').classList.remove('active');
+        currentDataOffertaLavoroId = null;
+    }
+
+    async function saveDataOfferta() {
+        if (!currentDataOffertaLavoroId) return;
+        
+        const revisionInput = document.getElementById('inputRevisione').value.trim();
+        const dateInput = document.getElementById('inputDataOfferta').value.trim();
+        
+        // Valida la data
+        if (!dateInput) {
+            alert('Inserisci la data offerta');
+            return;
+        }
+        
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(dateInput);
+        if (!m) {
+            alert('Formato data non valido. Usa gg/mm/aa o gg/mm/aaaa.');
+            return;
+        }
+        
+        const dd = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        let yy = parseInt(m[3], 10);
+        if (yy < 100) yy = 2000 + yy;
+        const iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+        
+        // Revisione: 0 se vuoto, altrimenti il numero inserito
+        const revision = revisionInput === '' ? 0 : parseInt(revisionInput, 10);
+        if (revisionInput !== '' && (isNaN(revision) || revision < 1)) {
+            alert('Il numero di revisione deve essere un numero positivo');
+            return;
+        }
+        
+        try {
+            // Aggiorna entrambi i campi
+            const res1 = await fetch(`/update_lavoro_field/${currentDataOffertaLavoroId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field: 'data_offerta', value: iso })
+            });
+            
+            if (!res1.ok) {
+                const err = await res1.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore aggiornamento data offerta');
+            }
+            
+            const res2 = await fetch(`/update_lavoro_field/${currentDataOffertaLavoroId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field: 'offerta_revision', value: revision })
+            });
+            
+            if (!res2.ok) {
+                const err = await res2.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore aggiornamento revisione');
+            }
+            
+            // Aggiorna UI: mostra sempre R[n] gg-mes o solo gg-mes
+            const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+            const txtDate = `${dd.toString().padStart(2,'0')}-${mesi[mm]}`;
+            const txtRevision = revision > 0 ? `R${revision} ` : '';
+            const displayText = txtRevision + txtDate;
+            
+            // Aggiorna le celle della data offerta
+            const rows = document.querySelectorAll(`tr[data-id="${currentDataOffertaLavoroId}"] .cell-data-offerta`);
+            rows.forEach(cell => {
+                cell.textContent = displayText;
+            });
+            
+            // Aggiorna gli attributi data-offerta-generated e data-offerta-rev nelle righe
+            const lavoroRows = document.querySelectorAll(`tr[data-id="${currentDataOffertaLavoroId}"]`);
+            lavoroRows.forEach(row => {
+                // Se c'è una data offerta, imposta data-offerta-generated a 1
+                row.setAttribute('data-offerta-generated', '1');
+                // Aggiorna data-offerta-rev con il valore della revisione
+                row.setAttribute('data-offerta-rev', revision.toString());
+            });
+            
+            closeDataOffertaModal();
+        } catch (error) {
+            alert(error.message || 'Errore durante il salvataggio');
+        }
+    }
+
     async function editFattura(event, lavoroId, fatturaType) {
         event.stopPropagation();
         const cell = event.currentTarget;
@@ -2763,7 +3072,10 @@
             // Aggiorna label Genera/Revisiona
             if (label) {
                 const generated = selectedRow.getAttribute('data-offerta-generated') === '1';
-                label.textContent = generated ? 'Revisiona Offerta' : 'Genera Offerta';
+                const revision = parseInt(selectedRow.getAttribute('data-offerta-rev') || '0', 10);
+                // Mostra "Revisiona Offerta" se c'è data_offerta O se c'è una revisione
+                const shouldShowRevision = generated || revision > 0;
+                label.textContent = shouldShowRevision ? 'Revisiona Offerta' : 'Genera Offerta';
             }
             // Evidenzia tutte le righe con lo stesso data-id
             const rowsToHighlight = document.querySelectorAll(`.oneui-table tbody tr[data-id="${lavoroId}"]`);
@@ -2855,8 +3167,12 @@
 
         const row = document.querySelector(`tr[data-id="${id}"]`);
         const generated = row && row.getAttribute('data-offerta-generated') === '1';
+        const revision = parseInt(row && row.getAttribute('data-offerta-rev') || '0', 10);
+        
+        // Se c'è data_offerta O se c'è una revisione, è una revisione
+        const isRevision = generated || revision > 0;
 
-        if (generated) {
+        if (isRevision) {
             // Revisiona: apri direttamente il form di modifica lavoro
             revisioneOffertaMode = true;
             editLavoro(id);

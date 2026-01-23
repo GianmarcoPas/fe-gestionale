@@ -1567,6 +1567,112 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 6px 0;
 }
 
+/* Modale Data Offerta */
+.data-offerta-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.data-offerta-modal-overlay.active {
+    display: flex;
+}
+
+.data-offerta-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 450px;
+    overflow: hidden;
+}
+
+.data-offerta-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+}
+
+.data-offerta-modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.data-offerta-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.data-offerta-modal-close:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.data-offerta-modal-body {
+    padding: 24px;
+}
+
+.data-offerta-field {
+    margin-bottom: 20px;
+}
+
+.data-offerta-field:last-child {
+    margin-bottom: 0;
+}
+
+.data-offerta-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.data-offerta-field input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.data-offerta-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #ff9800;
+    font-weight: 500;
+}
+
+.data-offerta-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
 .status-select:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);

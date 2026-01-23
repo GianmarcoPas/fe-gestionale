@@ -766,6 +766,8 @@ def update_lavoro_field(id):
     elif field == 'data_offerta':
         if value: lavoro.data_offerta = datetime.strptime(value, '%Y-%m-%d').date()
         else: lavoro.data_offerta = None
+    elif field == 'offerta_revision':
+        lavoro.offerta_revision = int(value) if value is not None else 0
     elif field == 'data_firma_check':
         lavoro.data_firma_check = value
     elif field == 'data_firma':
