@@ -38,8 +38,19 @@ def _build_beni_list_for_offerta(lavoro: LavoroAdmin) -> list[dict]:
 def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
     cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
 
-    suffix = "_amm" if getattr(lavoro, 'spese_amministrative', False) else ""
-    template_name = f"off_{tipo}{suffix}.docx"
+    # Gestione template in base al tipo
+    # Per "rsid" non ha variante _amm
+    # Per "varie" ha variante _amm se ci sono spese amministrative
+    if tipo == 'rsid':
+        template_name = "off_rsid.docx"
+    elif tipo == 'varie':
+        suffix = "_amm" if getattr(lavoro, 'spese_amministrative', False) else ""
+        template_name = f"off_varie{suffix}.docx"
+    else:
+        # Per "old" e "iper" mantieni la logica esistente
+        suffix = "_amm" if getattr(lavoro, 'spese_amministrative', False) else ""
+        template_name = f"off_{tipo}{suffix}.docx"
+    
     template_path = Path(current_app.root_path) / "doc_templates" / "offerte" / template_name
     if not template_path.exists():
         return jsonify({'error': f"Template mancante: {template_name}"}), 404
@@ -95,7 +106,15 @@ def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
         s = " ".join(s.split())
         return s
 
-    base_name = f"Prev. First Eng_{sanitize_filename(cliente_nome)}_4.0"
+    # Determina il suffisso del nome file in base al tipo
+    if tipo == 'rsid':
+        tipo_suffix = 'RSID'
+    elif tipo == 'varie':
+        tipo_suffix = 'VARIE'
+    else:
+        tipo_suffix = '4.0'  # Per "old" e "iper"
+    
+    base_name = f"Prev. First Eng_{sanitize_filename(cliente_nome)}_{tipo_suffix}"
     if rev_to_use > 0:
         base_name = f"{base_name} (Rev. {rev_to_use})"
     download_name = f"{base_name}.docx"
@@ -430,11 +449,27 @@ def genera_offerta(id):
     cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
 
     payload = request.get_json(silent=True) or {}
-    tipo = (payload.get('tipo') or '').strip().lower()  # 'old' | 'iper'
+    tipo = (payload.get('tipo') or '').strip().lower()  # 'old' | 'iper' | 'rsid' | 'varie'
+    
+    # Se il tipo non è specificato, determinalo dalla categoria
     if not tipo:
+        # Prima prova con offerta_tipo esistente (per retrocompatibilità)
         tipo = (getattr(lavoro, 'offerta_tipo', '') or '').strip().lower()
-    if tipo not in ('old', 'iper'):
-        return jsonify({'error': 'Tipo offerta non valido'}), 400
+        
+        # Se ancora non c'è, usa la categoria
+        if not tipo:
+            categoria = (getattr(lavoro, 'categoria', '') or '').strip().lower()
+            if categoria == 'old':
+                tipo = 'old'
+            elif categoria == 'iperamm':
+                tipo = 'iper'
+            elif categoria == 'rsid':
+                tipo = 'rsid'
+            elif categoria == 'varie':
+                tipo = 'varie'
+    
+    if tipo not in ('old', 'iper', 'rsid', 'varie'):
+        return jsonify({'error': 'Tipo offerta non valido. Imposta una categoria al lavoro.'}), 400
 
     return _generate_offerta_response(lavoro=lavoro, tipo=tipo)
 
@@ -558,9 +593,32 @@ def add_lavoro_admin():
             lavoro.has_revisore = (request.form.get('has_revisore') == 'on')
             lavoro.has_caricamento = (request.form.get('has_caricamento') == 'on')
             lavoro.spese_amministrative = (request.form.get('spese_amministrative') == 'on')
-            lavoro.categoria = request.form.get('categoria') or None
-            # Qualsiasi salvataggio dopo emissione offerta rende l’offerta "da revisionare"
-            if had_prev_offerta:
+            
+            # Gestione cambio categoria
+            nuova_categoria = request.form.get('categoria') or None
+            vecchia_categoria = getattr(lavoro, 'categoria', '') or ''
+            categoria_cambiata = vecchia_categoria != nuova_categoria
+            
+            if categoria_cambiata and nuova_categoria:
+                # Se la categoria è cambiata, aggiorna offerta_tipo in base alla nuova categoria
+                if nuova_categoria == 'old':
+                    lavoro.offerta_tipo = 'old'
+                elif nuova_categoria == 'iperamm':
+                    lavoro.offerta_tipo = 'iper'
+                elif nuova_categoria == 'rsid':
+                    lavoro.offerta_tipo = 'rsid'
+                elif nuova_categoria == 'varie':
+                    lavoro.offerta_tipo = 'varie'
+                
+                # Se c'era già un'offerta e la categoria è cambiata, marca come da revisionare
+                if had_prev_offerta:
+                    lavoro.offerta_dirty = True
+            
+            lavoro.categoria = nuova_categoria
+            
+            # Qualsiasi salvataggio dopo emissione offerta rende l'offerta "da revisionare"
+            # (ma solo se la categoria non è cambiata, altrimenti l'abbiamo già gestito sopra)
+            if had_prev_offerta and not categoria_cambiata:
                 lavoro.offerta_dirty = True
             lavoro.nome_revisore = request.form.get('nome_revisore') if lavoro.has_revisore else None
             lavoro.nome_caricamento = request.form.get('nome_caricamento') if lavoro.has_caricamento else None
@@ -652,10 +710,24 @@ def add_lavoro_admin():
             
             # Se richiesto, genera e scarica subito la revisione offerta (senza passare dal menu "Modifica")
             if download_offerta:
-                # Permetti override del tipo via querystring (per casi legacy dove offerta_tipo non è valorizzato)
-                tipo = (request.args.get('tipo') or '').strip().lower() or (getattr(lavoro, 'offerta_tipo', '') or '').strip().lower()
-                if tipo not in ('old', 'iper'):
-                    return jsonify({'error': 'Tipo offerta non impostato (genera la prima offerta prima).'}), 400
+                # Determina il tipo: prima da querystring, poi da offerta_tipo, infine dalla categoria
+                tipo = (request.args.get('tipo') or '').strip().lower()
+                if not tipo:
+                    tipo = (getattr(lavoro, 'offerta_tipo', '') or '').strip().lower()
+                if not tipo:
+                    # Usa la categoria per determinare il tipo
+                    categoria = (getattr(lavoro, 'categoria', '') or '').strip().lower()
+                    if categoria == 'old':
+                        tipo = 'old'
+                    elif categoria == 'iperamm':
+                        tipo = 'iper'
+                    elif categoria == 'rsid':
+                        tipo = 'rsid'
+                    elif categoria == 'varie':
+                        tipo = 'varie'
+                
+                if tipo not in ('old', 'iper', 'rsid', 'varie'):
+                    return jsonify({'error': 'Tipo offerta non impostato. Imposta una categoria al lavoro.'}), 400
                 return _generate_offerta_response(lavoro=lavoro, tipo=tipo)
 
             flash(f'Lavoro #{lavoro.numero} modificato con successo!', 'success')
@@ -695,6 +767,17 @@ def add_lavoro_admin():
                 categoria=request.form.get('categoria') or None,
                 stato='In corso' # Default
             )
+            
+            # Imposta offerta_tipo in base alla categoria per i nuovi lavori
+            if nuovo.categoria:
+                if nuovo.categoria == 'old':
+                    nuovo.offerta_tipo = 'old'
+                elif nuovo.categoria == 'iperamm':
+                    nuovo.offerta_tipo = 'iper'
+                elif nuovo.categoria == 'rsid':
+                    nuovo.offerta_tipo = 'rsid'
+                elif nuovo.categoria == 'varie':
+                    nuovo.offerta_tipo = 'varie'
             
             # Debug: verifica valori prima di salvare
             has_rev = (request.form.get('has_revisore') == 'on')

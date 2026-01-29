@@ -592,6 +592,12 @@
             <span id="redattoreFilterText" style="font-weight: normal; color: #666; font-size: 0.85rem;">Tutti</span>
         </button>
         
+        <!-- Pulsante Filtro Categoria -->
+        <button class="pill-btn" id="btnCategoria" onclick="toggleCategoriaFilter()" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.9rem; position: relative;">
+            <i class="bi bi-tags"></i> <span class="btn-text">Categoria</span>
+            <span id="categoriaFilterText" style="font-weight: normal; color: #666; font-size: 0.85rem;">Tutte</span>
+        </button>
+        
         <!-- Pulsante Reset Filtri -->
         <button class="pill-btn" id="btnResetFilters" onclick="resetAllFilters()" style="display: none; background: #f5f5f5; color: #666; padding: 8px 16px; font-size: 0.9rem;">
             <i class="bi bi-x-circle"></i> <span class="btn-text">Reset</span>
@@ -689,6 +695,26 @@
                 <i class="bi bi-person"></i> DELOITTE
             </div>
         </div>
+        
+        <!-- Menu Filtro Categoria -->
+        <div id="categoriaFilterMenu" class="filter-menu">
+            <div class="menu-item" onclick="setCategoriaFilter('')">
+                <i class="bi bi-check2"></i> Tutte
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" onclick="setCategoriaFilter('old')">
+                <i class="bi bi-building"></i> 4.0 OLD
+            </div>
+            <div class="menu-item" onclick="setCategoriaFilter('iperamm')">
+                <i class="bi bi-lightning-charge"></i> 4.0 I.A.
+            </div>
+            <div class="menu-item" onclick="setCategoriaFilter('rsid')">
+                <i class="bi bi-file-earmark-text"></i> RSID
+            </div>
+            <div class="menu-item" onclick="setCategoriaFilter('varie')">
+                <i class="bi bi-grid"></i> VARIE
+            </div>
+        </div>
     </div>
 </div>
 
@@ -730,6 +756,7 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
@@ -1026,6 +1053,7 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
@@ -1198,6 +1226,7 @@
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
@@ -2300,6 +2329,7 @@
     /* ==================== RICERCA E FILTRI ==================== */
     let currentSearchTerm = '';
     let currentRedattoreFilter = '';
+    let currentCategoriaFilter = '';
     let activeFilters = {
         stato: '',
         collaboratore: '',
@@ -2370,6 +2400,7 @@
         if (activeFilters.caricamento) count++;
         if (activeFilters.speseAmm) count++;
         if (currentRedattoreFilter) count++;
+        if (currentCategoriaFilter) count++;
         
         if (count > 0) {
             badge.textContent = count;
@@ -2426,6 +2457,14 @@
             if (currentRedattoreFilter && lavoroPassaFiltri) {
                 const redattore = (firstRow.getAttribute('data-redattore') || '').toUpperCase();
                 if (redattore !== currentRedattoreFilter.toUpperCase()) {
+                    lavoroPassaFiltri = false;
+                }
+            }
+            
+            // Filtro Categoria
+            if (currentCategoriaFilter && lavoroPassaFiltri) {
+                const categoria = (firstRow.getAttribute('data-categoria') || '').toLowerCase();
+                if (categoria !== currentCategoriaFilter.toLowerCase()) {
                     lavoroPassaFiltri = false;
                 }
             }
@@ -2694,11 +2733,15 @@
         const btn = document.getElementById('btnRedattore');
         const rect = btn.getBoundingClientRect();
         
+        // Chiudi il menu categoria se aperto
+        const categoriaMenu = document.getElementById('categoriaFilterMenu');
+        if (categoriaMenu) categoriaMenu.style.display = 'none';
+        
         if (menu.style.display === 'none' || !menu.style.display) {
             menu.style.display = 'block';
             menu.style.top = (rect.bottom + 5) + 'px';
-            menu.style.right = (window.innerWidth - rect.right) + 'px';
-            menu.style.left = 'auto';
+            menu.style.left = rect.left + 'px';
+            menu.style.right = 'auto';
             
             // Evidenzia l'opzione attiva
             menu.querySelectorAll('.menu-item').forEach(item => {
@@ -2724,9 +2767,65 @@
         applyAllFilters();
     }
     
+    function toggleCategoriaFilter() {
+        const menu = document.getElementById('categoriaFilterMenu');
+        const btn = document.getElementById('btnCategoria');
+        const rect = btn.getBoundingClientRect();
+        
+        // Chiudi il menu redattore se aperto
+        const redattoreMenu = document.getElementById('redattoreFilterMenu');
+        if (redattoreMenu) redattoreMenu.style.display = 'none';
+        
+        if (menu.style.display === 'none' || !menu.style.display) {
+            menu.style.display = 'block';
+            menu.style.top = (rect.bottom + 5) + 'px';
+            menu.style.left = rect.left + 'px';
+            menu.style.right = 'auto';
+            
+            // Evidenzia l'opzione attiva
+            menu.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+                const text = item.textContent.trim();
+                if (text === 'Tutte' && !currentCategoriaFilter) {
+                    item.classList.add('active');
+                } else {
+                    // Controlla se il testo corrisponde alla categoria selezionata
+                    const categoriaLabels = {
+                        'old': '4.0 OLD',
+                        'iperamm': '4.0 I.A.',
+                        'rsid': 'RSID',
+                        'varie': 'VARIE'
+                    };
+                    if (categoriaLabels[currentCategoriaFilter] === text) {
+                        item.classList.add('active');
+                    }
+                }
+            });
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+    
+    function setCategoriaFilter(categoria) {
+        currentCategoriaFilter = categoria;
+        const textEl = document.getElementById('categoriaFilterText');
+        const categoriaLabels = {
+            '': 'Tutte',
+            'old': '4.0 OLD',
+            'iperamm': '4.0 I.A.',
+            'rsid': 'RSID',
+            'varie': 'VARIE'
+        };
+        textEl.textContent = categoriaLabels[categoria] || 'Tutte';
+        document.getElementById('categoriaFilterMenu').style.display = 'none';
+        updateFilterBadge();
+        applyAllFilters();
+    }
+    
     function resetAllFilters() {
         currentSearchTerm = '';
         currentRedattoreFilter = '';
+        currentCategoriaFilter = '';
         activeFilters = {
             stato: '',
             collaboratore: '',
@@ -2739,6 +2838,12 @@
         document.getElementById('searchInput').value = '';
         document.getElementById('filterStato').value = '';
         document.getElementById('filterCollaboratore').value = '';
+        
+        // Reset filtri pill
+        const redattoreText = document.getElementById('redattoreFilterText');
+        if (redattoreText) redattoreText.textContent = 'Tutti';
+        const categoriaText = document.getElementById('categoriaFilterText');
+        if (categoriaText) categoriaText.textContent = 'Tutte';
         document.getElementById('filterOrigine').value = '';
         document.getElementById('filterRevisore').value = '';
         document.getElementById('filterCaricamento').value = '';
@@ -3238,8 +3343,29 @@
             return;
         }
 
-        // Prima emissione: scegli il tipo dal modal
+        // Prima emissione: determina automaticamente il tipo dalla categoria
         revisioneOffertaMode = false;
+        const categoria = row ? (row.getAttribute('data-categoria') || '').toLowerCase() : '';
+        
+        // Mappa categoria → tipo offerta
+        let tipo = null;
+        if (categoria === 'old') {
+            tipo = 'old';
+        } else if (categoria === 'iperamm') {
+            tipo = 'iper';
+        } else if (categoria === 'rsid') {
+            tipo = 'rsid';
+        } else if (categoria === 'varie') {
+            tipo = 'varie';
+        }
+        
+        // Se abbiamo determinato il tipo, genera direttamente
+        if (tipo) {
+            confirmGeneraOfferta(tipo);
+            return;
+        }
+        
+        // Se non c'è categoria, mostra la modale per scegliere (compatibilità con lavori vecchi)
         const modal = document.getElementById('generaOffertaModal');
         if (modal) modal.classList.add('active');
     }
@@ -3335,11 +3461,48 @@
             return;
         }
 
-        // Se il lavoro è legacy e non ha offerta_tipo, chiedi il tipo prima di procedere
+        // Determina automaticamente il tipo dalla categoria nel form o offerta_tipo esistente
         if (!tipoOverride) {
-            const row = document.querySelector(`tr[data-id="${lavoroId}"]`);
-            const hasTipo = row && row.getAttribute('data-offerta-tipo') && row.getAttribute('data-offerta-tipo').trim();
-            if (!hasTipo) {
+            // Leggi la categoria direttamente dal form (potrebbe essere stata modificata)
+            const categoriaInput = document.getElementById('categoriaInput');
+            const categoriaForm = categoriaInput ? (categoriaInput.value || '').toLowerCase() : '';
+            
+            // Se non c'è categoria nel form, prova con la riga della tabella (per retrocompatibilità)
+            let categoria = categoriaForm;
+            if (!categoria) {
+                const row = document.querySelector(`tr[data-id="${lavoroId}"]`);
+                categoria = row ? (row.getAttribute('data-categoria') || '').toLowerCase() : '';
+            }
+            
+            let tipo = null;
+            
+            // Se c'è una categoria nel form, usala (ha priorità perché è la modifica più recente)
+            if (categoria) {
+                if (categoria === 'old') {
+                    tipo = 'old';
+                } else if (categoria === 'iperamm') {
+                    tipo = 'iper';
+                } else if (categoria === 'rsid') {
+                    tipo = 'rsid';
+                } else if (categoria === 'varie') {
+                    tipo = 'varie';
+                }
+            }
+            
+            // Se non abbiamo ancora un tipo, prova con offerta_tipo esistente (per retrocompatibilità)
+            if (!tipo) {
+                const row = document.querySelector(`tr[data-id="${lavoroId}"]`);
+                const hasTipo = row && row.getAttribute('data-offerta-tipo') && row.getAttribute('data-offerta-tipo').trim();
+                if (hasTipo) {
+                    tipo = row.getAttribute('data-offerta-tipo').trim().toLowerCase();
+                }
+            }
+            
+            // Se abbiamo determinato il tipo, usalo
+            if (tipo) {
+                tipoOverride = tipo;
+            } else {
+                // Se non c'è né offerta_tipo né categoria, chiedi all'utente (lavori legacy)
                 pendingRevisionTipoPick = true;
                 currentOffertaLavoroId = lavoroId;
                 const modal = document.getElementById('generaOffertaModal');
