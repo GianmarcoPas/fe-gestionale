@@ -71,6 +71,9 @@ class LavoroAdmin(db.Model):
     
     # Stato
     stato = db.Column(db.String(50), default='vuoto') 
+    
+    # Categoria lavoro
+    categoria = db.Column(db.String(20))  # 'old', 'iperamm', 'rsid', 'varie'
 
     # Offerte: revisione e "dirty" dopo modifiche
     offerta_revision = db.Column(db.Integer, default=0)  # 0 = prima emissione (senza rev.)

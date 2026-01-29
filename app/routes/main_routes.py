@@ -407,6 +407,7 @@ def get_lavoro_admin(id):
         'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None,
         'firma_esito': getattr(lavoro, 'firma_esito', '') or '',
         'stato': lavoro.stato,
+        'categoria': getattr(lavoro, 'categoria', '') or '',
         'f_fe': lavoro.f_fe or '',
         'f_amin': lavoro.f_amin or '',
         'f_galvan': lavoro.f_galvan or '',
@@ -557,6 +558,7 @@ def add_lavoro_admin():
             lavoro.has_revisore = (request.form.get('has_revisore') == 'on')
             lavoro.has_caricamento = (request.form.get('has_caricamento') == 'on')
             lavoro.spese_amministrative = (request.form.get('spese_amministrative') == 'on')
+            lavoro.categoria = request.form.get('categoria') or None
             # Qualsiasi salvataggio dopo emissione offerta rende l’offerta "da revisionare"
             if had_prev_offerta:
                 lavoro.offerta_dirty = True
@@ -690,6 +692,7 @@ def add_lavoro_admin():
                 c_caricamento=to_float(request.form.get('c_caricamento')),
                 importo_revisione=to_float(request.form.get('importo_revisione', '0')),
                 importo_caricamento=to_float(request.form.get('importo_caricamento', '0')),
+                categoria=request.form.get('categoria') or None,
                 stato='In corso' # Default
             )
             

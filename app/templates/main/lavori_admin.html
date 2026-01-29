@@ -952,9 +952,23 @@
         <i class="bi bi-calculator"></i> Compensi
     </button>
 
-    <button class="btn-add-circle" onclick="openAddModal()">
-        <i class="bi bi-plus-lg"></i>
-    </button>
+    <div class="category-buttons" id="categoryButtons">
+        <button class="category-main-button" type="button" onclick="toggleCategoryButtons()">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+        <button class="category-button category-button-old" type="button" onclick="openAddModalWithCategory('old')">
+            4.0 OLD
+        </button>
+        <button class="category-button category-button-iperamm" type="button" onclick="openAddModalWithCategory('iperamm')">
+            4.0 I.A.
+        </button>
+        <button class="category-button category-button-rsid" type="button" onclick="openAddModalWithCategory('rsid')">
+            RSID
+        </button>
+        <button class="category-button category-button-varie" type="button" onclick="openAddModalWithCategory('varie')">
+            VARIE
+        </button>
+    </div>
 
     <button class="pill-btn" onclick="openOverlay('fatture')">
         <i class="bi bi-receipt"></i> Fatture
@@ -1147,9 +1161,23 @@
 </div>
 
 <div class="bottom-floating-bar">
-    <button class="btn-add-circle" onclick="openAddModal()">
-        <i class="bi bi-plus-lg"></i>
-    </button>
+    <div class="category-buttons" id="categoryButtons">
+        <button class="category-main-button" type="button" onclick="toggleCategoryButtons()">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+        <button class="category-button category-button-old" type="button" onclick="openAddModalWithCategory('old')">
+            4.0 OLD
+        </button>
+        <button class="category-button category-button-iperamm" type="button" onclick="openAddModalWithCategory('iperamm')">
+            4.0 I.A.
+        </button>
+        <button class="category-button category-button-rsid" type="button" onclick="openAddModalWithCategory('rsid')">
+            RSID
+        </button>
+        <button class="category-button category-button-varie" type="button" onclick="openAddModalWithCategory('varie')">
+            VARIE
+        </button>
+    </div>
 </div>
 
 {# ==================== MODALITÀ EXTRA 2 (Focus) ==================== #}
@@ -1380,6 +1408,26 @@
         <form action="{{ url_for('main.add_lavoro_admin') }}" method="POST" id="formAddLavoro"
             onsubmit="return validateForm()">
             <input type="hidden" name="lavoro_id" id="lavoroId" value="">
+            <input type="hidden" name="categoria" id="categoriaInput" value="">
+
+            <!-- Pulsanti selezione categoria (solo in modifica) -->
+            <div id="categoriaButtonsSection" class="form-section" style="display: none;">
+                <h4><i class="bi bi-tags-fill"></i> Categoria Lavoro</h4>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="category-select-btn" data-categoria="old" onclick="selectCategoria('old')">
+                        4.0 OLD
+                    </button>
+                    <button type="button" class="category-select-btn" data-categoria="iperamm" onclick="selectCategoria('iperamm')">
+                        4.0 I.A.
+                    </button>
+                    <button type="button" class="category-select-btn" data-categoria="rsid" onclick="selectCategoria('rsid')">
+                        RSID
+                    </button>
+                    <button type="button" class="category-select-btn" data-categoria="varie" onclick="selectCategoria('varie')">
+                        VARIE
+                    </button>
+                </div>
+            </div>
 
             <div class="form-section">
                 <h4><i class="bi bi-person-lines-fill"></i> Anagrafica Cliente</h4>
@@ -3553,11 +3601,32 @@
             document.getElementById('addModal').classList.add('active');
             document.body.style.overflow = 'hidden';
             
-            // Cambia il titolo
-            document.getElementById('modalTitle').textContent = `Modifica Lavoro #${data.numero}`;
-            
             // Imposta l'ID del lavoro da modificare
             document.getElementById('lavoroId').value = data.id;
+            
+            // Gestione categoria
+            const categoria = data.categoria || '';
+            document.getElementById('categoriaInput').value = categoria;
+            
+            // Mostra pulsanti categoria e imposta quello attivo
+            const categoriaSection = document.getElementById('categoriaButtonsSection');
+            categoriaSection.style.display = 'block';
+            document.querySelectorAll('.category-select-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.categoria === categoria) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Cambia il titolo con categoria
+            const categoriaLabels = {
+                'old': '4.0 OLD',
+                'iperamm': '4.0 I.A.',
+                'rsid': 'RSID',
+                'varie': 'VARIE'
+            };
+            const categoriaLabel = categoria ? ` - ${categoriaLabels[categoria] || categoria}` : '';
+            document.getElementById('modalTitle').textContent = `Modifica Lavoro #${data.numero}${categoriaLabel}`;
             
             // Reset del form
             document.getElementById('formAddLavoro').reset();
@@ -3864,20 +3933,39 @@
         });
     }
 
-    function openAddModal() {
+    function openAddModal(categoria = '') {
         document.getElementById('addModal').classList.add('active');
 
         // --- FIX: BLOCCA LO SCROLL DELLA PAGINA DIETRO ---
         document.body.style.overflow = 'hidden';
         // -------------------------------------------------
 
-        // Reset titolo
-        document.getElementById('modalTitle').textContent = 'Nuovo Lavoro';
-        
         // Reset ID lavoro (per nuovo lavoro)
         document.getElementById('lavoroId').value = '';
+        
+        // Imposta categoria se fornita
+        if (categoria) {
+            document.getElementById('categoriaInput').value = categoria;
+            const categoriaLabels = {
+                'old': '4.0 OLD',
+                'iperamm': '4.0 I.A.',
+                'rsid': 'RSID',
+                'varie': 'VARIE'
+            };
+            document.getElementById('modalTitle').textContent = `Nuovo Lavoro - ${categoriaLabels[categoria] || categoria}`;
+        } else {
+            document.getElementById('categoriaInput').value = '';
+            document.getElementById('modalTitle').textContent = 'Nuovo Lavoro';
+        }
+        
+        // Nascondi pulsanti categoria (solo per nuovo lavoro)
+        document.getElementById('categoriaButtonsSection').style.display = 'none';
 
         document.getElementById('formAddLavoro').reset();
+        // Ripristina categoria se era stata impostata
+        if (categoria) {
+            document.getElementById('categoriaInput').value = categoria;
+        }
         document.getElementById('alertCompensi').style.display = 'none';
         // Reset pulsanti revisione
         revisioneOffertaMode = false;
@@ -3895,6 +3983,55 @@
 
         toggleSpese();
         toggleExtInput();
+    }
+    
+    function toggleCategoryButtons() {
+        const containers = document.querySelectorAll('.category-buttons');
+        containers.forEach(container => {
+            container.classList.toggle('active');
+        });
+    }
+    
+    function openAddModalWithCategory(categoria) {
+        // Chiudi i pulsanti categoria dopo il click
+        const containers = document.querySelectorAll('.category-buttons');
+        containers.forEach(container => {
+            container.classList.remove('active');
+        });
+        openAddModal(categoria);
+    }
+    
+    // Chiudi i pulsanti categoria quando si clicca fuori
+    document.addEventListener('click', function(event) {
+        const containers = document.querySelectorAll('.category-buttons');
+        containers.forEach(container => {
+            if (!container.contains(event.target)) {
+                container.classList.remove('active');
+            }
+        });
+    });
+    
+    function selectCategoria(categoria) {
+        document.getElementById('categoriaInput').value = categoria;
+        // Aggiorna lo stato attivo dei pulsanti
+        document.querySelectorAll('.category-select-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.categoria === categoria) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Aggiorna il titolo
+        const lavoroId = document.getElementById('lavoroId').value;
+        if (lavoroId) {
+            const categoriaLabels = {
+                'old': '4.0 OLD',
+                'iperamm': '4.0 I.A.',
+                'rsid': 'RSID',
+                'varie': 'VARIE'
+            };
+            document.getElementById('modalTitle').textContent = `Modifica Lavoro #${lavoroId} - ${categoriaLabels[categoria] || categoria}`;
+        }
     }
 
     function closeAddModal() {

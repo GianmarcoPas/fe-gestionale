@@ -537,6 +537,7 @@ body {
     align-items: center;
     gap: 15px;
     z-index: 1000;
+    overflow: visible; /* Permette ai pulsanti categoria di uscire */
 }
 
 /* Switch 4.0 / 5.0 */
@@ -2708,4 +2709,182 @@ input:-webkit-autofill:active  {
 
 .align-items-end {
     align-items: flex-end !important;
+}
+
+/* ==========================================================================
+   ANIMAZIONE PULSANTI CATEGORIA (Share Button Style)
+   ========================================================================== */
+
+.category-buttons {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: fit-content;
+    width: fit-content;
+    transition: 0.3s;
+    border-radius: 50%;
+    z-index: 1001; /* Sopra la bottom-floating-bar (z-index: 1000) */
+}
+
+/* Quando i pulsanti sono aperti (classe active) */
+.category-buttons.active {
+    padding: 40px;
+    margin: -40px; /* Compensa il padding per non espandere la barra */
+}
+
+.category-buttons.active .category-button {
+    opacity: 1;
+    pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1002; /* Assicura che i pulsanti siano sopra tutto */
+}
+
+.category-main-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: var(--primary); /* Blu Samsung - coerente con btn-add-circle */
+    color: white;
+    border-radius: 50%;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1003; /* Sempre sopra gli altri pulsanti */
+    width: 56px;
+    height: 56px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.4);
+}
+
+.category-main-button:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+
+.category-button {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #000; /* Bordo nero */
+    background: #ffffff; /* Sfondo bianco */
+    box-shadow: 5px 5px 12px rgba(202, 202, 202, 0), -5px -5px 12px rgba(255, 255, 255, 0);
+    border-radius: 50%; /* Rotondo come prima */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 56px; /* Stessa dimensione del pulsante + */
+    height: 56px; /* Stessa dimensione del pulsante + */
+    cursor: pointer;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    z-index: 1001;
+    opacity: 0;
+    pointer-events: none;
+    /* Posizionamento iniziale al centro (sopra il pulsante principale) */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    line-height: 1.1;
+    padding: 4px;
+    text-transform: uppercase; /* Scritte in maiuscolo */
+}
+
+.category-button-old:hover {
+    background: var(--primary); /* Stesso blu del pulsante + */
+    color: white;
+}
+
+/* Distribuzione in arco di 180 gradi sopra il pulsante + */
+/* Angolo 0° (destra) */
+.category-buttons.active .category-button-old {
+    translate: 70px 0px;
+}
+
+.category-button-old:hover {
+    background: var(--primary); /* Stesso blu del pulsante + */
+    color: white;
+    border-color: var(--primary); /* Bordo blu al hover */
+}
+
+.category-button-iperamm:hover {
+    background: var(--primary); /* Stesso blu del pulsante + */
+    color: white;
+    border-color: var(--primary); /* Bordo blu al hover */
+}
+
+/* Angolo 60° (alto-destra) - raggio 70px */
+.category-buttons.active .category-button-iperamm {
+    translate: 35px -60.6px;
+}
+
+.category-button-rsid:hover {
+    background: var(--primary); /* Stesso blu del pulsante + */
+    color: white;
+    border-color: var(--primary); /* Bordo blu al hover */
+}
+
+/* Angolo 120° (alto-sinistra) - raggio 70px */
+.category-buttons.active .category-button-rsid {
+    translate: -35px -60.6px;
+}
+
+.category-button-varie:hover {
+    background: var(--primary); /* Stesso blu del pulsante + */
+    color: white;
+    border-color: var(--primary); /* Bordo blu al hover */
+}
+
+/* Angolo 180° (sinistra) */
+.category-buttons.active .category-button-varie {
+    translate: -70px 0px;
+}
+
+/* Pulsanti selezione categoria nel form (modifica) */
+.category-select-btn {
+    padding: 12px 24px;
+    border: 2px solid #ddd;
+    background: #fff;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-select-btn:hover {
+    border-color: var(--primary);
+    background: #f0f7ff;
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+}
+
+.category-select-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.category-select-btn[data-categoria="old"].active {
+    background: #5865F2;
+    border-color: #5865F2;
+}
+
+.category-select-btn[data-categoria="iperamm"].active {
+    background: #1CA1F1;
+    border-color: #1CA1F1;
+}
+
+.category-select-btn[data-categoria="rsid"].active {
+    background: #FF4500;
+    border-color: #FF4500;
+}
+
+.category-select-btn[data-categoria="varie"].active {
+    background: #0093FF;
+    border-color: #0093FF;
 }
