@@ -2726,6 +2726,14 @@ input:-webkit-autofill:active  {
     z-index: 1001; /* Sopra la bottom-floating-bar (z-index: 1000) */
 }
 
+/* Assicura che i pulsanti categoria siano nascosti di default */
+.category-buttons:not(.active) .category-button {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    /* Non usare display: none perché blocca le animazioni */
+}
+
 /* Quando i pulsanti sono aperti (classe active) */
 .category-buttons.active {
     padding: 40px;
@@ -2733,10 +2741,12 @@ input:-webkit-autofill:active  {
 }
 
 .category-buttons.active .category-button {
-    opacity: 1;
-    pointer-events: auto;
+    opacity: 1 !important; /* Visibile quando attivo - forzato */
+    visibility: visible !important; /* Visibile quando attivo - forzato */
+    pointer-events: auto !important; /* Cliccabile quando attivo - forzato */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1002; /* Assicura che i pulsanti siano sopra tutto */
+    /* L'animazione translate viene applicata dalle regole specifiche per ogni pulsante */
 }
 
 .category-main-button {
@@ -2769,18 +2779,23 @@ input:-webkit-autofill:active  {
     border: 2px solid #000; /* Bordo nero */
     background: #ffffff; /* Sfondo bianco */
     box-shadow: 5px 5px 12px rgba(202, 202, 202, 0), -5px -5px 12px rgba(255, 255, 255, 0);
-    border-radius: 50%; /* Rotondo come prima */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 56px; /* Stessa dimensione del pulsante + */
-    height: 56px; /* Stessa dimensione del pulsante + */
+    border-radius: 50% !important; /* Rotondo - forzato con !important */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animazione fluida */
+    width: 56px !important; /* Stessa dimensione del pulsante + - forzato */
+    height: 56px !important; /* Stessa dimensione del pulsante + - forzato */
+    min-width: 56px !important;
+    min-height: 56px !important;
+    max-width: 56px !important;
+    max-height: 56px !important;
     cursor: pointer;
     font-size: 0.65rem;
     font-weight: 600;
     color: #333;
     white-space: nowrap;
     z-index: 1001;
-    opacity: 0;
-    pointer-events: none;
+    opacity: 0; /* Nascosto di default */
+    visibility: hidden; /* Nascosto di default */
+    pointer-events: none; /* Non cliccabile di default */
     /* Posizionamento iniziale al centro (sopra il pulsante principale) */
     top: 50%;
     left: 50%;
@@ -2800,6 +2815,7 @@ input:-webkit-autofill:active  {
 /* Angolo 0° (destra) */
 .category-buttons.active .category-button-old {
     translate: 70px 0px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animazione fluida */
 }
 
 .category-button-old:hover {
@@ -2817,6 +2833,7 @@ input:-webkit-autofill:active  {
 /* Angolo 60° (alto-destra) - raggio 70px */
 .category-buttons.active .category-button-iperamm {
     translate: 35px -60.6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animazione fluida */
 }
 
 .category-button-rsid:hover {
@@ -2828,6 +2845,7 @@ input:-webkit-autofill:active  {
 /* Angolo 120° (alto-sinistra) - raggio 70px */
 .category-buttons.active .category-button-rsid {
     translate: -35px -60.6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animazione fluida */
 }
 
 .category-button-varie:hover {
@@ -2839,6 +2857,7 @@ input:-webkit-autofill:active  {
 /* Angolo 180° (sinistra) */
 .category-buttons.active .category-button-varie {
     translate: -70px 0px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animazione fluida */
 }
 
 /* Pulsanti selezione categoria nel form (modifica) */
@@ -2887,4 +2906,45 @@ input:-webkit-autofill:active  {
 .category-select-btn[data-categoria="varie"].active {
     background: #0093FF;
     border-color: #0093FF;
+}
+
+/* ==========================================================================
+   MODALE SELEZIONE CATEGORIA
+   ========================================================================== */
+
+.category-modal-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 30px 20px;
+    border: 2px solid #e0e0e0;
+    background: #ffffff;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.category-modal-btn:hover {
+    border-color: var(--primary);
+    background: #f5f8ff;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.15);
+}
+
+.category-modal-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

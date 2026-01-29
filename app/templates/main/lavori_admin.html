@@ -952,23 +952,9 @@
         <i class="bi bi-calculator"></i> Compensi
     </button>
 
-    <div class="category-buttons" id="categoryButtons">
-        <button class="category-main-button" type="button" onclick="toggleCategoryButtons()">
-            <i class="bi bi-plus-lg"></i>
-        </button>
-        <button class="category-button category-button-old" type="button" onclick="openAddModalWithCategory('old')">
-            4.0 OLD
-        </button>
-        <button class="category-button category-button-iperamm" type="button" onclick="openAddModalWithCategory('iperamm')">
-            4.0 I.A.
-        </button>
-        <button class="category-button category-button-rsid" type="button" onclick="openAddModalWithCategory('rsid')">
-            RSID
-        </button>
-        <button class="category-button category-button-varie" type="button" onclick="openAddModalWithCategory('varie')">
-            VARIE
-        </button>
-    </div>
+    <button class="btn-add-circle" onclick="openCategoryModal()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
 
     <button class="pill-btn" onclick="openOverlay('fatture')">
         <i class="bi bi-receipt"></i> Fatture
@@ -1161,23 +1147,9 @@
 </div>
 
 <div class="bottom-floating-bar">
-    <div class="category-buttons" id="categoryButtons">
-        <button class="category-main-button" type="button" onclick="toggleCategoryButtons()">
-            <i class="bi bi-plus-lg"></i>
-        </button>
-        <button class="category-button category-button-old" type="button" onclick="openAddModalWithCategory('old')">
-            4.0 OLD
-        </button>
-        <button class="category-button category-button-iperamm" type="button" onclick="openAddModalWithCategory('iperamm')">
-            4.0 I.A.
-        </button>
-        <button class="category-button category-button-rsid" type="button" onclick="openAddModalWithCategory('rsid')">
-            RSID
-        </button>
-        <button class="category-button category-button-varie" type="button" onclick="openAddModalWithCategory('varie')">
-            VARIE
-        </button>
-    </div>
+    <button class="btn-add-circle" onclick="openCategoryModal()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
 </div>
 
 {# ==================== MODALITÀ EXTRA 2 (Focus) ==================== #}
@@ -1392,6 +1364,45 @@
 {% else %}
 <div style="height: 120px;"></div>
 {% endif %}
+
+<!-- Modale selezione categoria -->
+<div id="categoryModal" class="modal-overlay" onclick="closeCategoryModal(event)">
+    <div class="modal-glass" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Seleziona Categoria Lavoro</h3>
+            <button class="btn-close" onclick="closeCategoryModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div style="padding: 20px;">
+            <p style="margin-bottom: 30px; color: #666; text-align: center;">Scegli la categoria per il nuovo lavoro:</p>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('old')">
+                    <div class="category-modal-icon" style="background: #5865F2;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <span>4.0 OLD</span>
+                </button>
+                <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('iperamm')">
+                    <div class="category-modal-icon" style="background: #1CA1F1;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <span>4.0 I.A.</span>
+                </button>
+                <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('rsid')">
+                    <div class="category-modal-icon" style="background: #FF4500;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <span>RSID</span>
+                </button>
+                <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('varie')">
+                    <div class="category-modal-icon" style="background: #0093FF;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <span>VARIE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="addModal" class="modal-overlay">
     <div class="modal-glass modal-large">
@@ -3985,31 +3996,32 @@
         toggleExtInput();
     }
     
-    function toggleCategoryButtons() {
-        const containers = document.querySelectorAll('.category-buttons');
-        containers.forEach(container => {
-            container.classList.toggle('active');
-        });
+    function openCategoryModal() {
+        const modal = document.getElementById('categoryModal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
     }
     
-    function openAddModalWithCategory(categoria) {
-        // Chiudi i pulsanti categoria dopo il click
-        const containers = document.querySelectorAll('.category-buttons');
-        containers.forEach(container => {
-            container.classList.remove('active');
-        });
-        openAddModal(categoria);
-    }
-    
-    // Chiudi i pulsanti categoria quando si clicca fuori
-    document.addEventListener('click', function(event) {
-        const containers = document.querySelectorAll('.category-buttons');
-        containers.forEach(container => {
-            if (!container.contains(event.target)) {
-                container.classList.remove('active');
+    function closeCategoryModal(event) {
+        const modal = document.getElementById('categoryModal');
+        if (modal) {
+            // Chiudi solo se clicco fuori (overlay) o sulla X
+            if (!event || event.target.id === 'categoryModal' || event.target.closest('.btn-close')) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
             }
-        });
-    });
+        }
+    }
+    
+    function selectCategoryAndOpen(categoria) {
+        closeCategoryModal();
+        // Piccolo delay per permettere la chiusura della modale
+        setTimeout(() => {
+            openAddModal(categoria);
+        }, 200);
+    }
     
     function selectCategoria(categoria) {
         document.getElementById('categoriaInput').value = categoria;
