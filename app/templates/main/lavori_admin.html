@@ -196,22 +196,48 @@
         border-left: 4px solid #ff9f43;
     }
     
-    /* Stesso stile per la tabella expanded (extra1) */
-    .table-expanded tbody tr[data-categoria="old"] {
-        border-left: 4px solid #9c27b0;
+    /* Stesso stile per la tabella expanded (extra1/scroll) */
+    .table-expanded tbody tr[data-categoria="old"],
+    .table-scroll-horizontal .table-expanded tbody tr[data-categoria="old"],
+    #extra1TableScroll .table-expanded tbody tr[data-categoria="old"] {
+        border-left: 4px solid #9c27b0 !important;
     }
     
-    .table-expanded tbody tr[data-categoria="iperamm"] {
-        border-left: 4px solid #00A651;
+    .table-expanded tbody tr[data-categoria="iperamm"],
+    .table-scroll-horizontal .table-expanded tbody tr[data-categoria="iperamm"],
+    #extra1TableScroll .table-expanded tbody tr[data-categoria="iperamm"] {
+        border-left: 4px solid #00A651 !important;
     }
     
-    .table-expanded tbody tr[data-categoria="rsid"] {
-        border-left: 4px solid #007AFF;
+    .table-expanded tbody tr[data-categoria="rsid"],
+    .table-scroll-horizontal .table-expanded tbody tr[data-categoria="rsid"],
+    #extra1TableScroll .table-expanded tbody tr[data-categoria="rsid"] {
+        border-left: 4px solid #007AFF !important;
     }
     
-    .table-expanded tbody tr[data-categoria="varie"] {
-        border-left: 4px solid #ff9f43;
+    .table-expanded tbody tr[data-categoria="varie"],
+    .table-scroll-horizontal .table-expanded tbody tr[data-categoria="varie"],
+    #extra1TableScroll .table-expanded tbody tr[data-categoria="varie"] {
+        border-left: 4px solid #ff9f43 !important;
     }
+    
+    /* Bordo colorato categoria per focusTable */
+    #focusTable tbody tr[data-categoria="old"] {
+        border-left: 4px solid #9c27b0 !important;
+    }
+    
+    #focusTable tbody tr[data-categoria="iperamm"] {
+        border-left: 4px solid #00A651 !important;
+    }
+    
+    #focusTable tbody tr[data-categoria="rsid"] {
+        border-left: 4px solid #007AFF !important;
+    }
+    
+    #focusTable tbody tr[data-categoria="varie"] {
+        border-left: 4px solid #ff9f43 !important;
+    }
+    
     .table-scroll-horizontal .table-expanded tbody td {
         /* in extra1 la linea è un box-shadow: qui solo per coerenza (colore) */
         border-bottom: none !important;
