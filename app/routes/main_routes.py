@@ -204,9 +204,24 @@ def dashboard():
         tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).scalar() or 0
         tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).scalar() or 0
         
+        # Conteggi lavori
         total_lavori = LavoroAdmin.query.count()
-        in_corso = LavoroAdmin.query.filter(LavoroAdmin.stato.ilike('In corso')).count()
-        completati = LavoroAdmin.query.filter(LavoroAdmin.stato.in_(['Fatturato', 'Completo', 'Chiuso'])).count()
+        
+        # In Lavorazione: lavori che hanno almeno un bene con stato "vuoto" o "-"
+        # Oppure lavori senza beni (che hanno stato vuoto di default)
+        lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == '')
+        ).all()]
+        lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id))
+        ).all()]
+        in_corso = len(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
+        
+        # Completati: lavori che hanno almeno un bene con stato "chiusa"
+        lavori_ids_completati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'chiusa'
+        ).all()]
+        completati = len(set(lavori_ids_completati))
         
         return render_template('main/dashboard.html',
                                role='admin',
@@ -265,8 +280,36 @@ def lavori_admin():
     if view_mode == 'extra2':
         view_mode = 'standard'
     
-    # MODIFICA: .asc() invece di .desc()
-    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+    # Filtro per stato (se passato come parametro)
+    filtro_stato = request.args.get('filtro_stato', '').lower()
+    
+    # Query base
+    if filtro_stato == 'in_lavorazione':
+        # Lavori che hanno almeno un bene con stato "vuoto" o "-"
+        # Oppure lavori senza beni
+        lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == '')
+        ).all()]
+        lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id))
+        ).all()]
+        tutti_ids = list(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
+        if tutti_ids:
+            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(tutti_ids)).order_by(LavoroAdmin.numero.asc()).all()
+        else:
+            lavori = []
+    elif filtro_stato == 'completati':
+        # Lavori che hanno almeno un bene con stato "chiusa"
+        lavori_ids_completati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'chiusa'
+        ).all()]
+        if lavori_ids_completati:
+            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(lavori_ids_completati)).order_by(LavoroAdmin.numero.asc()).all()
+        else:
+            lavori = []
+    else:
+        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori
+        lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
     
     # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
@@ -1232,3 +1275,401 @@ def api_caricamenti():
     
     results = [n[0] for n in nomi]
     return jsonify(results)
+
+# --- ROTTE FATTURAZIONE ---
+
+@bp.route('/fatturazione/<tipo>')
+@login_required
+def fatturazione(tipo):
+    if current_user.role != 'admin':
+        return redirect(url_for('main.dashboard'))
+    
+    # Valida tipo
+    tipo_map = {
+        'amin': ('c_amin', 'f_amin', 'data_fattura_amin', 'AMIN'),
+        'fe': ('c_fe', 'f_fe', 'data_fattura_fe', 'FE'),
+        'galvan': ('c_galvan', 'f_galvan', 'data_fattura_galvan', 'GALVAN'),
+        'fh': ('c_fh', 'f_fh', 'data_fattura_fh', 'FH')
+    }
+    
+    if tipo not in tipo_map:
+        flash('Tipo fatturazione non valido', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    campo_compenso, campo_fattura, campo_data, nome_display = tipo_map[tipo]
+    
+    # Query lavori con stato "incassata" e compenso > 0 per questo tipo
+    # Lo stato "incassata" può essere a livello di bene o a livello di lavoro
+    # IMPORTANTE: Escludiamo i lavori che hanno già un numero di fattura per questo tipo
+    lavori_ids_incassata_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
+        Bene.stato == 'incassata'
+    ).all()]
+    
+    # Lavori con stato "incassata" a livello di lavoro
+    lavori_ids_incassata_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+        LavoroAdmin.stato == 'incassata'
+    ).all()]
+    
+    # Unisci le due liste
+    lavori_ids_incassata = list(set(lavori_ids_incassata_beni + lavori_ids_incassata_lavoro))
+    
+    if not lavori_ids_incassata:
+        lavori = []
+    else:
+        # Filtra per compenso > 0 per il tipo specifico E che NON hanno ancora un numero di fattura
+        # (campo fattura deve essere NULL o stringa vuota)
+        campo_fattura_obj = getattr(LavoroAdmin, campo_fattura)
+        lavori = LavoroAdmin.query.filter(
+            LavoroAdmin.id.in_(lavori_ids_incassata),
+            getattr(LavoroAdmin, campo_compenso) > 0,
+            (campo_fattura_obj == None) | (campo_fattura_obj == '')
+        ).order_by(LavoroAdmin.numero.asc()).all()
+    
+    # Prepara dati per template - una riga per ogni bene con stato "incassata"
+    lavori_data = []
+    totale_compensi = 0.0
+    
+    for lavoro in lavori:
+        compenso = getattr(lavoro, campo_compenso) or 0.0
+        totale_compensi += compenso
+        
+        # Recupera beni con stato "incassata"
+        beni_incassata = []
+        if lavoro.beni_list:
+            for b in lavoro.beni_list:
+                if b.stato == 'incassata':
+                    beni_incassata.append({
+                        'id': b.id,
+                        'descrizione': b.descrizione,
+                        'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
+                    })
+        else:
+            # Se non ci sono beni nella tabella separata, controlla lo stato del lavoro
+            # Se il lavoro ha stato "incassata", usa il campo concatenato
+            if lavoro.stato == 'incassata' and lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ') if ' | ' in lavoro.bene else [lavoro.bene]
+                # Dividi l'importo totale proporzionalmente
+                importo_totale = lavoro.importo_offerta or 0.0
+                importo_per_bene = importo_totale / len(beni_parts) if beni_parts else 0.0
+                for desc in beni_parts:
+                    beni_incassata.append({
+                        'id': None,
+                        'descrizione': desc.strip(),
+                        'importo': importo_per_bene
+                    })
+        
+        # Crea una riga per ogni bene con stato "incassata"
+        if beni_incassata:
+            for idx, bene in enumerate(beni_incassata):
+                lavori_data.append({
+                    'lavoro': lavoro,
+                    'bene': bene,
+                    'compenso': compenso if idx == 0 else None,  # Mostra compenso solo nella prima riga
+                    'is_first_bene': idx == 0  # Flag per sapere se è la prima riga del lavoro
+                })
+    
+    return render_template('main/fatturazione.html', 
+                         lavori_data=lavori_data,
+                         tipo=tipo,
+                         nome_display=nome_display,
+                         totale_compensi=totale_compensi,
+                         campo_fattura=campo_fattura,
+                         campo_data=campo_data)
+
+@bp.route('/api/fatturazione/salva', methods=['POST'])
+@login_required
+def salva_fatturazione():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    lavori_ids = data.get('lavori_ids', [])
+    
+    if not numero_fattura:
+        return jsonify({'error': 'Numero fattura richiesto'}), 400
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin'),
+        'fe': ('f_fe', 'data_fattura_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    data_fattura = datetime.now().date()
+    
+    # Aggiorna tutti i lavori selezionati
+    lavori_aggiornati = LavoroAdmin.query.filter(LavoroAdmin.id.in_(lavori_ids)).all()
+    
+    for lavoro in lavori_aggiornati:
+        setattr(lavoro, campo_fattura, numero_fattura)
+        setattr(lavoro, campo_data, data_fattura)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'lavori_aggiornati': len(lavori_aggiornati),
+        'data_fattura': data_fattura.strftime('%Y-%m-%d')
+    })
+
+@bp.route('/api/fatturazione/lista/<tipo>')
+@login_required
+def lista_fatture(tipo):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin', 'c_amin'),
+        'fe': ('f_fe', 'data_fattura_fe', 'c_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan', 'c_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh', 'c_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data, campo_compenso = tipo_map[tipo]
+    
+    # Raggruppa per numero fattura
+    fatture_dict = {}
+    
+    lavori = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) != None,
+        getattr(LavoroAdmin, campo_fattura) != ''
+    ).all()
+    
+    for lavoro in lavori:
+        num_fattura = getattr(lavoro, campo_fattura)
+        data_fattura = getattr(lavoro, campo_data)
+        compenso = getattr(lavoro, campo_compenso) or 0.0
+        
+        if num_fattura not in fatture_dict:
+            fatture_dict[num_fattura] = {
+                'numero': num_fattura,
+                'data': data_fattura.strftime('%Y-%m-%d') if data_fattura else None,
+                'lavori': [],
+                'totale_compensi': 0.0
+            }
+        
+        # Recupera beni
+        beni_list = []
+        if lavoro.beni_list:
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append(bene.descrizione)
+        else:
+            if lavoro.bene:
+                beni_list = [b.strip() for b in lavoro.bene.split(' | ')]
+        
+        fatture_dict[num_fattura]['lavori'].append({
+            'id': lavoro.id,
+            'numero': lavoro.numero,
+            'cliente': lavoro.cliente_nome or '',
+            'beni': beni_list,
+            'compenso': compenso,
+            'importo': lavoro.importo_offerta or 0.0
+        })
+        
+        fatture_dict[num_fattura]['totale_compensi'] += compenso
+    
+    # Converti in lista e ordina per data (più recente prima)
+    fatture_list = list(fatture_dict.values())
+    fatture_list.sort(key=lambda x: x['data'] or '', reverse=True)
+    
+    return jsonify({'fatture': fatture_list})
+
+@bp.route('/api/fatturazione/lavori-disponibili/<tipo>')
+@login_required
+def lavori_disponibili_fatturazione(tipo):
+    """Restituisce tutti i lavori disponibili per la fatturazione (inclusi quelli già fatturati)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    tipo_map = {
+        'amin': ('c_amin', 'f_amin'),
+        'fe': ('c_fe', 'f_fe'),
+        'galvan': ('c_galvan', 'f_galvan'),
+        'fh': ('c_fh', 'f_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_compenso, campo_fattura = tipo_map[tipo]
+    
+    # Query lavori con stato "incassata" e compenso > 0 per questo tipo
+    lavori_ids_incassata_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
+        Bene.stato == 'incassata'
+    ).all()]
+    
+    lavori_ids_incassata_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+        LavoroAdmin.stato == 'incassata'
+    ).all()]
+    
+    lavori_ids_incassata = list(set(lavori_ids_incassata_beni + lavori_ids_incassata_lavoro))
+    
+    if not lavori_ids_incassata:
+        return jsonify({'lavori': []})
+    
+    # Ottieni tutti i lavori (inclusi quelli già fatturati)
+    lavori = LavoroAdmin.query.filter(
+        LavoroAdmin.id.in_(lavori_ids_incassata),
+        getattr(LavoroAdmin, campo_compenso) > 0
+    ).order_by(LavoroAdmin.numero.asc()).all()
+    
+    lavori_data = []
+    for lavoro in lavori:
+        # Recupera beni con stato "incassata"
+        beni_incassata = []
+        if lavoro.beni_list:
+            for b in lavoro.beni_list:
+                if b.stato == 'incassata':
+                    beni_incassata.append({
+                        'id': b.id,
+                        'descrizione': b.descrizione,
+                        'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
+                    })
+        else:
+            if lavoro.stato == 'incassata' and lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ') if ' | ' in lavoro.bene else [lavoro.bene]
+                importo_totale = lavoro.importo_offerta or 0.0
+                importo_per_bene = importo_totale / len(beni_parts) if beni_parts else 0.0
+                for desc in beni_parts:
+                    beni_incassata.append({
+                        'id': None,
+                        'descrizione': desc.strip(),
+                        'importo': importo_per_bene
+                    })
+        
+        if beni_incassata:
+            compenso = getattr(lavoro, campo_compenso) or 0.0
+            numero_fattura_attuale = getattr(lavoro, campo_fattura) or None
+            
+            lavori_data.append({
+                'id': lavoro.id,
+                'numero': lavoro.numero,
+                'cliente': lavoro.cliente_nome or '',
+                'beni': beni_incassata,
+                'compenso': compenso,
+                'importo_totale': lavoro.importo_offerta or 0.0,
+                'fattura_attuale': numero_fattura_attuale
+            })
+    
+    return jsonify({'lavori': lavori_data})
+
+@bp.route('/api/fatturazione/dettaglio/<tipo>/<numero_fattura>')
+@login_required
+def dettaglio_fattura(tipo, numero_fattura):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin', 'c_amin'),
+        'fe': ('f_fe', 'data_fattura_fe', 'c_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan', 'c_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh', 'c_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data, campo_compenso = tipo_map[tipo]
+    
+    # Trova tutti i lavori con questa fattura
+    lavori = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) == numero_fattura
+    ).all()
+    
+    lavori_list = []
+    for lavoro in lavori:
+        # Recupera beni
+        beni_list = []
+        if lavoro.beni_list:
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append(bene.descrizione)
+        else:
+            if lavoro.bene:
+                beni_list = [b.strip() for b in lavoro.bene.split(' | ')]
+        
+        lavori_list.append({
+            'id': lavoro.id,
+            'numero': lavoro.numero,
+            'cliente': lavoro.cliente_nome or '',
+            'beni': beni_list,
+            'compenso': getattr(lavoro, campo_compenso) or 0.0,
+            'importo': lavoro.importo_offerta or 0.0
+        })
+    
+    # Recupera la data della fattura dal primo lavoro
+    data_fattura = None
+    if lavori:
+        data_fattura_obj = getattr(lavori[0], campo_data)
+        if data_fattura_obj:
+            data_fattura = data_fattura_obj.strftime('%Y-%m-%d')
+    
+    return jsonify({
+        'numero': numero_fattura,
+        'data': data_fattura,
+        'lavori': lavori_list
+    })
+
+@bp.route('/api/fatturazione/aggiorna', methods=['POST'])
+@login_required
+def aggiorna_fatturazione():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    vecchio_numero = data.get('vecchio_numero', '').strip()
+    nuovo_numero = data.get('nuovo_numero', '').strip()
+    lavori_ids_inclusi = data.get('lavori_ids_inclusi', [])
+    
+    if not nuovo_numero:
+        return jsonify({'error': 'Numero fattura richiesto'}), 400
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin'),
+        'fe': ('f_fe', 'data_fattura_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    # 1. Rimuovi la fattura da tutti i lavori che avevano il vecchio numero
+    lavori_con_vecchia_fattura = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) == vecchio_numero
+    ).all()
+    
+    for lavoro in lavori_con_vecchia_fattura:
+        setattr(lavoro, campo_fattura, None)
+        setattr(lavoro, campo_data, None)
+    
+    # 2. Aggiungi la nuova fattura ai lavori selezionati
+    if lavori_ids_inclusi:
+        lavori_da_aggiornare = LavoroAdmin.query.filter(
+            LavoroAdmin.id.in_(lavori_ids_inclusi)
+        ).all()
+        
+        data_fattura = datetime.now().date()
+        
+        for lavoro in lavori_da_aggiornare:
+            setattr(lavoro, campo_fattura, nuovo_numero)
+            setattr(lavoro, campo_data, data_fattura)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'lavori_aggiornati': len(lavori_ids_inclusi),
+        'data_fattura': datetime.now().date().strftime('%Y-%m-%d')
+    })

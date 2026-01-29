@@ -1025,8 +1025,20 @@ input:checked + .slider:before { transform: translateX(22px); }
   box-shadow: inset 0px 2px 5px rgba(0,0,0,0.1);
 }
 
-.days-section button {
+.days-section-link {
   flex: 1; /* Distribuzione equa dello spazio */
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.days-section-link:last-child {
+  border-right: none;
+}
+
+.days-section button {
+  flex: 1; /* Occupa tutto lo spazio del link */
   border: none;
   background: transparent;
   color: white;
@@ -1034,12 +1046,13 @@ input:checked + .slider:before { transform: translateX(22px); }
   font-size: 0.85rem;
   cursor: pointer;
   transition: background 0.2s;
-  border-right: 1px solid rgba(255,255,255,0.1);
   padding: 0;
   margin: 0;
   height: 100%;
+  width: 100%;
 }
 
+.days-section-link:hover button,
 .days-section button:hover {
   background: rgba(255, 255, 255, 0.2);
 }

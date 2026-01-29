@@ -1,0 +1,1118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .fatturazione-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 20px 0;
+    }
+    
+    .fatturazione-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+    
+    .fatturazione-header .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        text-decoration: none;
+        color: var(--text-dark);
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .fatturazione-header .back-btn:hover {
+        background: #f5f5f5;
+        transform: translateX(-3px);
+    }
+    
+    .fatturazione-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .summary-card {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.03);
+    }
+    
+    .summary-card h3 {
+        font-size: 0.9rem;
+        color: #666;
+        margin: 0 0 10px 0;
+        font-weight: 500;
+    }
+    
+    .summary-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+    
+    .fatturazione-section {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.03);
+        margin-bottom: 30px;
+    }
+    
+    .fatturazione-section h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0 0 20px 0;
+        color: var(--text-dark);
+    }
+    
+    .fatturazione-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .fatturazione-table thead th {
+        background: #f5f5f5;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #666;
+        border-bottom: 2px solid #ddd;
+    }
+    
+    .fatturazione-table tbody td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        font-size: 0.9rem;
+    }
+    
+    .fatturazione-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+    
+    .fatturazione-table tbody tr.selected {
+        background: #e3f2fd;
+    }
+    
+    .fatturazione-input-group {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        margin-top: 20px;
+    }
+    
+    .fatturazione-input-group .input-wrapper {
+        flex: 1;
+    }
+    
+    .fatturazione-input-group label {
+        display: block;
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .fatturazione-input-group input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+    
+    .fatturazione-input-group input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+    
+    .btn-salva-fattura {
+        padding: 12px 30px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    
+    .btn-salva-fattura:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    }
+    
+    .btn-salva-fattura:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .checkbox-cell {
+        text-align: center;
+        width: 50px;
+    }
+    
+    .checkbox-cell input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .fatture-emesse-list {
+        margin-top: 20px;
+    }
+    
+    .fattura-item {
+        background: #f9f9f9;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .fattura-item:hover {
+        background: #f0f0f0;
+    }
+    
+    .fattura-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .fattura-item-header .fattura-numero {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-dark);
+    }
+    
+    .fattura-item-header .fattura-data {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .fattura-item-header .fattura-totale {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 1rem;
+    }
+    
+    .fattura-item-header .expand-icon {
+        transition: transform 0.3s;
+    }
+    
+    .fattura-item.expanded .expand-icon {
+        transform: rotate(180deg);
+    }
+    
+    .fattura-item-lavori {
+        display: none;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+    }
+    
+    .fattura-item.expanded .fattura-item-lavori {
+        display: block;
+    }
+    
+    .lavoro-item {
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .lavoro-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .lavoro-item-header .lavoro-numero {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    .lavoro-item-header .lavoro-compenso {
+        font-weight: 600;
+        color: var(--primary);
+    }
+    
+    .lavoro-item-cliente {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .lavoro-item-beni {
+        font-size: 0.85rem;
+        color: #999;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+    
+    .select-all-row {
+        background: #f5f5f5;
+        font-weight: 600;
+    }
+    
+    /* Modal modifica fattura */
+    .modal-modifica-fattura {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        overflow-y: auto;
+    }
+    
+    .modal-modifica-fattura.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .modal-content-fattura {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header-fattura {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #eee;
+    }
+    
+    .modal-header-fattura h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: var(--text-dark);
+    }
+    
+    .btn-close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-close-modal:hover {
+        color: var(--text-dark);
+    }
+    
+    .modal-input-group {
+        margin-bottom: 20px;
+    }
+    
+    .modal-input-group label {
+        display: block;
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .modal-lavori-section {
+        margin-top: 25px;
+    }
+    
+    .modal-lavori-section h3 {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        color: var(--text-dark);
+    }
+    
+    .modal-lavori-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        padding: 10px;
+    }
+    
+    .modal-lavoro-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s;
+    }
+    
+    .modal-lavoro-item:hover {
+        background: #f9f9f9;
+    }
+    
+    .modal-lavoro-item:last-child {
+        border-bottom: none;
+    }
+    
+    .modal-lavoro-item input[type="checkbox"] {
+        margin-right: 12px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    .modal-lavoro-info {
+        flex: 1;
+    }
+    
+    .modal-lavoro-numero {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 4px;
+    }
+    
+    .modal-lavoro-cliente {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 4px;
+    }
+    
+    .modal-lavoro-beni {
+        font-size: 0.8rem;
+        color: #999;
+    }
+    
+    .modal-lavoro-importi {
+        text-align: right;
+        margin-left: 15px;
+    }
+    
+    .modal-lavoro-compenso {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 0.9rem;
+    }
+    
+    .modal-lavoro-importo {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 4px;
+    }
+    
+    .modal-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 25px;
+        justify-content: flex-end;
+    }
+    
+    .btn-modifica-fattura {
+        padding: 8px 16px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: #666;
+        transition: all 0.2s;
+    }
+    
+    .btn-modifica-fattura:hover {
+        background: #e9e9e9;
+    }
+</style>
+
+<div class="fatturazione-header">
+    <h1>Fatturazione {{ nome_display }}</h1>
+    <a href="{{ url_for('main.dashboard') }}" class="back-btn">
+        <i class="bi bi-arrow-left"></i>
+        Torna alla Dashboard
+    </a>
+</div>
+
+<div class="fatturazione-summary">
+    <div class="summary-card">
+        <h3>Lavori da Fatturare</h3>
+        <div class="value" id="countLavori">{{ lavori_data|length }}</div>
+    </div>
+    <div class="summary-card">
+        <h3>Totale Compensi</h3>
+        <div class="value">€ {{ "{:,.2f}".format(totale_compensi).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+    </div>
+</div>
+
+<div class="fatturazione-section">
+    <h2>Lavori con Stato "Incassata"</h2>
+    
+    {% if lavori_data %}
+    <table class="fatturazione-table">
+        <thead>
+            <tr>
+                <th class="checkbox-cell">
+                    <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+                </th>
+                <th>N°</th>
+                <th>Cliente</th>
+                <th>Beni</th>
+                <th>Importo</th>
+                <th>Compenso {{ nome_display }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in lavori_data %}
+            <tr data-lavoro-id="{{ item.lavoro.id }}" {% if not item.is_first_bene %}style="background-color: #fafafa;"{% endif %}>
+                <td class="checkbox-cell">
+                    <input type="checkbox" class="lavoro-checkbox" value="{{ item.lavoro.id }}" onchange="updateSelectedCount()">
+                </td>
+                <td>
+                    {% if item.is_first_bene %}
+                        {{ item.lavoro.numero }}
+                    {% else %}
+                        <span style="color: #999;">└</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_first_bene %}
+                        {{ item.lavoro.cliente_nome or '-' }}
+                    {% else %}
+                        <span style="color: #999;">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.bene.descrizione }}</td>
+                <td>€ {{ "{:,.2f}".format(item.bene.importo).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td style="font-weight: 600; color: var(--primary);">
+                    {% if item.compenso is not none %}
+                        € {{ "{:,.2f}".format(item.compenso).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                    {% else %}
+                        <span style="color: #999;">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="fatturazione-input-group">
+        <div class="input-wrapper">
+            <label for="numeroFattura">Numero Fattura</label>
+            <input type="text" id="numeroFattura" placeholder="Inserisci il numero di fattura" class="one-ui-input">
+        </div>
+        <button class="btn-salva-fattura" id="btnSalvaFattura" onclick="salvaFattura()" disabled>
+            <i class="bi bi-check-circle"></i> Salva Fattura
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <p>Nessun lavoro con stato "incassata" e compenso {{ nome_display }} > 0</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="fatturazione-section" id="sezioneFattureEmesse">
+    <h2>Fatture Emesse</h2>
+    <div id="fattureEmesseList" class="fatture-emesse-list">
+        <div class="empty-state">
+            <i class="bi bi-hourglass-split"></i>
+            <p>Caricamento fatture...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modifica Fattura -->
+<div id="modalModificaFattura" class="modal-modifica-fattura">
+    <div class="modal-content-fattura">
+        <div class="modal-header-fattura">
+            <h2>Modifica Fattura</h2>
+            <button class="btn-close-modal" onclick="chiudiModalModifica()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <div class="modal-input-group">
+            <label for="modalNumeroFattura">Numero Fattura</label>
+            <input type="text" id="modalNumeroFattura" class="one-ui-input" placeholder="Inserisci il numero di fattura">
+        </div>
+        
+        <div class="modal-lavori-section">
+            <h3>Lavori da Includere</h3>
+            <div id="modalLavoriList" class="modal-lavori-list">
+                <div class="empty-state">
+                    <i class="bi bi-hourglass-split"></i>
+                    <p>Caricamento lavori...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-modifica-fattura" onclick="chiudiModalModifica()">Annulla</button>
+            <button class="btn-salva-fattura" id="btnSalvaModifica" onclick="salvaModificaFattura()">
+                <i class="bi bi-check-circle"></i> Salva Modifiche
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tipo = '{{ tipo }}';
+    let selectedLavori = new Set();
+    
+    function toggleAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.lavoro-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+            if (checkbox.checked) {
+                selectedLavori.add(parseInt(cb.value));
+            } else {
+                selectedLavori.delete(parseInt(cb.value));
+            }
+        });
+        updateSelectedCount();
+    }
+    
+    document.querySelectorAll('.lavoro-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const lavoroId = parseInt(this.value);
+            if (this.checked) {
+                selectedLavori.add(lavoroId);
+            } else {
+                selectedLavori.delete(lavoroId);
+            }
+            updateSelectedCount();
+        });
+    });
+    
+    function updateSelectedCount() {
+        const count = selectedLavori.size;
+        const btn = document.getElementById('btnSalvaFattura');
+        const input = document.getElementById('numeroFattura');
+        
+        if (count > 0 && input && input.value.trim()) {
+            btn.disabled = false;
+        } else {
+            if (btn) {
+                btn.disabled = true;
+            }
+        }
+        
+        // Aggiorna count lavori selezionati
+        const countEl = document.getElementById('countLavori');
+        if (countEl) {
+            if (count > 0) {
+                countEl.textContent = count + ' selezionati';
+            } else {
+                // Ripristina il conteggio originale dei lavori totali
+                const totalRows = document.querySelectorAll('.lavoro-checkbox').length;
+                countEl.textContent = totalRows;
+            }
+        }
+    }
+    
+    // Aggiungi listener solo se l'input esiste (potrebbe non esistere se non ci sono lavori da fatturare)
+    const numeroFatturaInput = document.getElementById('numeroFattura');
+    if (numeroFatturaInput) {
+        numeroFatturaInput.addEventListener('input', updateSelectedCount);
+    }
+    
+    function salvaFattura() {
+        const numeroFattura = document.getElementById('numeroFattura').value.trim();
+        
+        if (!numeroFattura) {
+            showToast('Inserisci un numero di fattura', 'error');
+            return;
+        }
+        
+        if (selectedLavori.size === 0) {
+            showToast('Seleziona almeno un lavoro', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('btnSalvaFattura');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvataggio...';
+        
+        fetch('/api/fatturazione/salva', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                tipo: tipo,
+                numero_fattura: numeroFattura,
+                lavori_ids: Array.from(selectedLavori)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Fattura ${numeroFattura} salvata su ${data.lavori_aggiornati} lavori`, 'success');
+                
+                // Salva gli ID dei lavori fatturati prima di pulire selectedLavori
+                const lavoriFatturati = Array.from(selectedLavori);
+                
+                // Reset form
+                document.getElementById('numeroFattura').value = '';
+                document.querySelectorAll('.lavoro-checkbox').forEach(cb => cb.checked = false);
+                document.getElementById('selectAll').checked = false;
+                selectedLavori.clear();
+                
+                // Rimuovi tutte le righe dei lavori fatturati dalla lista
+                // IMPORTANTE: Usa un selettore molto specifico per NON toccare la sezione "Fatture Emesse"
+                // Cerca SOLO la sezione "Lavori con Stato 'Incassata'" (la prima sezione)
+                const sezioneLavori = document.querySelector('.fatturazione-section:first-of-type');
+                const sezioneFatture = document.getElementById('sezioneFattureEmesse');
+                
+                // Verifica che la sezione fatture esista e non venga toccata
+                if (sezioneFatture && sezioneLavori && sezioneLavori !== sezioneFatture) {
+                    const tabellaLavori = sezioneLavori.querySelector('.fatturazione-table');
+                    if (tabellaLavori) {
+                        const tbodyLavori = tabellaLavori.querySelector('tbody');
+                        if (tbodyLavori) {
+                            lavoriFatturati.forEach(id => {
+                                // Rimuovi tutte le righe associate a questo lavoro (potrebbero esserci più righe per più beni)
+                                const rows = tbodyLavori.querySelectorAll(`tr[data-lavoro-id="${id}"]`);
+                                rows.forEach(row => row.remove());
+                            });
+                            
+                            // Aggiorna il conteggio
+                            updateSelectedCount();
+                            
+                            // Se non ci sono più lavori, mostra il messaggio vuoto
+                            const remainingRows = tbodyLavori.querySelectorAll('tr');
+                            if (remainingRows.length === 0) {
+                                tbodyLavori.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">Nessun lavoro da fatturare</td></tr>';
+                                // Aggiorna anche il conteggio nella card summary
+                                const countEl = document.getElementById('countLavori');
+                                if (countEl) {
+                                    countEl.textContent = '0';
+                                }
+                            } else {
+                                // Aggiorna il conteggio nella card summary
+                                const countEl = document.getElementById('countLavori');
+                                if (countEl) {
+                                    countEl.textContent = remainingRows.length;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // IMPORTANTE: Ricarica lista fatture SEMPRE, indipendentemente dalla rimozione dei lavori
+                // Questo deve essere eseguito anche se non ci sono lavori da fatturare
+                // Usa un timeout per assicurarsi che venga eseguito dopo tutte le altre operazioni
+                setTimeout(() => {
+                    try {
+                        caricaFattureEmesse();
+                    } catch (error) {
+                        console.error('Errore nel caricamento delle fatture:', error);
+                        // Anche in caso di errore, prova a ricaricare le fatture
+                        setTimeout(() => {
+                            caricaFattureEmesse();
+                        }, 500);
+                    }
+                }, 100);
+            } else {
+                showToast(data.error || 'Errore nel salvataggio', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Salva Fattura';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Errore di connessione', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Salva Fattura';
+        });
+    }
+    
+    function caricaFattureEmesse() {
+        console.log('[DEBUG] caricaFattureEmesse chiamata');
+        
+        // Verifica che la sezione esista ancora nel DOM
+        const sezioneFatture = document.getElementById('sezioneFattureEmesse');
+        if (!sezioneFatture) {
+            console.error('[DEBUG] Sezione fatture emesse non trovata nel DOM');
+            return;
+        }
+        
+        const container = document.getElementById('fattureEmesseList');
+        if (!container) {
+            console.error('[DEBUG] Container fattureEmesseList non trovato');
+            // Riprova dopo un breve delay
+            setTimeout(caricaFattureEmesse, 200);
+            return;
+        }
+        
+        // Verifica che il container sia ancora dentro la sezione (non sia stato rimosso)
+        if (!sezioneFatture.contains(container)) {
+            console.error('[DEBUG] Container fattureEmesseList non è più dentro la sezione');
+            return;
+        }
+        
+        console.log('[DEBUG] Chiamata API per caricare fatture');
+        
+        // Mostra stato di caricamento solo se il container è vuoto o mostra ancora "Caricamento fatture..."
+        const currentContent = container.innerHTML.trim();
+        if (!currentContent || currentContent.includes('Caricamento fatture') || currentContent.includes('hourglass')) {
+            container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento fatture...</p></div>';
+        }
+        
+        fetch(`/api/fatturazione/lista/${tipo}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Errore HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('[DEBUG] Dati ricevuti dall\'API:', data);
+            
+            if (!data) {
+                throw new Error('Nessun dato ricevuto dal server');
+            }
+            
+            if (!data.fatture) {
+                console.warn('[DEBUG] Risposta API senza campo fatture:', data);
+                // Verifica che il container esista ancora
+                const containerCheck = document.getElementById('fattureEmesseList');
+                if (containerCheck) {
+                    containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel formato dei dati</p></div>';
+                }
+                return;
+            }
+            
+            // Verifica che il container esista ancora prima di modificarlo
+            const containerCheck = document.getElementById('fattureEmesseList');
+            if (!containerCheck) {
+                console.error('[DEBUG] Container non trovato durante l\'aggiornamento');
+                return;
+            }
+            
+            console.log('[DEBUG] Numero fatture trovate:', data.fatture.length);
+            
+            if (data.fatture.length > 0) {
+                container.innerHTML = '';
+                data.fatture.forEach(fattura => {
+                    const item = document.createElement('div');
+                    item.className = 'fattura-item';
+                    item.innerHTML = `
+                        <div class="fattura-item-header">
+                            <div onclick="toggleFattura(this)" style="flex: 1; cursor: pointer;">
+                                <div class="fattura-numero">Fattura ${fattura.numero}</div>
+                                <div class="fattura-data">${fattura.data ? new Date(fattura.data).toLocaleDateString('it-IT') : 'Data non disponibile'}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div class="fattura-totale">€ ${formatCurrency(fattura.totale_compensi)}</div>
+                                <button class="btn-modifica-fattura" onclick="apriModalModifica('${fattura.numero}')" style="padding: 6px 12px;">
+                                    <i class="bi bi-pencil"></i> Modifica
+                                </button>
+                                <i class="bi bi-chevron-down expand-icon" onclick="toggleFattura(this)" style="cursor: pointer;"></i>
+                            </div>
+                        </div>
+                        <div class="fattura-item-lavori">
+                            ${fattura.lavori.map(lavoro => `
+                                <div class="lavoro-item">
+                                    <div class="lavoro-item-header">
+                                        <span class="lavoro-numero">Lavoro #${lavoro.numero}</span>
+                                        <span class="lavoro-compenso">€ ${formatCurrency(lavoro.compenso)}</span>
+                                    </div>
+                                    <div class="lavoro-item-cliente">${lavoro.cliente}</div>
+                                    <div class="lavoro-item-beni">${lavoro.beni.join(', ')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                container.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessuna fattura emessa</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento delle fatture:', error);
+            
+            // Mostra messaggio di errore
+            if (container) {
+                container.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel caricamento delle fatture. Riprovo...</p></div>';
+            }
+            
+            // Riprova dopo 2 secondi
+            setTimeout(() => {
+                console.log('Tentativo di ricaricare le fatture...');
+                caricaFattureEmesse();
+            }, 2000);
+        });
+    }
+    
+    function toggleFattura(header) {
+        const item = header.closest('.fattura-item');
+        item.classList.toggle('expanded');
+    }
+    
+    function formatCurrency(value) {
+        return parseFloat(value).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+    
+    // Carica fatture emesse al caricamento della pagina
+    // Usa multiple strategie per assicurarsi che venga sempre eseguito
+    function initCaricaFatture() {
+        console.log('[DEBUG] initCaricaFatture chiamata');
+        try {
+            const sezioneFatture = document.getElementById('sezioneFattureEmesse');
+            const container = document.getElementById('fattureEmesseList');
+            
+            if (sezioneFatture && container) {
+                console.log('[DEBUG] Sezione e container trovati, carico fatture');
+                caricaFattureEmesse();
+            } else {
+                console.warn('[DEBUG] Sezione o container non trovati, riprovo tra 100ms');
+                // Se il container non esiste ancora, riprova dopo un breve delay
+                setTimeout(initCaricaFatture, 100);
+            }
+        } catch (error) {
+            console.error('Errore nell\'inizializzazione del caricamento fatture:', error);
+            // Riprova dopo un delay
+            setTimeout(() => {
+                try {
+                    caricaFattureEmesse();
+                } catch (e) {
+                    console.error('Errore nel secondo tentativo:', e);
+                }
+            }, 500);
+        }
+    }
+    
+    // Esegui quando il DOM è pronto
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[DEBUG] DOMContentLoaded, inizializzo caricamento fatture');
+            initCaricaFatture();
+        });
+    } else {
+        // DOM già caricato, esegui immediatamente
+        console.log('[DEBUG] DOM già caricato, inizializzo immediatamente');
+        initCaricaFatture();
+    }
+    
+    // Backup: esegui anche dopo un breve delay per sicurezza
+    setTimeout(() => {
+        console.log('[DEBUG] Timeout backup, verifico se devo ricaricare');
+        const container = document.getElementById('fattureEmesseList');
+        if (container) {
+            const content = container.innerHTML.trim();
+            if (content.includes('Caricamento fatture') || content.includes('hourglass') || content === '') {
+                console.log('[DEBUG] Container ancora in caricamento o vuoto, ricarico');
+                caricaFattureEmesse();
+            }
+        } else {
+            console.warn('[DEBUG] Container non trovato nel timeout backup');
+        }
+    }, 1000);
+    
+    // Variabili per modifica fattura
+    let fatturaCorrente = null;
+    let tuttiLavoriDisponibili = [];
+    
+    function apriModalModifica(numeroFattura) {
+        fatturaCorrente = numeroFattura;
+        document.getElementById('modalNumeroFattura').value = numeroFattura;
+        document.getElementById('modalModificaFattura').classList.add('active');
+        
+        // Carica tutti i lavori disponibili
+        caricaLavoriDisponibili(numeroFattura);
+    }
+    
+    function chiudiModalModifica() {
+        document.getElementById('modalModificaFattura').classList.remove('active');
+        fatturaCorrente = null;
+        tuttiLavoriDisponibili = [];
+    }
+    
+    function caricaLavoriDisponibili(numeroFattura) {
+        const container = document.getElementById('modalLavoriList');
+        container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento lavori...</p></div>';
+        
+        fetch(`/api/fatturazione/lavori-disponibili/${tipo}`)
+        .then(response => response.json())
+        .then(data => {
+            tuttiLavoriDisponibili = data.lavori || [];
+            mostraLavoriNelModal(numeroFattura);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel caricamento</p></div>';
+        });
+    }
+    
+    function mostraLavoriNelModal(numeroFattura) {
+        const container = document.getElementById('modalLavoriList');
+        
+        if (tuttiLavoriDisponibili.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessun lavoro disponibile</p></div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Raggruppa i lavori per ID per evitare duplicati
+        const lavoriUnici = {};
+        tuttiLavoriDisponibili.forEach(lavoro => {
+            if (!lavoriUnici[lavoro.id]) {
+                lavoriUnici[lavoro.id] = lavoro;
+            }
+        });
+        
+        Object.values(lavoriUnici).forEach(lavoro => {
+            // Verifica se questo lavoro è già incluso nella fattura
+            const isIncluso = lavoro.fattura_attuale === numeroFattura;
+            
+            const item = document.createElement('div');
+            item.className = 'modal-lavoro-item';
+            
+            // Mostra tutti i beni separati da virgola
+            const beniList = lavoro.beni.map(b => b.descrizione).join(', ');
+            const importoTotale = lavoro.beni.reduce((sum, b) => sum + (b.importo || 0), 0);
+            
+            item.innerHTML = `
+                <input type="checkbox" 
+                       class="modal-lavoro-checkbox" 
+                       value="${lavoro.id}" 
+                       ${isIncluso ? 'checked' : ''}
+                       onchange="updateModalSelected()">
+                <div class="modal-lavoro-info">
+                    <div class="modal-lavoro-numero">Lavoro #${lavoro.numero}</div>
+                    <div class="modal-lavoro-cliente">${lavoro.cliente}</div>
+                    <div class="modal-lavoro-beni">${beniList}</div>
+                </div>
+                <div class="modal-lavoro-importi">
+                    <div class="modal-lavoro-compenso">€ ${formatCurrency(lavoro.compenso)}</div>
+                    <div class="modal-lavoro-importo">€ ${formatCurrency(importoTotale)}</div>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+    
+    function updateModalSelected() {
+        // Aggiorna il pulsante salva
+        const btn = document.getElementById('btnSalvaModifica');
+        const input = document.getElementById('modalNumeroFattura');
+        
+        if (input.value.trim()) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+    
+    function salvaModificaFattura() {
+        const nuovoNumero = document.getElementById('modalNumeroFattura').value.trim();
+        
+        if (!nuovoNumero) {
+            showToast('Inserisci un numero di fattura', 'error');
+            return;
+        }
+        
+        if (!fatturaCorrente) {
+            showToast('Errore: fattura non identificata', 'error');
+            return;
+        }
+        
+        // Raccogli tutti i lavori selezionati (unici per ID)
+        const checkboxes = document.querySelectorAll('.modal-lavoro-checkbox:checked');
+        const lavoriSelezionati = new Set();
+        checkboxes.forEach(cb => {
+            lavoriSelezionati.add(parseInt(cb.value));
+        });
+        
+        const btn = document.getElementById('btnSalvaModifica');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvataggio...';
+        
+        fetch('/api/fatturazione/aggiorna', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                tipo: tipo,
+                vecchio_numero: fatturaCorrente,
+                nuovo_numero: nuovoNumero,
+                lavori_ids_inclusi: Array.from(lavoriSelezionati)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Fattura ${nuovoNumero} aggiornata su ${data.lavori_aggiornati} lavori`, 'success');
+                chiudiModalModifica();
+                
+                // Ricarica la pagina per aggiornare le liste
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast(data.error || 'Errore nel salvataggio', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Salva Modifiche';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Errore di connessione', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> Salva Modifiche';
+        });
+    }
+    
+    // Aggiorna il pulsante quando si modifica il numero fattura (solo se il modal esiste)
+    const modalNumeroFatturaInput = document.getElementById('modalNumeroFattura');
+    if (modalNumeroFatturaInput) {
+        modalNumeroFatturaInput.addEventListener('input', updateModalSelected);
+    }
+</script>
+
+{% endblock %}

@@ -16,7 +16,7 @@
 {% if role == 'admin' %}
     <div class="admin-top-section">
         
-        <div class="card-widget-revenue">
+        <div class="card-widget-revenue" style="transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
             <div class="background-design">
                 <div class="circle"></div>
                 <div class="circle"></div>
@@ -31,53 +31,67 @@
                 </div>
             </div>
             <div class="days-section">
-                <button onmouseenter="updateWidget('FE', '{{ tot_fe }}')" onmouseleave="resetWidget()">FE</button>
-                <button onmouseenter="updateWidget('AMIN', '{{ tot_amin }}')" onmouseleave="resetWidget()">AMIN</button>
-                <button onmouseenter="updateWidget('GALV', '{{ tot_galvan }}')" onmouseleave="resetWidget()">GALV</button>
-                <button onmouseenter="updateWidget('FH', '{{ tot_fh }}')" onmouseleave="resetWidget()">FH</button>
+                <a href="{{ url_for('main.fatturazione', tipo='fe') }}" class="days-section-link" onmouseenter="updateWidget('FE', '{{ tot_fe }}')" onmouseleave="resetWidget()">
+                    <button>FE</button>
+                </a>
+                <a href="{{ url_for('main.fatturazione', tipo='amin') }}" class="days-section-link" onmouseenter="updateWidget('AMIN', '{{ tot_amin }}')" onmouseleave="resetWidget()">
+                    <button>AMIN</button>
+                </a>
+                <a href="{{ url_for('main.fatturazione', tipo='galvan') }}" class="days-section-link" onmouseenter="updateWidget('GALV', '{{ tot_galvan }}')" onmouseleave="resetWidget()">
+                    <button>GALV</button>
+                </a>
+                <a href="{{ url_for('main.fatturazione', tipo='fh') }}" class="days-section-link" onmouseenter="updateWidget('FH', '{{ tot_fh }}')" onmouseleave="resetWidget()">
+                    <button>FH</button>
+                </a>
             </div>
         </div>
 
         <div class="admin-stats-grid">
             
-            <div class="card-styled style-blue">
-                <div class="background-design pos-variant-1">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='tutti') }}" style="text-decoration: none; color: inherit;">
+                <div class="card-styled style-blue" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
+                    <div class="background-design pos-variant-1">
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                    </div>
+                    <div class="card-content-centered">
+                        <div class="card-icon-large"><i class="bi bi-folder-fill"></i></div>
+                        <div class="card-number-large">{{ total_lavori }}</div>
+                        <div class="card-label-large">Totale Lavori</div>
+                    </div>
                 </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-folder-fill"></i></div>
-                    <div class="card-number-large">{{ total_lavori }}</div>
-                    <div class="card-label-large">Totale Lavori</div>
-                </div>
-            </div>
+            </a>
 
-            <div class="card-styled style-orange">
-                <div class="background-design pos-variant-2">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='in_lavorazione') }}" style="text-decoration: none; color: inherit;">
+                <div class="card-styled style-orange" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
+                    <div class="background-design pos-variant-2">
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                    </div>
+                    <div class="card-content-centered">
+                        <div class="card-icon-large"><i class="bi bi-clock-history"></i></div>
+                        <div class="card-number-large">{{ in_corso }}</div>
+                        <div class="card-label-large">In Lavorazione</div>
+                    </div>
                 </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-clock-history"></i></div>
-                    <div class="card-number-large">{{ in_corso }}</div>
-                    <div class="card-label-large">In Lavorazione</div>
-                </div>
-            </div>
+            </a>
 
-            <div class="card-styled style-green">
-                <div class="background-design pos-variant-3">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='completati') }}" style="text-decoration: none; color: inherit;">
+                <div class="card-styled style-green" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
+                    <div class="background-design pos-variant-3">
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                    </div>
+                    <div class="card-content-centered">
+                        <div class="card-icon-large"><i class="bi bi-check-circle-fill"></i></div>
+                        <div class="card-number-large">{{ completati }}</div>
+                        <div class="card-label-large">Completati</div>
+                    </div>
                 </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-check-circle-fill"></i></div>
-                    <div class="card-number-large">{{ completati }}</div>
-                    <div class="card-label-large">Completati</div>
-                </div>
-            </div>
+            </a>
 
         </div>
     </div>

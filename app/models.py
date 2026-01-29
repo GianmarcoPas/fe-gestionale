@@ -124,6 +124,17 @@ class LavoroAdmin(db.Model):
     f_ext = db.Column(db.String(50))
     f_revisore = db.Column(db.String(50))
     f_caricamento = db.Column(db.String(50))
+    
+    # Date fatturazione
+    data_fattura_fe = db.Column(db.Date, nullable=True)
+    data_fattura_amin = db.Column(db.Date, nullable=True)
+    data_fattura_galvan = db.Column(db.Date, nullable=True)
+    data_fattura_fh = db.Column(db.Date, nullable=True)
+    data_fattura_bianc = db.Column(db.Date, nullable=True)
+    data_fattura_deloitte = db.Column(db.Date, nullable=True)
+    data_fattura_ext = db.Column(db.Date, nullable=True)
+    data_fattura_revisore = db.Column(db.Date, nullable=True)
+    data_fattura_caricamento = db.Column(db.Date, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
