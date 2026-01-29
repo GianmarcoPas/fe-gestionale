@@ -2889,23 +2889,23 @@ input:-webkit-autofill:active  {
 }
 
 .category-select-btn[data-categoria="old"].active {
-    background: #5865F2;
-    border-color: #5865F2;
+    background: #9c27b0;
+    border-color: #9c27b0;
 }
 
 .category-select-btn[data-categoria="iperamm"].active {
-    background: #1CA1F1;
-    border-color: #1CA1F1;
+    background: #00A651;
+    border-color: #00A651;
 }
 
 .category-select-btn[data-categoria="rsid"].active {
-    background: #FF4500;
-    border-color: #FF4500;
+    background: #007AFF;
+    border-color: #007AFF;
 }
 
 .category-select-btn[data-categoria="varie"].active {
-    background: #0093FF;
-    border-color: #0093FF;
+    background: #ff9f43;
+    border-color: #ff9f43;
 }
 
 /* ==========================================================================

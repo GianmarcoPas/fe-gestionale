@@ -178,6 +178,40 @@
     .lavori-admin-standard-table tbody td {
         border-bottom: 1px solid #ddd !important;
     }
+    
+    /* Bordo colorato categoria sulle righe */
+    .lavori-admin-standard-table tbody tr[data-categoria="old"] {
+        border-left: 4px solid #9c27b0;
+    }
+    
+    .lavori-admin-standard-table tbody tr[data-categoria="iperamm"] {
+        border-left: 4px solid #00A651;
+    }
+    
+    .lavori-admin-standard-table tbody tr[data-categoria="rsid"] {
+        border-left: 4px solid #007AFF;
+    }
+    
+    .lavori-admin-standard-table tbody tr[data-categoria="varie"] {
+        border-left: 4px solid #ff9f43;
+    }
+    
+    /* Stesso stile per la tabella expanded (extra1) */
+    .table-expanded tbody tr[data-categoria="old"] {
+        border-left: 4px solid #9c27b0;
+    }
+    
+    .table-expanded tbody tr[data-categoria="iperamm"] {
+        border-left: 4px solid #00A651;
+    }
+    
+    .table-expanded tbody tr[data-categoria="rsid"] {
+        border-left: 4px solid #007AFF;
+    }
+    
+    .table-expanded tbody tr[data-categoria="varie"] {
+        border-left: 4px solid #ff9f43;
+    }
     .table-scroll-horizontal .table-expanded tbody td {
         /* in extra1 la linea è un box-shadow: qui solo per coerenza (colore) */
         border-bottom: none !important;
@@ -1405,25 +1439,25 @@
             <p style="margin-bottom: 30px; color: #666; text-align: center;">Scegli la categoria per il nuovo lavoro:</p>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                 <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('old')">
-                    <div class="category-modal-icon" style="background: #5865F2;">
+                    <div class="category-modal-icon" style="background: #9c27b0;">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <span>4.0 OLD</span>
                 </button>
                 <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('iperamm')">
-                    <div class="category-modal-icon" style="background: #1CA1F1;">
+                    <div class="category-modal-icon" style="background: #00A651;">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <span>4.0 I.A.</span>
                 </button>
                 <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('rsid')">
-                    <div class="category-modal-icon" style="background: #FF4500;">
+                    <div class="category-modal-icon" style="background: #007AFF;">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <span>RSID</span>
                 </button>
                 <button type="button" class="category-modal-btn" onclick="selectCategoryAndOpen('varie')">
-                    <div class="category-modal-icon" style="background: #0093FF;">
+                    <div class="category-modal-icon" style="background: #ff9f43;">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <span>VARIE</span>
