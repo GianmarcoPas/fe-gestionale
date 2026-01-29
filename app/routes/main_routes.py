@@ -195,14 +195,14 @@ def dashboard():
         timeline = get_timeline_data([LavoroAdmin])
         
         # 1. Calcolo Fatturati (Widget Rosso)
-        # Nota: Adatta i nomi dei campi quota se nel model nuovo si chiamano c_fe, c_amin ecc.
-        # Qui mantengo la logica dashboard esistente, assumendo che per la visualizzazione usi ancora questi campi
-        # o che tu abbia mappato le property nel model.
+        # Di default mostra il totale degli importi (somma di tutte le celle importo_offerta)
+        tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).scalar() or 0
+        
+        # Totali compensi per ogni FE
         tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).scalar() or 0
         tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).scalar() or 0
         tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).scalar() or 0
         tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).scalar() or 0
-        # tot_capr = db.session.query(func.sum(LavoroAdmin.capriuolo_quota)).scalar() or 0 # Se esiste ancora
         
         total_lavori = LavoroAdmin.query.count()
         in_corso = LavoroAdmin.query.filter(LavoroAdmin.stato.ilike('In corso')).count()
@@ -210,7 +210,7 @@ def dashboard():
         
         return render_template('main/dashboard.html',
                                role='admin',
-                               tot_fe=tot_fe, tot_amin=tot_amin, tot_galvan=tot_galvan, tot_fh=tot_fh,
+                               tot_importo=tot_importo, tot_fe=tot_fe, tot_amin=tot_amin, tot_galvan=tot_galvan, tot_fh=tot_fh,
                                total_lavori=total_lavori, in_corso=in_corso, completati=completati,
                                timeline=timeline)
 

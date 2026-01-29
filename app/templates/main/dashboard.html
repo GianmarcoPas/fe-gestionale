@@ -25,16 +25,15 @@
             <div class="info-section">
                 <div class="left-side">
                     <div class="temperature" id="displayAmount">
-                        € {{ "{:,.0f}".format(tot_fe) }}
+                        € {{ "{:,.2f}".format(tot_importo).replace(",", "X").replace(".", ",").replace("X", ".") }}
                     </div>
-                    <div class="date" id="displayName">Fatturato FE</div>
+                    <div class="date" id="displayName">Totale Lavori</div>
                 </div>
             </div>
             <div class="days-section">
                 <button onmouseenter="updateWidget('FE', '{{ tot_fe }}')" onmouseleave="resetWidget()">FE</button>
                 <button onmouseenter="updateWidget('AMIN', '{{ tot_amin }}')" onmouseleave="resetWidget()">AMIN</button>
                 <button onmouseenter="updateWidget('GALV', '{{ tot_galvan }}')" onmouseleave="resetWidget()">GALV</button>
-                <button onmouseenter="updateWidget('CAPR', '{{ tot_capr }}')" onmouseleave="resetWidget()">CAPR</button>
                 <button onmouseenter="updateWidget('FH', '{{ tot_fh }}')" onmouseleave="resetWidget()">FH</button>
             </div>
         </div>
@@ -102,12 +101,29 @@
     </div>
 
     <script>
-        const defaultAmount = "€ {{ '{:,.0f}'.format(tot_fe) }}";
-        const defaultName = "Fatturato FE";
+        const defaultAmount = "€ {{ '{:,.2f}'.format(tot_importo).replace(',', 'X').replace('.', ',').replace('X', '.') }}";
+        const defaultName = "Totale Lavori";
+        
+        function formatCurrency(value) {
+            // Formatta: € prima, punto per migliaia, virgola per decimali
+            let num = parseFloat(value) || 0;
+            // Usa toFixed per avere sempre 2 decimali
+            let numStr = num.toFixed(2);
+            // Separa parte intera e decimale
+            let parts = numStr.split('.');
+            let integerPart = parts[0];
+            let decimalPart = parts[1] || '00';
+            
+            // Aggiungi punti come separatori delle migliaia
+            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            return '€ ' + integerPart + ',' + decimalPart;
+        }
+        
         function updateWidget(name, amount) {
-            let formatted = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+            let formatted = formatCurrency(amount);
             document.getElementById('displayAmount').innerText = formatted;
-            document.getElementById('displayName').innerText = "Fatturato " + name;
+            document.getElementById('displayName').innerText = "Compenso " + name;
         }
         function resetWidget() {
             document.getElementById('displayAmount').innerText = defaultAmount;

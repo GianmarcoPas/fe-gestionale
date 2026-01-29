@@ -15,14 +15,15 @@
         
         <form action="{{ url_for('main.save_view_mode') }}" method="POST" class="view-mode-form">
             
-            <label class="mode-option">
+            {# Opzione Standard nascosta temporaneamente #}
+            {# <label class="mode-option">
                 <input type="radio" name="view_mode" value="standard" {% if current_user.admin_view_mode == 'standard' %}checked{% endif %}>
                 <div class="mode-card">
                     <div class="icon"><i class="bi bi-layout-sidebar-inset-reverse"></i></div>
                     <strong>Standard</strong>
                     <small>Fatture e Compensi in pannello laterale a scomparsa.</small>
                 </div>
-            </label>
+            </label> #}
 
             <label class="mode-option">
                 <input type="radio" name="view_mode" value="extra1" {% if current_user.admin_view_mode == 'extra1' %}checked{% endif %}>
