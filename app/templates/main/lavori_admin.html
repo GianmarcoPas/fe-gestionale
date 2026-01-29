@@ -785,12 +785,12 @@
             {% for bene in item.beni %}
             {% set bene_idx = loop.index0 %}
             <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 {% if bene_idx == 0 %}
                 data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
-                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
@@ -1082,12 +1082,12 @@
             {% for bene in item.beni %}
             {% set bene_idx = loop.index0 %}
             <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 {% if bene_idx == 0 %}
                 data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
-                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
@@ -1255,12 +1255,12 @@
             {% for bene in item.beni %}
             {% set bene_idx = loop.index0 %}
             <tr data-id="{{ l.id }}" data-bene-id="{{ bene.id }}"
+                data-categoria="{{ (l.categoria or '') }}"
                 {% if bene_idx == 0 %}
                 data-offerta-generated="{{ 1 if l.data_offerta else 0 }}"
                 data-offerta-dirty="{{ 1 if l.offerta_dirty else 0 }}"
                 data-offerta-rev="{{ l.offerta_revision or 0 }}"
                 data-offerta-tipo="{{ (l.offerta_tipo or '') }}"
-                data-categoria="{{ (l.categoria or '') }}"
                 data-cliente="{{ (l.cliente_nome or '')|lower }}"
                 data-redattore="{{ (l.redattore or '')|upper }}"
                 data-collaboratore="{{ (l.collaboratore or '')|lower }}"
