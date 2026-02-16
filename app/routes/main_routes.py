@@ -211,34 +211,67 @@ def dashboard():
         
         # 1. Calcolo Fatturati (Widget Rosso)
         # Di default mostra il totale degli importi (somma di tutte le celle importo_offerta)
-        tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).scalar() or 0
+        # ESCLUDI i lavori abbandonati dai calcoli
+        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'abbandonato'
+        ).all()]
         
-        # Totali compensi per ogni FE
-        tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).scalar() or 0
-        tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).scalar() or 0
-        tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).scalar() or 0
-        tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).scalar() or 0
+        if lavori_ids_abbandonati:
+            tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
+                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
+            ).scalar() or 0
+            
+            # Totali compensi per ogni FE (escludendo lavori abbandonati)
+            tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
+                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
+            ).scalar() or 0
+            tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
+                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
+            ).scalar() or 0
+            tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
+                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
+            ).scalar() or 0
+            tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
+                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
+            ).scalar() or 0
+        else:
+            # Nessun lavoro abbandonato, calcola normalmente
+            tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).scalar() or 0
+            tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).scalar() or 0
+            tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).scalar() or 0
+            tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).scalar() or 0
+            tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).scalar() or 0
         
         # Conteggi lavori
         total_lavori = LavoroAdmin.query.count()
         
         # In Lavorazione: lavori che hanno almeno un bene con stato "vuoto" o "-"
         # Oppure lavori senza beni (che hanno stato vuoto di default)
+        # ESCLUDI i lavori con stato "chiusa" o con beni "abbandonato"
         lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == '')
+            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == ''),
+            LavoroAdmin.stato != 'chiusa',
+            Bene.stato != 'abbandonato'
         ).all()]
         lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
-            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id))
+            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id)),
+            LavoroAdmin.stato != 'chiusa'
         ).all()]
         in_corso = len(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
         
         # Completati: lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
         completati = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').count()
         
+        # Abbandonati: lavori che hanno almeno un bene con stato "abbandonato"
+        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'abbandonato'
+        ).all()]
+        abbandonati = len(set(lavori_ids_abbandonati))
+        
         return render_template('main/dashboard.html',
                                role='admin',
                                tot_importo=tot_importo, tot_fe=tot_fe, tot_amin=tot_amin, tot_galvan=tot_galvan, tot_fh=tot_fh,
-                               total_lavori=total_lavori, in_corso=in_corso, completati=completati,
+                               total_lavori=total_lavori, in_corso=in_corso, completati=completati, abbandonati=abbandonati,
                                timeline=timeline)
 
     else:
@@ -299,16 +332,21 @@ def lavori_admin():
     if filtro_stato == 'in_lavorazione':
         # Lavori che hanno almeno un bene con stato "vuoto" o "-"
         # Oppure lavori senza beni
-        # ESCLUDI i lavori con stato "chiusa"
+        # ESCLUDI i lavori con stato "chiusa" e quelli con beni "abbandonato"
         lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
             (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == ''),
-            LavoroAdmin.stato != 'chiusa'
+            LavoroAdmin.stato != 'chiusa',
+            Bene.stato != 'abbandonato'
         ).all()]
         lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
             ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id)),
             LavoroAdmin.stato != 'chiusa'
         ).all()]
-        tutti_ids = list(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
+        # Escludi anche i lavori che hanno beni abbandonati
+        lavori_ids_con_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'abbandonato'
+        ).all()]
+        tutti_ids = list(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni) - set(lavori_ids_con_abbandonati))
         if tutti_ids:
             lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(tutti_ids), LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
         else:
@@ -317,9 +355,42 @@ def lavori_admin():
         # Lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
         # Ordinati per ID (data di creazione) per mantenere l'ordine cronologico
         lavori = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').order_by(LavoroAdmin.id.asc()).all()
+    elif filtro_stato == 'abbandonati':
+        # Lavori che hanno almeno un bene con stato "abbandonato"
+        # Devono essere mostrati nell'ordine in cui vengono abbandonati:
+        # il primo abbandonato in alto, poi via via gli altri aggiunti sotto.
+        # Per garantire questo, usiamo il campo Bene.ordine_abbandono,
+        # che è un progressivo globale impostato al momento dell'abbandono.
+
+        from sqlalchemy import func as sql_func
+
+        # Subquery: per ogni lavoro prendi il minimo ordine_abbandono tra i suoi beni abbandonati
+        subquery = (
+            db.session.query(
+                Bene.lavoro_id,
+                sql_func.min(Bene.ordine_abbandono).label("min_ordine_abbandono"),
+            )
+            .filter(Bene.stato == "abbandonato")
+            .group_by(Bene.lavoro_id)
+            .subquery()
+        )
+
+        # Unisci i lavori con la subquery e ordina per ordine_abbandono crescente
+        lavori = (
+            db.session.query(LavoroAdmin)
+            .join(subquery, LavoroAdmin.id == subquery.c.lavoro_id)
+            .order_by(subquery.c.min_ordine_abbandono.asc().nulls_last())
+            .all()
+        )
     else:
-        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori ESCLUSI quelli chiusi
-        lavori = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
+        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori ESCLUSI quelli chiusi e quelli abbandonati
+        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'abbandonato'
+        ).all()]
+        lavori = LavoroAdmin.query.filter(
+            LavoroAdmin.stato != 'chiusa',
+            ~LavoroAdmin.id.in_(lavori_ids_abbandonati) if lavori_ids_abbandonati else True
+        ).order_by(LavoroAdmin.numero.asc()).all()
     
     # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
@@ -334,7 +405,9 @@ def lavori_admin():
                     'valore': bene.valore,
                     'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
                     'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
-                    'data_pec': bene.data_pec
+                    'data_pec': bene.data_pec,
+                    'motivo_abbandono': getattr(bene, 'motivo_abbandono', None),
+                    'commento_abbandono': getattr(bene, 'commento_abbandono', None)
                 })
         else:
             # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
@@ -348,9 +421,9 @@ def lavori_admin():
                 # Un solo bene
                 beni_list.append({'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta})
         
-        # Per la vista "completati", usa un numero sequenziale per la visualizzazione
+        # Per la vista "completati" e "abbandonati", usa un numero sequenziale per la visualizzazione
         # mantenendo il numero originale nel database
-        if filtro_stato == 'completati':
+        if filtro_stato == 'completati' or filtro_stato == 'abbandonati':
             numero_visualizzazione = idx
         else:
             numero_visualizzazione = lavoro.numero
@@ -370,8 +443,16 @@ def lavori_focus():
     if current_user.role != 'admin' or current_user.admin_view_mode != 'extra2':
         return redirect(url_for('main.dashboard'))
     
-    # Escludi i lavori chiusi dalla vista focus
-    lavori = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
+    # Escludi i lavori chiusi e quelli abbandonati dalla vista focus
+    lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+        Bene.stato == 'abbandonato'
+    ).all()]
+    
+    query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
+    if lavori_ids_abbandonati:
+        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_abbandonati))
+    
+    lavori = query.order_by(LavoroAdmin.numero.asc()).all()
     
     # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
@@ -386,7 +467,9 @@ def lavori_focus():
                     'valore': bene.valore,
                     'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
                     'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
-                    'data_pec': bene.data_pec
+                    'data_pec': bene.data_pec,
+                    'motivo_abbandono': getattr(bene, 'motivo_abbandono', None),
+                    'commento_abbandono': getattr(bene, 'commento_abbandono', None)
                 })
         else:
             # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
@@ -572,8 +655,18 @@ def add_lavoro_admin():
         new_num = lavoro.numero  # Mantieni lo stesso numero
         had_prev_offerta = bool(lavoro.data_offerta)
     else:
-        # NUOVO: calcola il nuovo numero
-        last = LavoroAdmin.query.order_by(LavoroAdmin.numero.desc()).first()
+        # NUOVO: calcola il nuovo numero escludendo lavori chiusi e abbandonati
+        # Ottieni i lavori che hanno almeno un bene con stato "abbandonato"
+        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+            Bene.stato == 'abbandonato'
+        ).all()]
+        
+        # Query per trovare l'ultimo numero tra i lavori attivi (non chiusi e non abbandonati)
+        query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
+        if lavori_ids_abbandonati:
+            query = query.filter(~LavoroAdmin.id.in_(lavori_ids_abbandonati))
+        
+        last = query.order_by(LavoroAdmin.numero.desc()).first()
         new_num = (last.numero + 1) if (last and last.numero) else 1
         lavoro = None
 
@@ -999,7 +1092,16 @@ def update_bene_field(id):
         # Impedisci l'impostazione manuale di "chiusa"
         if value == 'chiusa':
             return jsonify({'error': 'Lo stato "chiusa" non può essere impostato manualmente. Viene impostato automaticamente quando tutti i compensi interni hanno la fattura.'}), 400
+        
+        stato_precedente = bene.stato
         bene.stato = value or 'vuoto'
+        
+        # Se lo stato viene cambiato a "abbandonato", imposta la data_abbandono se non è già impostata
+        if value == 'abbandonato':
+            if not getattr(bene, 'data_abbandono', None):
+                bene.data_abbandono = datetime.now().date()
+                # Commit immediato per assicurarsi che la data sia salvata
+                db.session.flush()
     elif field == 'data_pec':
         if value:
             bene.data_pec = datetime.strptime(value, '%Y-%m-%d').date()
@@ -1017,6 +1119,63 @@ def update_bene_field(id):
         pass
 
     db.session.commit()
+    return jsonify({'success': True})
+
+@bp.route('/update_bene_abbandono/<int:id>', methods=['POST'])
+@login_required
+def update_bene_abbandono(id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    bene = Bene.query.get_or_404(id)
+    data = request.json or {}
+    motivo = data.get('motivo')
+    commento = data.get('commento')
+
+    if not motivo:
+        return jsonify({'error': 'Motivo abbandono richiesto'}), 400
+
+    # Valida i valori del motivo
+    motivi_validi = ['assegnato_altro_studio', 'abbandonato_cliente', 'altro']
+    if motivo not in motivi_validi:
+        return jsonify({'error': 'Motivo non valido'}), 400
+
+    if motivo == 'altro' and not commento:
+        return jsonify({'error': 'Commento richiesto per motivo "altro"'}), 400
+
+    bene.motivo_abbandono = motivo
+    bene.commento_abbandono = commento if motivo == 'altro' else None
+    # Imposta la data di abbandono se non è già impostata
+    if not getattr(bene, 'data_abbandono', None):
+        bene.data_abbandono = datetime.now().date()
+
+    # Imposta l'ordine di abbandono se non è già impostato
+    if not getattr(bene, "ordine_abbandono", None):
+        from sqlalchemy import func as sql_func
+
+        max_ordine = db.session.query(sql_func.max(Bene.ordine_abbandono)).scalar() or 0
+        bene.ordine_abbandono = max_ordine + 1
+
+    # Se l'offerta è già stata generata, qualsiasi modifica post-emissione rende l'offerta "da revisionare"
+    try:
+        lavoro = bene.lavoro
+        if lavoro and getattr(lavoro, 'data_offerta', None):
+            lavoro.offerta_dirty = True
+    except Exception:
+        pass
+
+    # Salva prima il motivo e commento
+    db.session.flush()  # Flush per assicurarsi che i cambiamenti siano visibili
+    db.session.commit()
+    
+    # Ricalcola i numeri sequenziali dopo che un lavoro è stato abbandonato
+    # (escludendo i lavori abbandonati e chiusi)
+    # Nota: il commit precedente assicura che lo stato "abbandonato" del bene sia già salvato
+    ricalcola_numeri_sequenziali()
+    
+    # Salva i numeri ricalcolati
+    db.session.commit()
+    
     return jsonify({'success': True})
     
 
@@ -1074,11 +1233,8 @@ def delete_lavoro_admin(id):
     db.session.delete(lavoro)
     db.session.commit()
     
-    # Rinumerazione sequenziale di tutti i lavori rimanenti
-    lavori_rimanenti = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
-    for idx, lav in enumerate(lavori_rimanenti, start=1):
-        lav.numero = idx
-    
+    # Ricalcola i numeri sequenziali escludendo i lavori chiusi e abbandonati
+    ricalcola_numeri_sequenziali()
     db.session.commit()
     
     flash(f'Lavoro #{id} eliminato con successo. Numerazione aggiornata.', 'success')
@@ -1421,14 +1577,24 @@ def api_caricamenti():
 
 def ricalcola_numeri_sequenziali():
     """
-    Ricalcola i numeri sequenziali dei lavori escludendo quelli con stato 'chiusa'.
-    I lavori 'chiusa' mantengono il loro numero originale, mentre i lavori attivi
+    Ricalcola i numeri sequenziali dei lavori escludendo quelli con stato 'chiusa' e quelli abbandonati.
+    I lavori 'chiusa' e quelli abbandonati mantengono il loro numero originale, mentre i lavori attivi
     vengono rinumerati sequenzialmente partendo da 1.
     """
-    # Ottieni tutti i lavori NON chiusi, ordinati per numero attuale
-    lavori_attivi = LavoroAdmin.query.filter(
-        LavoroAdmin.stato != 'chiusa'
-    ).order_by(LavoroAdmin.numero.asc(), LavoroAdmin.id.asc()).all()
+    # Refresh della sessione per assicurarsi di vedere i cambiamenti più recenti
+    db.session.expire_all()
+    
+    # Ottieni i lavori che hanno almeno un bene con stato "abbandonato"
+    lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+        Bene.stato == 'abbandonato'
+    ).all()]
+    
+    # Ottieni tutti i lavori NON chiusi e NON abbandonati, ordinati per numero attuale
+    query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
+    if lavori_ids_abbandonati:
+        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_abbandonati))
+    
+    lavori_attivi = query.order_by(LavoroAdmin.numero.asc(), LavoroAdmin.id.asc()).all()
     
     # Assegna numeri sequenziali partendo da 1
     for idx, lav in enumerate(lavori_attivi, start=1):
@@ -1550,6 +1716,7 @@ def fatturazione(tipo):
     # Query lavori con stato "incassata" e compenso > 0 per questo tipo
     # Lo stato "incassata" può essere a livello di bene o a livello di lavoro
     # IMPORTANTE: Escludiamo i lavori che hanno già un numero di fattura per questo tipo
+    # IMPORTANTE: Escludiamo anche i lavori abbandonati
     lavori_ids_incassata_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
         Bene.stato == 'incassata'
     ).all()]
@@ -1561,6 +1728,14 @@ def fatturazione(tipo):
     
     # Unisci le due liste
     lavori_ids_incassata = list(set(lavori_ids_incassata_beni + lavori_ids_incassata_lavoro))
+    
+    # Escludi i lavori abbandonati
+    lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
+        Bene.stato == 'abbandonato'
+    ).all()]
+    
+    if lavori_ids_abbandonati:
+        lavori_ids_incassata = [lid for lid in lavori_ids_incassata if lid not in lavori_ids_abbandonati]
     
     if not lavori_ids_incassata:
         lavori = []

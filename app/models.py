@@ -39,6 +39,10 @@ class Bene(db.Model):
     stato = db.Column(db.String(50), default='vuoto')  # Stato per bene
     data_pec = db.Column(db.Date, nullable=True)  # Data PEC per bene
     ordine = db.Column(db.Integer, default=0)  # Per mantenere l'ordine di inserimento
+    motivo_abbandono = db.Column(db.String(100), nullable=True)  # Motivo abbandono: 'assegnato_altro_studio', 'abbandonato_cliente', 'altro'
+    commento_abbandono = db.Column(db.Text, nullable=True)  # Commento quando motivo_abbandono è 'altro'
+    data_abbandono = db.Column(db.Date, nullable=True)  # Data in cui il bene è stato abbandonato
+    ordine_abbandono = db.Column(db.Integer, nullable=True)  # Ordine progressivo globale di abbandono
     
     lavoro = db.relationship('LavoroAdmin', backref='beni_list')
 

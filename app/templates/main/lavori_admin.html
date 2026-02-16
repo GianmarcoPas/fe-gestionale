@@ -882,6 +882,14 @@
                 <td>
                     {% if (bene.stato or '')=='chiusa' %}
                         <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% elif (bene.stato or '')=='abbandonato' %}
+                        <span class="status-pill stato-abbandonato" 
+                              style="cursor: pointer;" 
+                              onclick="showMotivoAbbandonoFromElement(this)"
+                              data-bene-id="{{ bene.id }}"
+                              data-motivo="{% if bene.motivo_abbandono %}{{ bene.motivo_abbandono }}{% else %}{% endif %}"
+                              data-commento="{% if bene.commento_abbandono %}{{ bene.commento_abbandono|replace('"', '&quot;')|replace("'", '&#39;') }}{% else %}{% endif %}"
+                              title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
@@ -892,6 +900,7 @@
                             <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
                             <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
                             <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                            <option value="abbandonato" {% if (bene.stato or '')=='abbandonato' %}selected{% endif %}>Abbandonato</option>
                         </select>
                     {% endif %}
                 </td>
@@ -935,7 +944,7 @@
                 {% set bene_idx = loop.index0 %}
                 <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
-                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
@@ -982,7 +991,7 @@
                 {% set bene_idx = loop.index0 %}
                 <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
-                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
@@ -1206,6 +1215,14 @@
                 <td class="col-stato">
                     {% if (bene.stato or '')=='chiusa' %}
                         <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% elif (bene.stato or '')=='abbandonato' %}
+                        <span class="status-pill stato-abbandonato" 
+                              style="cursor: pointer;" 
+                              onclick="showMotivoAbbandonoFromElement(this)"
+                              data-bene-id="{{ bene.id }}"
+                              data-motivo="{% if bene.motivo_abbandono %}{{ bene.motivo_abbandono }}{% else %}{% endif %}"
+                              data-commento="{% if bene.commento_abbandono %}{{ bene.commento_abbandono|replace('"', '&quot;')|replace("'", '&#39;') }}{% else %}{% endif %}"
+                              title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
@@ -1216,6 +1233,7 @@
                             <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
                             <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
                             <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                            <option value="abbandonato" {% if (bene.stato or '')=='abbandonato' %}selected{% endif %}>Abbandonato</option>
                         </select>
                     {% endif %}
                 </td>
@@ -1316,6 +1334,14 @@
                 <td>
                     {% if (bene.stato or '')=='chiusa' %}
                         <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% elif (bene.stato or '')=='abbandonato' %}
+                        <span class="status-pill stato-abbandonato" 
+                              style="cursor: pointer;" 
+                              onclick="showMotivoAbbandonoFromElement(this)"
+                              data-bene-id="{{ bene.id }}"
+                              data-motivo="{% if bene.motivo_abbandono %}{{ bene.motivo_abbandono }}{% else %}{% endif %}"
+                              data-commento="{% if bene.commento_abbandono %}{{ bene.commento_abbandono|replace('"', '&quot;')|replace("'", '&#39;') }}{% else %}{% endif %}"
+                              title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
@@ -1326,6 +1352,7 @@
                             <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
                             <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
                             <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                            <option value="abbandonato" {% if (bene.stato or '')=='abbandonato' %}selected{% endif %}>Abbandonato</option>
                         </select>
                     {% endif %}
                 </td>
@@ -1388,7 +1415,7 @@
                 {% set bene_idx = loop.index0 %}
                 <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
-                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
@@ -1433,7 +1460,7 @@
                 {% set bene_idx = loop.index0 %}
                 <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
-                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_fe or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_amin or '-' }}</td>
@@ -1927,6 +1954,59 @@
         <div class="data-offerta-modal-footer">
             <button class="btn-secondary-oneui" onclick="closeDataOffertaModal()">Annulla</button>
             <button class="btn-primary-oneui" onclick="saveDataOfferta()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Motivo Abbandono -->
+<div id="abbandonoModal" class="modal-overlay" onclick="closeAbbandonoModal(event)">
+    <div class="modal-glass" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Seleziona Motivo Abbandono</h3>
+            <button class="btn-close" onclick="closeAbbandonoModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div style="padding: 20px;">
+            <p style="margin-bottom: 20px; color: #666;">Seleziona il motivo per cui il lavoro viene abbandonato:</p>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='#007AFF'; this.style.backgroundColor='#f0f7ff';" onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='transparent';">
+                    <input type="radio" name="motivoAbbandono" value="assegnato_altro_studio" style="margin-right: 10px; cursor: pointer;">
+                    <span>Assegnato ad altro studio/ente</span>
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='#007AFF'; this.style.backgroundColor='#f0f7ff';" onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='transparent';">
+                    <input type="radio" name="motivoAbbandono" value="abbandonato_cliente" style="margin-right: 10px; cursor: pointer;">
+                    <span>Progetto abbandonato da cliente</span>
+                </label>
+                <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.borderColor='#007AFF'; this.style.backgroundColor='#f0f7ff';" onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='transparent';">
+                    <input type="radio" name="motivoAbbandono" value="altro" style="margin-right: 10px; cursor: pointer;">
+                    <span>Altro</span>
+                </label>
+            </div>
+            <div id="commentoAbbandonoContainer" style="display: none; margin-bottom: 20px;">
+                <label for="commentoAbbandono" style="display: block; margin-bottom: 8px; font-weight: 500;">Commento:</label>
+                <textarea id="commentoAbbandono" class="one-ui-input" rows="4" placeholder="Inserisci un commento..." style="width: 100%; resize: vertical;"></textarea>
+            </div>
+        </div>
+        <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn-secondary-oneui" onclick="closeAbbandonoModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveAbbandono()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Visualizza Motivo Abbandono -->
+<div id="motivoAbbandonoModal" class="modal-overlay" onclick="closeMotivoAbbandonoModal(event)">
+    <div class="modal-glass" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Motivo Abbandono</h3>
+            <button class="btn-close" onclick="closeMotivoAbbandonoModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div style="padding: 20px;">
+            <div id="motivoAbbandonoContent">
+                <!-- Il contenuto verrà popolato da JavaScript -->
+            </div>
+        </div>
+        <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
+            <button class="btn-primary-oneui" onclick="closeMotivoAbbandonoModal()">Chiudi</button>
         </div>
     </div>
 </div>
@@ -3014,8 +3094,27 @@
         }
     }
 
+    let currentAbbandonoBeneId = null;
+    let currentAbbandonoSelect = null;
+
     async function updateBeneStato(select, beneId) {
         if (!beneId) return;
+        
+        // Se si seleziona "abbandonato", apri la modale invece di salvare direttamente
+        if (select.value === 'abbandonato') {
+            currentAbbandonoBeneId = beneId;
+            currentAbbandonoSelect = select;
+            // Ripristina il valore precedente nel select
+            const previousValue = select.getAttribute('data-previous-value') || 'vuoto';
+            select.value = previousValue;
+            // Apri la modale
+            openAbbandonoModal();
+            return;
+        }
+        
+        // Salva il valore corrente come precedente per il prossimo cambio
+        select.setAttribute('data-previous-value', select.value);
+        
         const res = await fetch(`/update_bene_field/${beneId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3024,9 +3123,165 @@
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             alert(err.error || 'Errore aggiornamento stato');
+            // Ripristina il valore precedente in caso di errore
+            const previousValue = select.getAttribute('data-previous-value') || 'vuoto';
+            select.value = previousValue;
             return;
         }
         select.className = 'status-select stato-' + select.value.replace(/ /g, '-');
+    }
+
+    function openAbbandonoModal() {
+        // Reset form
+        document.querySelectorAll('input[name="motivoAbbandono"]').forEach(radio => {
+            radio.checked = false;
+        });
+        document.getElementById('commentoAbbandono').value = '';
+        document.getElementById('commentoAbbandonoContainer').style.display = 'none';
+        
+        // Mostra la modale
+        document.getElementById('abbandonoModal').classList.add('active');
+    }
+
+    // Listener per mostrare/nascondere il campo commento (una volta sola al caricamento)
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('input[name="motivoAbbandono"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'altro') {
+                    document.getElementById('commentoAbbandonoContainer').style.display = 'block';
+                } else {
+                    document.getElementById('commentoAbbandonoContainer').style.display = 'none';
+                }
+            });
+        });
+    });
+
+    function closeAbbandonoModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById('abbandonoModal').classList.remove('active');
+        currentAbbandonoBeneId = null;
+        currentAbbandonoSelect = null;
+    }
+
+    async function saveAbbandono() {
+        if (!currentAbbandonoBeneId || !currentAbbandonoSelect) return;
+        
+        const motivoRadio = document.querySelector('input[name="motivoAbbandono"]:checked');
+        if (!motivoRadio) {
+            alert('Seleziona un motivo per l\'abbandono');
+            return;
+        }
+        
+        const motivo = motivoRadio.value;
+        const commento = motivo === 'altro' ? document.getElementById('commentoAbbandono').value.trim() : null;
+        
+        if (motivo === 'altro' && !commento) {
+            alert('Inserisci un commento quando selezioni "Altro"');
+            return;
+        }
+        
+        try {
+            // Salva lo stato come "abbandonato"
+            const resStato = await fetch(`/update_bene_field/${currentAbbandonoBeneId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field: 'stato', value: 'abbandonato' })
+            });
+            
+            if (!resStato.ok) {
+                const err = await resStato.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore aggiornamento stato');
+            }
+            
+            // Salva motivo e commento
+            const resMotivo = await fetch(`/update_bene_abbandono/${currentAbbandonoBeneId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ motivo: motivo, commento: commento })
+            });
+            
+            if (!resMotivo.ok) {
+                const err = await resMotivo.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore salvataggio motivo abbandono');
+            }
+            
+            // Aggiorna UI
+            currentAbbandonoSelect.value = 'abbandonato';
+            currentAbbandonoSelect.className = 'status-select stato-abbandonato';
+            currentAbbandonoSelect.setAttribute('data-previous-value', 'abbandonato');
+            
+            // Chiudi modale
+            closeAbbandonoModal();
+            
+            // Ricarica la pagina per aggiornare la vista (i lavori abbandonati non vengono più mostrati)
+            window.location.reload();
+            
+        } catch (error) {
+            alert(error.message || 'Errore durante il salvataggio');
+        }
+    }
+
+    function showMotivoAbbandonoFromElement(element) {
+        const beneId = element.getAttribute('data-bene-id');
+        const motivo = element.getAttribute('data-motivo') || '';
+        const commento = element.getAttribute('data-commento') || '';
+        
+        // Debug
+        console.log('showMotivoAbbandonoFromElement - beneId:', beneId, 'motivo:', motivo, 'commento:', commento);
+        
+        showMotivoAbbandono(beneId, motivo, commento);
+    }
+
+    function showMotivoAbbandono(beneId, motivo, commento) {
+        const modal = document.getElementById('motivoAbbandonoModal');
+        const content = document.getElementById('motivoAbbandonoContent');
+        
+        // Mappa dei motivi per la visualizzazione
+        const motiviMap = {
+            'assegnato_altro_studio': 'Assegnato ad altro studio/ente',
+            'abbandonato_cliente': 'Progetto abbandonato da cliente',
+            'altro': 'Altro'
+        };
+        
+        let html = '<div style="margin-bottom: 20px;">';
+        html += '<label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Motivo:</label>';
+        
+        if (motivo && motiviMap[motivo]) {
+            html += '<div style="padding: 12px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid #ff6b6b;">';
+            html += '<span style="font-size: 1rem;">' + escapeHtml(motiviMap[motivo]) + '</span>';
+            html += '</div>';
+        } else {
+            html += '<div style="padding: 12px; background: #f5f5f5; border-radius: 8px; color: #999;">';
+            html += '<span>Motivo non specificato</span>';
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        // Mostra il commento se il motivo è "altro" e c'è un commento
+        if (motivo === 'altro' && commento && commento.trim()) {
+            html += '<div>';
+            html += '<label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Commento:</label>';
+            html += '<div style="padding: 12px; background: #f9f9f9; border-radius: 8px; border: 1px solid #e0e0e0; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">';
+            html += '<span style="font-size: 0.95rem; line-height: 1.5;">' + escapeHtml(commento) + '</span>';
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        content.innerHTML = html;
+        modal.classList.add('active');
+    }
+
+    function closeMotivoAbbandonoModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById('motivoAbbandonoModal').classList.remove('active');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async function editDataPec(ev, beneId) {

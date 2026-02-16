@@ -1278,6 +1278,12 @@ input:checked + .slider:before { transform: translateX(22px); }
     box-shadow: 0 10px 25px rgba(67, 233, 123, 0.4);
 }
 
+/* ROSSO (Abbandonati) */
+.style-red {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+}
+
 /* --- BOLLE DECORATIVE (Fixed) --- */
 .background-design {
     position: absolute;
@@ -1328,6 +1334,11 @@ input:checked + .slider:before { transform: translateX(22px); }
 .pos-variant-3 .circle:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; opacity: 0.2; }
 .pos-variant-3 .circle:nth-child(2) { bottom: -30px; right: -30px; width: 150px; height: 150px; opacity: 0.3; }
 .pos-variant-3 .circle:nth-child(3) { top: 20px; left: 20px; width: 40px; height: 40px; opacity: 0.4; }
+
+/* Variante 4 (Per Abbandonati - Rosso) */
+.pos-variant-4 .circle:nth-child(1) { top: -40px; right: -40px; width: 180px; height: 180px; opacity: 0.3; }
+.pos-variant-4 .circle:nth-child(2) { bottom: -20px; left: -20px; width: 140px; height: 140px; opacity: 0.25; }
+.pos-variant-4 .circle:nth-child(3) { top: 60%; left: 30px; width: 70px; height: 70px; opacity: 0.3; }
 
 
 /* ==========================================================================
@@ -1741,7 +1752,13 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #2e7d32;
 }
 
-/* Status pill per stato chiusa (non selezionabile) */
+/* Abbandonato - Rosso/Grigio */
+.stato-abbandonato {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+/* Status pill per stato chiusa e abbandonato (non selezionabili) */
 .status-pill {
     display: inline-block;
     padding: 4px 12px;

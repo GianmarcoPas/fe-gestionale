@@ -97,6 +97,21 @@
                 </div>
             </a>
 
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='abbandonati') }}" style="text-decoration: none; color: inherit;">
+                <div class="card-styled style-red" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
+                    <div class="background-design pos-variant-4">
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                        <div class="circle"></div>
+                    </div>
+                    <div class="card-content-centered">
+                        <div class="card-icon-large"><i class="bi bi-x-circle-fill"></i></div>
+                        <div class="card-number-large">{{ abbandonati }}</div>
+                        <div class="card-label-large">Abbandonati</div>
+                    </div>
+                </div>
+            </a>
+
         </div>
     </div>
 
