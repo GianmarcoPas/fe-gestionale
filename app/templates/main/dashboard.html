@@ -23,9 +23,13 @@
                 <div class="circle"></div>
             </div>
             <div class="info-section">
-                <div class="left-side">
+                    <div class="left-side">
                     <div class="temperature" id="displayAmount">
-                        € {{ "{:,.2f}".format(tot_importo).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        {% if tot_importo is defined %}
+                            € {{ "{:,.2f}".format(tot_importo).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        {% else %}
+                            € 0,00
+                        {% endif %}
                     </div>
                     <div class="date" id="displayName">Totale Lavori</div>
                 </div>
@@ -115,7 +119,7 @@
     </div>
 
     <script>
-        const defaultAmount = "€ {{ '{:,.2f}'.format(tot_importo).replace(',', 'X').replace('.', ',').replace('X', '.') }}";
+        const defaultAmount = "{% if tot_importo is defined %}€ {{ '{:,.2f}'.format(tot_importo).replace(',', 'X').replace('.', ',').replace('X', '.') }}{% else %}€ 0,00{% endif %}";
         const defaultName = "Totale Lavori";
         
         function formatCurrency(value) {
