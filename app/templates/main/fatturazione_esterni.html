@@ -36,6 +36,36 @@
         transform: translateX(-3px);
     }
     
+    .filtro-nome-section {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.03);
+        margin-bottom: 30px;
+    }
+    
+    .filtro-nome-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 15px 0;
+        color: var(--text-dark);
+    }
+    
+    .filtro-nome-section select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+    
+    .filtro-nome-section select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+    
     .fatturazione-summary {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -468,16 +498,28 @@
 <div class="fatturazione-header">
     <h1>Fatturazione {{ nome_display }}</h1>
     <div style="display: flex; gap: 10px;">
-        <button class="back-btn" onclick="apriModalEsterni()" style="cursor: pointer;">
+        <a href="{{ url_for('main.fatturazione', tipo='fe') }}" class="back-btn">
             <i class="bi bi-people"></i>
-            Passa ad Esterni
-        </button>
+            Passa ad Interni
+        </a>
         <a href="{{ url_for('main.dashboard') }}" class="back-btn">
             <i class="bi bi-arrow-left"></i>
             Torna alla Dashboard
         </a>
     </div>
 </div>
+
+{% if campo_nome %}
+<div class="filtro-nome-section">
+    <h3>Filtra per Nome</h3>
+    <select id="filtroNome" onchange="applicaFiltroNome()">
+        <option value="">-- Tutti --</option>
+        {% for nome in nomi_disponibili %}
+        <option value="{{ nome }}" {% if filtro_nome == nome %}selected{% endif %}>{{ nome }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
 
 <div class="fatturazione-summary">
     <div class="summary-card">
@@ -490,7 +532,7 @@
     </div>
 </div>
 
-<div class="fatturazione-section">
+<div class="fatturazione-section" id="sezioneLavoriDaFatturare">
     <h2>Lavori con Stato "Incassata"</h2>
     
     {% if lavori_data %}
@@ -568,40 +610,6 @@
     </div>
 </div>
 
-<!-- Modal Selezione Esterni -->
-<div id="modalSelezioneEsterni" class="modal-modifica-fattura">
-    <div class="modal-content-fattura">
-        <div class="modal-header-fattura">
-            <h2>Seleziona Tipo Esterno</h2>
-            <button class="btn-close-modal" onclick="chiudiModalEsterni()">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
-            <button class="btn-salva-fattura" onclick="vaiAEsterni('bianc')" style="width: 100%; padding: 20px; font-size: 1.1rem;">
-                <i class="bi bi-person"></i> BIANCHINI
-            </button>
-            <button class="btn-salva-fattura" onclick="vaiAEsterni('deloitte')" style="width: 100%; padding: 20px; font-size: 1.1rem;">
-                <i class="bi bi-person"></i> DELOITTE
-            </button>
-            <button class="btn-salva-fattura" onclick="vaiAEsterni('revisore')" style="width: 100%; padding: 20px; font-size: 1.1rem;">
-                <i class="bi bi-person-check"></i> REVISORE
-            </button>
-            <button class="btn-salva-fattura" onclick="vaiAEsterni('caricamento')" style="width: 100%; padding: 20px; font-size: 1.1rem;">
-                <i class="bi bi-upload"></i> CARICAMENTO
-            </button>
-            <button class="btn-salva-fattura" onclick="vaiAEsterni('ext')" style="width: 100%; padding: 20px; font-size: 1.1rem; grid-column: 1 / -1;">
-                <i class="bi bi-person-badge"></i> ESTERNI
-            </button>
-        </div>
-        
-        <div class="modal-actions" style="margin-top: 20px;">
-            <button class="btn-modifica-fattura" onclick="chiudiModalEsterni()">Annulla</button>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Modifica Fattura -->
 <div id="modalModificaFattura" class="modal-modifica-fattura">
     <div class="modal-content-fattura">
@@ -638,7 +646,23 @@
 
 <script>
     const tipo = '{{ tipo }}';
+    const campoNome = '{{ campo_nome or "" }}';
+    const filtroNomeCorrente = '{{ filtro_nome or "" }}';
     let selectedLavori = new Set();
+    
+    function applicaFiltroNome() {
+        const select = document.getElementById('filtroNome');
+        if (select) {
+            const nomeSelezionato = select.value;
+            const url = new URL(window.location.href);
+            if (nomeSelezionato) {
+                url.searchParams.set('nome', nomeSelezionato);
+            } else {
+                url.searchParams.delete('nome');
+            }
+            window.location.href = url.toString();
+        }
+    }
     
     function toggleAll(checkbox) {
         const checkboxes = document.querySelectorAll('.lavoro-checkbox');
@@ -678,20 +702,17 @@
             }
         }
         
-        // Aggiorna count lavori selezionati
         const countEl = document.getElementById('countLavori');
         if (countEl) {
             if (count > 0) {
                 countEl.textContent = count + ' selezionati';
             } else {
-                // Ripristina il conteggio originale dei lavori totali
                 const totalRows = document.querySelectorAll('.lavoro-checkbox').length;
                 countEl.textContent = totalRows;
             }
         }
     }
     
-    // Aggiungi listener solo se l'input esiste (potrebbe non esistere se non ci sono lavori da fatturare)
     const numeroFatturaInput = document.getElementById('numeroFattura');
     if (numeroFatturaInput) {
         numeroFatturaInput.addEventListener('input', updateSelectedCount);
@@ -714,7 +735,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvataggio...';
         
-        fetch('/api/fatturazione/salva', {
+        fetch('/api/fatturazione_esterni/salva', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -730,47 +751,36 @@
             if (data.success) {
                 showToast(`Fattura ${numeroFattura} salvata su ${data.lavori_aggiornati} lavori`, 'success');
                 
-                // Salva gli ID dei lavori fatturati prima di pulire selectedLavori
                 const lavoriFatturati = Array.from(selectedLavori);
                 
-                // Reset form
                 document.getElementById('numeroFattura').value = '';
                 document.querySelectorAll('.lavoro-checkbox').forEach(cb => cb.checked = false);
                 document.getElementById('selectAll').checked = false;
                 selectedLavori.clear();
                 
-                // Rimuovi tutte le righe dei lavori fatturati dalla lista
-                // IMPORTANTE: Usa un selettore molto specifico per NON toccare la sezione "Fatture Emesse"
-                // Cerca SOLO la sezione "Lavori con Stato 'Incassata'" (la prima sezione)
                 const sezioneLavori = document.querySelector('.fatturazione-section:first-of-type');
                 const sezioneFatture = document.getElementById('sezioneFattureEmesse');
                 
-                // Verifica che la sezione fatture esista e non venga toccata
                 if (sezioneFatture && sezioneLavori && sezioneLavori !== sezioneFatture) {
                     const tabellaLavori = sezioneLavori.querySelector('.fatturazione-table');
                     if (tabellaLavori) {
                         const tbodyLavori = tabellaLavori.querySelector('tbody');
                         if (tbodyLavori) {
                             lavoriFatturati.forEach(id => {
-                                // Rimuovi tutte le righe associate a questo lavoro (potrebbero esserci più righe per più beni)
                                 const rows = tbodyLavori.querySelectorAll(`tr[data-lavoro-id="${id}"]`);
                                 rows.forEach(row => row.remove());
                             });
                             
-                            // Aggiorna il conteggio
                             updateSelectedCount();
                             
-                            // Se non ci sono più lavori, mostra il messaggio vuoto
                             const remainingRows = tbodyLavori.querySelectorAll('tr');
                             if (remainingRows.length === 0) {
                                 tbodyLavori.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">Nessun lavoro da fatturare</td></tr>';
-                                // Aggiorna anche il conteggio nella card summary
                                 const countEl = document.getElementById('countLavori');
                                 if (countEl) {
                                     countEl.textContent = '0';
                                 }
                             } else {
-                                // Aggiorna il conteggio nella card summary
                                 const countEl = document.getElementById('countLavori');
                                 if (countEl) {
                                     countEl.textContent = remainingRows.length;
@@ -780,15 +790,11 @@
                     }
                 }
                 
-                // IMPORTANTE: Ricarica lista fatture SEMPRE, indipendentemente dalla rimozione dei lavori
-                // Questo deve essere eseguito anche se non ci sono lavori da fatturare
-                // Usa un timeout per assicurarsi che venga eseguito dopo tutte le altre operazioni
                 setTimeout(() => {
                     try {
                         caricaFattureEmesse();
                     } catch (error) {
                         console.error('Errore nel caricamento delle fatture:', error);
-                        // Anche in caso di errore, prova a ricaricare le fatture
                         setTimeout(() => {
                             caricaFattureEmesse();
                         }, 500);
@@ -809,38 +815,32 @@
     }
     
     function caricaFattureEmesse() {
-        console.log('[DEBUG] caricaFattureEmesse chiamata');
-        
-        // Verifica che la sezione esista ancora nel DOM
         const sezioneFatture = document.getElementById('sezioneFattureEmesse');
         if (!sezioneFatture) {
-            console.error('[DEBUG] Sezione fatture emesse non trovata nel DOM');
             return;
         }
         
         const container = document.getElementById('fattureEmesseList');
         if (!container) {
-            console.error('[DEBUG] Container fattureEmesseList non trovato');
-            // Riprova dopo un breve delay
             setTimeout(caricaFattureEmesse, 200);
             return;
         }
         
-        // Verifica che il container sia ancora dentro la sezione (non sia stato rimosso)
         if (!sezioneFatture.contains(container)) {
-            console.error('[DEBUG] Container fattureEmesseList non è più dentro la sezione');
             return;
         }
         
-        console.log('[DEBUG] Chiamata API per caricare fatture');
-        
-        // Mostra stato di caricamento solo se il container è vuoto o mostra ancora "Caricamento fatture..."
         const currentContent = container.innerHTML.trim();
         if (!currentContent || currentContent.includes('Caricamento fatture') || currentContent.includes('hourglass')) {
             container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento fatture...</p></div>';
         }
         
-        fetch(`/api/fatturazione/lista/${tipo}`)
+        let url = `/api/fatturazione_esterni/lista/${tipo}`;
+        if (campoNome && filtroNomeCorrente) {
+            url += `?nome=${encodeURIComponent(filtroNomeCorrente)}`;
+        }
+        
+        fetch(url)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Errore HTTP: ${response.status}`);
@@ -848,15 +848,11 @@
             return response.json();
         })
         .then(data => {
-            console.log('[DEBUG] Dati ricevuti dall\'API:', data);
-            
             if (!data) {
                 throw new Error('Nessun dato ricevuto dal server');
             }
             
             if (!data.fatture) {
-                console.warn('[DEBUG] Risposta API senza campo fatture:', data);
-                // Verifica che il container esista ancora
                 const containerCheck = document.getElementById('fattureEmesseList');
                 if (containerCheck) {
                     containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel formato dei dati</p></div>';
@@ -864,17 +860,13 @@
                 return;
             }
             
-            // Verifica che il container esista ancora prima di modificarlo
             const containerCheck = document.getElementById('fattureEmesseList');
             if (!containerCheck) {
-                console.error('[DEBUG] Container non trovato durante l\'aggiornamento');
                 return;
             }
             
-            console.log('[DEBUG] Numero fatture trovate:', data.fatture.length);
-            
             if (data.fatture.length > 0) {
-                container.innerHTML = '';
+                containerCheck.innerHTML = '';
                 data.fatture.forEach(fattura => {
                     const item = document.createElement('div');
                     item.className = 'fattura-item';
@@ -889,7 +881,7 @@
                                 <button class="btn-modifica-fattura" onclick="apriModalModifica('${fattura.numero}')" style="padding: 6px 12px;">
                                     <i class="bi bi-pencil"></i> Modifica
                                 </button>
-                                <button class="btn-elimina-fattura" onclick="eliminaFattura('${fattura.numero}')" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                <button class="btn-elimina-fattura" onclick="eliminaFatturaEsterni('${fattura.numero}')" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
                                     <i class="bi bi-trash"></i> Elimina
                                 </button>
                                 <i class="bi bi-chevron-down expand-icon" onclick="toggleFattura(this)" style="cursor: pointer;"></i>
@@ -908,23 +900,20 @@
                             `).join('')}
                         </div>
                     `;
-                    container.appendChild(item);
+                    containerCheck.appendChild(item);
                 });
             } else {
-                container.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessuna fattura emessa</p></div>';
+                containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessuna fattura emessa</p></div>';
             }
         })
         .catch(error => {
             console.error('Errore nel caricamento delle fatture:', error);
             
-            // Mostra messaggio di errore
             if (container) {
                 container.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel caricamento delle fatture. Riprovo...</p></div>';
             }
             
-            // Riprova dopo 2 secondi
             setTimeout(() => {
-                console.log('Tentativo di ricaricare le fatture...');
                 caricaFattureEmesse();
             }, 2000);
         });
@@ -939,25 +928,18 @@
         return parseFloat(value).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
     
-    // Carica fatture emesse al caricamento della pagina
-    // Usa multiple strategie per assicurarsi che venga sempre eseguito
     function initCaricaFatture() {
-        console.log('[DEBUG] initCaricaFatture chiamata');
         try {
             const sezioneFatture = document.getElementById('sezioneFattureEmesse');
             const container = document.getElementById('fattureEmesseList');
             
             if (sezioneFatture && container) {
-                console.log('[DEBUG] Sezione e container trovati, carico fatture');
                 caricaFattureEmesse();
             } else {
-                console.warn('[DEBUG] Sezione o container non trovati, riprovo tra 100ms');
-                // Se il container non esiste ancora, riprova dopo un breve delay
                 setTimeout(initCaricaFatture, 100);
             }
         } catch (error) {
             console.error('Errore nell\'inizializzazione del caricamento fatture:', error);
-            // Riprova dopo un delay
             setTimeout(() => {
                 try {
                     caricaFattureEmesse();
@@ -968,56 +950,32 @@
         }
     }
     
-    // Esegui quando il DOM è pronto
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[DEBUG] DOMContentLoaded, inizializzo caricamento fatture');
             initCaricaFatture();
         });
     } else {
-        // DOM già caricato, esegui immediatamente
-        console.log('[DEBUG] DOM già caricato, inizializzo immediatamente');
         initCaricaFatture();
     }
     
-    // Backup: esegui anche dopo un breve delay per sicurezza
     setTimeout(() => {
-        console.log('[DEBUG] Timeout backup, verifico se devo ricaricare');
         const container = document.getElementById('fattureEmesseList');
         if (container) {
             const content = container.innerHTML.trim();
             if (content.includes('Caricamento fatture') || content.includes('hourglass') || content === '') {
-                console.log('[DEBUG] Container ancora in caricamento o vuoto, ricarico');
                 caricaFattureEmesse();
             }
-        } else {
-            console.warn('[DEBUG] Container non trovato nel timeout backup');
         }
     }, 1000);
     
-    // Variabili per modifica fattura
     let fatturaCorrente = null;
     let tuttiLavoriDisponibili = [];
-    
-    // Funzioni per modal esterni
-    function apriModalEsterni() {
-        document.getElementById('modalSelezioneEsterni').classList.add('active');
-    }
-    
-    function chiudiModalEsterni() {
-        document.getElementById('modalSelezioneEsterni').classList.remove('active');
-    }
-    
-    function vaiAEsterni(tipo) {
-        window.location.href = `/fatturazione_esterni/${tipo}`;
-    }
     
     function apriModalModifica(numeroFattura) {
         fatturaCorrente = numeroFattura;
         document.getElementById('modalNumeroFattura').value = numeroFattura;
         document.getElementById('modalModificaFattura').classList.add('active');
         
-        // Carica tutti i lavori disponibili
         caricaLavoriDisponibili(numeroFattura);
     }
     
@@ -1031,13 +989,15 @@
         const container = document.getElementById('modalLavoriList');
         container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento lavori...</p></div>';
         
-        // Passa il numero fattura come parametro per includere anche i lavori già fatturati con quella fattura
-        fetch(`/api/fatturazione/lavori-disponibili/${tipo}?fattura=${encodeURIComponent(numeroFattura)}`)
+        let url = `/api/fatturazione_esterni/lavori-disponibili/${tipo}?fattura=${encodeURIComponent(numeroFattura)}`;
+        if (campoNome && filtroNomeCorrente) {
+            url += `&nome=${encodeURIComponent(filtroNomeCorrente)}`;
+        }
+        
+        fetch(url)
         .then(response => response.json())
         .then(data => {
             tuttiLavoriDisponibili = data.lavori || [];
-            console.log('[DEBUG] Numero fattura da cercare:', numeroFattura);
-            console.log('[DEBUG] Lavori caricati:', tuttiLavoriDisponibili.map(l => ({id: l.id, numero: l.numero, fattura_attuale: l.fattura_attuale, stato: l.stato})));
             mostraLavoriNelModal(numeroFattura);
         })
         .catch(error => {
@@ -1056,7 +1016,6 @@
         
         container.innerHTML = '';
         
-        // Raggruppa i lavori per ID per evitare duplicati
         const lavoriUnici = {};
         tuttiLavoriDisponibili.forEach(lavoro => {
             if (!lavoriUnici[lavoro.id]) {
@@ -1072,12 +1031,9 @@
             const isIncluso = fatturaAttuale === numeroFatturaTrim && fatturaAttuale !== '';
             const isChiusa = lavoro.stato === 'chiusa';
             
-            console.log(`[DEBUG] Lavoro #${lavoro.numero}: fattura_attuale="${fatturaAttuale}", numeroFattura="${numeroFatturaTrim}", isIncluso=${isIncluso}, stato=${lavoro.stato}`);
-            
             const item = document.createElement('div');
             item.className = 'modal-lavoro-item';
             
-            // Mostra tutti i beni separati da virgola
             const beniList = lavoro.beni && lavoro.beni.length > 0 
                 ? lavoro.beni.map(b => b.descrizione).join(', ')
                 : 'Nessun bene';
@@ -1112,7 +1068,6 @@
     }
     
     function updateModalSelected() {
-        // Aggiorna il pulsante salva
         const btn = document.getElementById('btnSalvaModifica');
         const input = document.getElementById('modalNumeroFattura');
         
@@ -1136,7 +1091,6 @@
             return;
         }
         
-        // Raccogli tutti i lavori selezionati (unici per ID)
         const checkboxes = document.querySelectorAll('.modal-lavoro-checkbox:checked');
         const lavoriSelezionati = new Set();
         checkboxes.forEach(cb => {
@@ -1147,7 +1101,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvataggio...';
         
-        fetch('/api/fatturazione/aggiorna', {
+        fetch('/api/fatturazione_esterni/aggiorna', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1165,7 +1119,6 @@
                 showToast(`Fattura ${nuovoNumero} aggiornata su ${data.lavori_aggiornati} lavori`, 'success');
                 chiudiModalModifica();
                 
-                // Ricarica la pagina per aggiornare le liste
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -1183,20 +1136,19 @@
         });
     }
     
-    // Aggiorna il pulsante quando si modifica il numero fattura (solo se il modal esiste)
     const modalNumeroFatturaInput = document.getElementById('modalNumeroFattura');
     if (modalNumeroFatturaInput) {
         modalNumeroFatturaInput.addEventListener('input', updateModalSelected);
     }
     
-    function eliminaFattura(numeroFattura) {
+    function eliminaFatturaEsterni(numeroFattura) {
         const tipo = '{{ tipo }}';
         
         if (!confirm(`Sei sicuro di voler eliminare l'intera fattura ${numeroFattura}? Tutti i lavori associati torneranno disponibili per la fatturazione.`)) {
             return;
         }
         
-        fetch('/api/fatturazione/elimina', {
+        fetch('/api/fatturazione_esterni/elimina', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

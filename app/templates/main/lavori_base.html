@@ -1,0 +1,955 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* ============================================================
+       FIX SCROLLBAR ORIZZONTALE (METODO SICURO)
+       ============================================================ */
+    
+    /* 1. Rimuoviamo overflow hidden da html/body */
+    html, body {
+        overflow-x: clip !important;
+        width: 100%;
+        margin: 0;
+    }
+
+    /* 2. Assicuriamo che il main-content non forzi larghezze strane */
+    .main-content {
+        max-width: 100vw !important;
+        padding-top: 0 !important;
+        padding-left: 10px !important; 
+        padding-right: 10px !important;
+        box-sizing: border-box;
+        overflow: visible !important; 
+        transition: padding-right 0.3s; 
+    }
+
+    .table-container {
+        position: relative !important; 
+        overflow: visible !important; 
+        padding-bottom: 0 !important; 
+    }
+
+    .table-container:not(.table-scroll-horizontal) {
+        min-height: auto;
+    }
+
+    /* FIX MOVIMENTO CARD: Blocca lo spostamento e mantiene l'ombra fissa */
+    .oneui-card.table-container,
+    .oneui-card.table-scroll-horizontal {
+        transition: none !important; 
+        transform: none !important;
+    }
+
+    .oneui-card.table-container:hover,
+    .oneui-card.table-scroll-horizontal:hover {
+        transform: none !important; 
+        box-shadow: 0 2px 20px rgba(0,0,0,0.03) !important; 
+    }
+
+    /* ============================================================
+       2. RIGHE E CELLE
+       ============================================================ */
+    .oneui-table {
+        margin: 0 !important;
+        border-spacing: 0;
+        width: 100%;
+    }
+
+    .oneui-table tr {
+        height: 50px !important;
+        max-height: 50px !important;
+    }
+
+    .oneui-table tbody td {
+        white-space: nowrap;
+        padding: 0 10px !important; 
+        font-size: 0.8rem !important; 
+        height: 50px !important; 
+        vertical-align: middle !important;
+        line-height: 1.2 !important;
+        border-bottom: 1px solid #ddd;
+        box-sizing: border-box; 
+    }
+
+    /* Rimuovi bordo inferiore dall'ultima riga visibile */
+    .oneui-table tbody tr:last-child:not(.filtered-out) td {
+        border-bottom: none !important;
+    }
+    
+    /* Assicura che tutte le celle abbiano lo stesso bordo */
+    .oneui-table tbody tr td {
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    .oneui-table tbody tr:last-child:not(.filtered-out) td {
+        border-bottom: none !important;
+    }
+
+    /* Riga verde chiaro per lavori con firma OK/AUTORIZZ./data */
+    .oneui-table tbody tr.ready-to-work {
+        background-color: #e8f5e9 !important;
+    }
+
+    .oneui-table tbody tr.ready-to-work td {
+        background-color: #e8f5e9 !important;
+    }
+
+    /* Nascondi righe filtrate */
+    .oneui-table tbody tr.filtered-out {
+        display: none !important;
+    }
+
+    /* ============================================================
+       3. HEADER TABLE (MAIN TABLE)
+       ============================================================ */
+    .table-container > .oneui-table > thead > tr > th {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 160px; /* Spazio per header-section con barra ricerca */
+        z-index: 10; 
+        background-color: #F0F2F5 !important; 
+        color: #000 !important;
+        border-bottom: none !important;
+        box-shadow: inset 0 -3px #bbb;
+        background-clip: padding-box;
+        height: 50px !important; 
+        padding: 0 10px !important;
+        vertical-align: middle !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    /* ============================================================
+       4. BARRA RICERCA
+       ============================================================ */
+    .search-filters-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 20px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .search-bar {
+        flex: 1;
+        min-width: 200px;
+        max-width: 400px;
+        transition: all 0.3s ease;
+        display: none;
+    }
+    
+    .search-bar.active {
+        display: block;
+    }
+    
+    .search-bar input {
+        width: 100%;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        background: #fff;
+    }
+
+    .pill-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        background: #f5f5f5;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #333;
+    }
+
+    .pill-btn:hover {
+        background: #e0e0e0;
+    }
+
+    .text-truncate {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .status-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-pill.stato-vuoto {
+        background-color: #f5f5f5;
+        color: #666;
+    }
+
+    .status-pill.stato-in-corso {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .status-pill.stato-da-firmare {
+        background-color: #fff3e0;
+        color: #e67e22;
+    }
+
+    .status-pill.stato-pec-da-inviare {
+        background-color: #fce4ec;
+        color: #c2185b;
+    }
+
+    .status-pill.stato-da-fatturare {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .status-pill.stato-da-incassare {
+        background-color: #e0f2f1;
+        color: #00796b;
+    }
+
+    .status-pill.stato-incassata {
+        background-color: #c8e6c9;
+        color: #2e7d32;
+    }
+
+    .status-pill.stato-chiusa {
+        background-color: #e0e0e0;
+        color: #424242;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge.red {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+
+    .badge.grey {
+        background-color: #f5f5f5;
+        color: #666;
+    }
+</style>
+
+<div class="header-section">
+    <h1>I Miei Lavori</h1>
+    
+    <!-- Barra Ricerca -->
+    <div class="search-filters-bar">
+        <!-- Pulsante Ricerca -->
+        <button class="pill-btn" id="btnSearch" onclick="toggleSearchBar()" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.9rem;">
+            <i class="bi bi-search"></i> <span class="btn-text">Ricerca</span>
+        </button>
+        
+        <!-- Barra di ricerca (nascosta inizialmente) -->
+        <div id="searchBar" class="search-bar">
+            <input type="text" id="searchInput" class="one-ui-input" placeholder="Cerca cliente o bene..." 
+                   oninput="performSearch(this.value)" style="width: 100%;">
+        </div>
+    </div>
+</div>
+
+<div class="table-container oneui-card">
+    <table class="oneui-table">
+        <thead>
+            <tr>
+                <th>N°</th>
+                <th>Cliente</th>
+                <th>Bene</th>
+                <th>Data Contatto</th>
+                <th>Note</th>
+                <th>Sollecito</th>
+                <th>Compenso</th>
+                <th>Stato</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if lavori_with_beni %}
+            {% for item in lavori_with_beni %}
+            {% set l = item.lavoro %}
+            {% set num_beni = item.beni|length %}
+            {% set is_ready = (l.firma_esito and l.firma_esito in ['OK', 'AUTORIZZ.']) or (l.data_firma is not none and l.data_firma != '') %}
+            {% for bene in item.beni %}
+            {% set bene_idx = loop.index0 %}
+            <tr class="{% if is_ready %}ready-to-work{% endif %}"
+                data-id="{{ l.id }}"
+                data-bene-id="{{ bene.id if bene.id else '' }}"
+                data-cliente="{{ (l.cliente_nome or '')|lower }}"
+                data-bene="{{ (bene.descrizione or '')|lower }}">
+                {% if bene_idx == 0 %}
+                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; font-weight: 600;">
+                    {{ item.numero_visualizzazione }}
+                </td>
+                <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle; font-weight: 500;">
+                    {{ l.cliente_nome or '-' }}
+                </td>
+                {% endif %}
+                <td class="col-bene text-truncate">
+                    {{ bene.descrizione if bene.descrizione else '-' }}
+                </td>
+                {% if bene_idx == 0 %}
+                <td rowspan="{{ num_beni }}" class="cell-data-contatto" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editDataContatto(event, {{ l.id }})">
+                    {% if l.data_contatto %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ l.data_contatto.strftime('%d') }}-{{ mesi[l.data_contatto.month] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td rowspan="{{ num_beni }}" class="cell-note text-truncate" style="max-width: 200px; cursor: pointer;" ondblclick="editNote(event, {{ l.id }})">
+                    {% if l.note %}
+                        {{ l.note[:50] }}{% if l.note|length > 50 %}...{% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td rowspan="{{ num_beni }}" class="cell-sollecito" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editSollecito(event, {{ l.id }})">
+                    {% if l.data_sollecito %}
+                        {% set mesi = ['','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'] %}
+                        {{ l.data_sollecito.strftime('%d') }}-{{ mesi[l.data_sollecito.month] }}
+                    {% elif l.sollecito %}
+                        <span class="badge red">Sì</span>
+                    {% else %}
+                        <span class="badge grey">No</span>
+                    {% endif %}
+                </td>
+                <td rowspan="{{ num_beni }}" class="cell-compenso" style="vertical-align: middle; text-align: right; cursor: pointer;" ondblclick="editCompenso(event, {{ l.id }})">
+                    {% if l.compenso and l.compenso > 0 %}
+                        € {{ "{:,.0f}".format(l.compenso).replace(",", ".") }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                {% endif %}
+                <td style="text-align: center;">
+                    {% set stato_bene = bene.stato or l.stato or 'vuoto' %}
+                    {% if stato_bene == 'chiusa' %}
+                        <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% elif stato_bene == 'in corso' %}
+                        <span class="status-pill stato-in-corso">In Corso</span>
+                    {% elif stato_bene == 'da firmare' %}
+                        <span class="status-pill stato-da-firmare">Da Firmare</span>
+                    {% elif stato_bene == 'pec da inviare' %}
+                        <span class="status-pill stato-pec-da-inviare">Pec da Inviare</span>
+                    {% elif stato_bene == 'da fatturare' %}
+                        <span class="status-pill stato-da-fatturare">Da Fatturare</span>
+                    {% elif stato_bene == 'da incassare' %}
+                        <span class="status-pill stato-da-incassare">Da Incassare</span>
+                    {% elif stato_bene == 'incassata' %}
+                        <span class="status-pill stato-incassata">Incassata</span>
+                    {% else %}
+                        <span class="status-pill stato-vuoto">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="8" style="text-align:center; color:#999; padding: 30px;">
+                    Nessun lavoro assegnato.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modali per modifica -->
+<!-- Modale Data Contatto -->
+<div id="dataContattoModal" class="edit-modal-overlay" onclick="closeDataContattoModal(event)">
+    <div class="edit-modal" onclick="event.stopPropagation();">
+        <div class="edit-modal-header">
+            <h3>Inserisci Data Contatto</h3>
+            <button class="edit-modal-close" onclick="closeDataContattoModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <div class="edit-modal-field">
+                <label for="inputDataContatto">Data Contatto:</label>
+                <input type="text" id="inputDataContatto" class="one-ui-input" placeholder="gg/mm/aa oppure gg/mm/aaaa">
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button class="btn-secondary-oneui" onclick="closeDataContattoModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveDataContatto()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Note -->
+<div id="noteModal" class="edit-modal-overlay" onclick="closeNoteModal(event)">
+    <div class="edit-modal" onclick="event.stopPropagation();">
+        <div class="edit-modal-header">
+            <h3>Inserisci Note</h3>
+            <button class="edit-modal-close" onclick="closeNoteModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <div class="edit-modal-field">
+                <label for="inputNote">Note:</label>
+                <textarea id="inputNote" class="one-ui-input" rows="5" placeholder="Inserisci le note..."></textarea>
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button class="btn-secondary-oneui" onclick="closeNoteModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveNote()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Sollecito -->
+<div id="sollecitoModal" class="edit-modal-overlay" onclick="closeSollecitoModal(event)">
+    <div class="edit-modal" onclick="event.stopPropagation();">
+        <div class="edit-modal-header">
+            <h3>Inserisci Data Sollecito</h3>
+            <button class="edit-modal-close" onclick="closeSollecitoModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <div class="edit-modal-field">
+                <label for="inputSollecito">Data Sollecito:</label>
+                <input type="text" id="inputSollecito" class="one-ui-input" placeholder="gg/mm/aa oppure gg/mm/aaaa">
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button class="btn-secondary-oneui" onclick="closeSollecitoModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveSollecito()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Compenso -->
+<div id="compensoModal" class="edit-modal-overlay" onclick="closeCompensoModal(event)">
+    <div class="edit-modal" onclick="event.stopPropagation();">
+        <div class="edit-modal-header">
+            <h3>Inserisci Compenso</h3>
+            <button class="edit-modal-close" onclick="closeCompensoModal()">&times;</button>
+        </div>
+        <div class="edit-modal-body">
+            <div class="edit-modal-field">
+                <label for="inputCompenso">Compenso (€):</label>
+                <input type="text" id="inputCompenso" class="one-ui-input" placeholder="Es: 250 o 1000">
+            </div>
+        </div>
+        <div class="edit-modal-footer">
+            <button class="btn-secondary-oneui" onclick="closeCompensoModal()">Annulla</button>
+            <button class="btn-primary-oneui" onclick="saveCompenso()">Salva</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Stili per modali di modifica */
+    .edit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .edit-modal-overlay.active {
+        display: flex;
+    }
+
+    .edit-modal {
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        min-width: 400px;
+        max-width: 500px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .edit-modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .edit-modal-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .edit-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .edit-modal-close:hover {
+        color: #333;
+    }
+
+    .edit-modal-body {
+        padding: 20px;
+    }
+
+    .edit-modal-field {
+        margin-bottom: 15px;
+    }
+
+    .edit-modal-field label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .edit-modal-field input,
+    .edit-modal-field textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        box-sizing: border-box;
+    }
+
+    .edit-modal-footer {
+        padding: 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn-primary-oneui,
+    .btn-secondary-oneui {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .btn-primary-oneui {
+        background: var(--primary, #007AFF);
+        color: white;
+    }
+
+    .btn-primary-oneui:hover {
+        background: var(--primary-hover, #0056b3);
+    }
+
+    .btn-secondary-oneui {
+        background: #f5f5f5;
+        color: #333;
+    }
+
+    .btn-secondary-oneui:hover {
+        background: #e0e0e0;
+    }
+</style>
+
+<script>
+    /* ==================== VARIABILI GLOBALI ==================== */
+    let currentEditLavoroId = null;
+    let currentEditType = null; // 'data_contatto', 'note', 'sollecito', 'compenso'
+    let currentSearchTerm = '';
+    
+    function toggleSearchBar() {
+        const searchBar = document.getElementById('searchBar');
+        const btnSearch = document.getElementById('btnSearch');
+        if (searchBar.style.display === 'none' || !searchBar.style.display) {
+            searchBar.style.display = 'flex';
+            document.getElementById('searchInput').focus();
+            btnSearch.style.background = 'var(--primary)';
+            btnSearch.style.color = 'white';
+        } else {
+            searchBar.style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            currentSearchTerm = '';
+            btnSearch.style.background = '';
+            btnSearch.style.color = '';
+            performSearch('');
+        }
+    }
+    
+    function performSearch(term) {
+        currentSearchTerm = term.toLowerCase().trim();
+        
+        // Raggruppa le righe per lavoro (data-id)
+        const lavoriRows = {};
+        const allRows = document.querySelectorAll('.oneui-table tbody tr[data-id]');
+        
+        allRows.forEach(row => {
+            const lavoroId = row.getAttribute('data-id');
+            if (!lavoriRows[lavoroId]) {
+                lavoriRows[lavoroId] = [];
+            }
+            lavoriRows[lavoroId].push(row);
+        });
+        
+        // Applica il filtro
+        Object.keys(lavoriRows).forEach(lavoroId => {
+            const rows = lavoriRows[lavoroId];
+            let shouldShow = false;
+            
+            if (!currentSearchTerm) {
+                shouldShow = true;
+            } else {
+                // Controlla se il termine di ricerca corrisponde a cliente o bene
+                rows.forEach(row => {
+                    const cliente = (row.getAttribute('data-cliente') || '').toLowerCase();
+                    const bene = (row.getAttribute('data-bene') || '').toLowerCase();
+                    
+                    if (cliente.includes(currentSearchTerm) || bene.includes(currentSearchTerm)) {
+                        shouldShow = true;
+                    }
+                });
+            }
+            
+            // Mostra/nascondi tutte le righe del lavoro
+            rows.forEach(row => {
+                if (shouldShow) {
+                    row.classList.remove('filtered-out');
+                } else {
+                    row.classList.add('filtered-out');
+                }
+            });
+        });
+    }
+
+    /* ==================== MODIFICA CAMPI ==================== */
+    
+    // Data Contatto
+    function editDataContatto(ev, lavoroId) {
+        ev.stopPropagation();
+        currentEditLavoroId = lavoroId;
+        currentEditType = 'data_contatto';
+        
+        // Precompila con valore esistente
+        const cell = document.querySelector(`tr[data-id="${lavoroId}"] .cell-data-contatto`);
+        let currentValue = '';
+        if (cell && cell.textContent.trim() !== '-') {
+            // Estrai data dal formato "dd-mes" (es. "23-gen")
+            const text = cell.textContent.trim();
+            const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+            const match = text.match(/^(\d{1,2})-(\w+)$/);
+            if (match) {
+                const dd = match[1];
+                const mesName = match[2];
+                const mm = mesi.indexOf(mesName);
+                if (mm > 0) {
+                    const yy = new Date().getFullYear();
+                    currentValue = `${dd}/${mm}/${yy}`;
+                }
+            }
+        }
+        
+        document.getElementById('inputDataContatto').value = currentValue;
+        document.getElementById('dataContattoModal').classList.add('active');
+        document.getElementById('inputDataContatto').focus();
+    }
+
+    function closeDataContattoModal(ev) {
+        if (ev && ev.target !== ev.currentTarget && !ev.target.closest('.edit-modal')) {
+            return;
+        }
+        document.getElementById('dataContattoModal').classList.remove('active');
+        currentEditLavoroId = null;
+        currentEditType = null;
+    }
+
+    async function saveDataContatto() {
+        if (!currentEditLavoroId) return;
+        
+        const dateInput = document.getElementById('inputDataContatto').value.trim();
+        
+        if (!dateInput) {
+            // Se vuoto, cancella la data
+            await updateField(currentEditLavoroId, 'data_contatto', '');
+            closeDataContattoModal();
+            return;
+        }
+        
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(dateInput);
+        if (!m) {
+            alert('Formato data non valido. Usa gg/mm/aa o gg/mm/aaaa.');
+            return;
+        }
+        
+        const dd = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        let yy = parseInt(m[3], 10);
+        if (yy < 100) yy = 2000 + yy;
+        const iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+        
+        await updateField(currentEditLavoroId, 'data_contatto', iso);
+        closeDataContattoModal();
+    }
+
+    // Note
+    function editNote(ev, lavoroId) {
+        ev.stopPropagation();
+        currentEditLavoroId = lavoroId;
+        currentEditType = 'note';
+        
+        // Precompila con valore esistente
+        const cell = document.querySelector(`tr[data-id="${lavoroId}"] .cell-note`);
+        let currentValue = '';
+        if (cell && cell.textContent.trim() !== '-') {
+            // Per le note, dobbiamo recuperare il valore completo dal server
+            // Per ora usiamo il testo visibile
+            currentValue = cell.textContent.trim();
+        }
+        
+        document.getElementById('inputNote').value = currentValue;
+        document.getElementById('noteModal').classList.add('active');
+        document.getElementById('inputNote').focus();
+    }
+
+    function closeNoteModal(ev) {
+        if (ev && ev.target !== ev.currentTarget && !ev.target.closest('.edit-modal')) {
+            return;
+        }
+        document.getElementById('noteModal').classList.remove('active');
+        currentEditLavoroId = null;
+        currentEditType = null;
+    }
+
+    async function saveNote() {
+        if (!currentEditLavoroId) return;
+        
+        const noteValue = document.getElementById('inputNote').value.trim();
+        await updateField(currentEditLavoroId, 'note', noteValue);
+        closeNoteModal();
+    }
+
+    // Sollecito
+    function editSollecito(ev, lavoroId) {
+        ev.stopPropagation();
+        currentEditLavoroId = lavoroId;
+        currentEditType = 'data_sollecito';
+        
+        // Precompila con valore esistente
+        const cell = document.querySelector(`tr[data-id="${lavoroId}"] .cell-sollecito`);
+        let currentValue = '';
+        if (cell && cell.textContent.trim() !== '-' && !cell.textContent.includes('Sì') && !cell.textContent.includes('No')) {
+            // Estrai data dal formato "dd-mes" (es. "23-gen")
+            const text = cell.textContent.trim();
+            const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+            const match = text.match(/^(\d{1,2})-(\w+)$/);
+            if (match) {
+                const dd = match[1];
+                const mesName = match[2];
+                const mm = mesi.indexOf(mesName);
+                if (mm > 0) {
+                    const yy = new Date().getFullYear();
+                    currentValue = `${dd}/${mm}/${yy}`;
+                }
+            }
+        }
+        
+        document.getElementById('inputSollecito').value = currentValue;
+        document.getElementById('sollecitoModal').classList.add('active');
+        document.getElementById('inputSollecito').focus();
+    }
+
+    function closeSollecitoModal(ev) {
+        if (ev && ev.target !== ev.currentTarget && !ev.target.closest('.edit-modal')) {
+            return;
+        }
+        document.getElementById('sollecitoModal').classList.remove('active');
+        currentEditLavoroId = null;
+        currentEditType = null;
+    }
+
+    async function saveSollecito() {
+        if (!currentEditLavoroId) return;
+        
+        const dateInput = document.getElementById('inputSollecito').value.trim();
+        
+        if (!dateInput) {
+            // Se vuoto, cancella la data sollecito
+            await updateField(currentEditLavoroId, 'data_sollecito', '');
+            closeSollecitoModal();
+            return;
+        }
+        
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(dateInput);
+        if (!m) {
+            alert('Formato data non valido. Usa gg/mm/aa o gg/mm/aaaa.');
+            return;
+        }
+        
+        const dd = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        let yy = parseInt(m[3], 10);
+        if (yy < 100) yy = 2000 + yy;
+        const iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`;
+        
+        await updateField(currentEditLavoroId, 'data_sollecito', iso);
+        closeSollecitoModal();
+    }
+
+    // Compenso
+    function editCompenso(ev, lavoroId) {
+        ev.stopPropagation();
+        currentEditLavoroId = lavoroId;
+        currentEditType = 'compenso';
+        
+        // Precompila con valore esistente (rimuovi € e formattazione)
+        const cell = document.querySelector(`tr[data-id="${lavoroId}"] .cell-compenso`);
+        let currentValue = '';
+        if (cell && cell.textContent.trim() !== '-') {
+            const text = cell.textContent.trim();
+            // Rimuovi € e punti
+            currentValue = text.replace('€', '').replace(/\./g, '').trim();
+        }
+        
+        document.getElementById('inputCompenso').value = currentValue;
+        document.getElementById('compensoModal').classList.add('active');
+        document.getElementById('inputCompenso').focus();
+    }
+
+    function closeCompensoModal(ev) {
+        if (ev && ev.target !== ev.currentTarget && !ev.target.closest('.edit-modal')) {
+            return;
+        }
+        document.getElementById('compensoModal').classList.remove('active');
+        currentEditLavoroId = null;
+        currentEditType = null;
+    }
+
+    async function saveCompenso() {
+        if (!currentEditLavoroId) return;
+        
+        const compensoValue = document.getElementById('inputCompenso').value.trim();
+        
+        if (!compensoValue) {
+            await updateField(currentEditLavoroId, 'compenso', '0');
+            closeCompensoModal();
+            return;
+        }
+        
+        // Rimuovi eventuali caratteri non numerici (tranne punto e virgola)
+        const cleanValue = compensoValue.replace(/[^\d.,]/g, '').replace(',', '.');
+        const numValue = parseFloat(cleanValue);
+        
+        if (isNaN(numValue) || numValue < 0) {
+            alert('Inserisci un valore numerico valido.');
+            return;
+        }
+        
+        await updateField(currentEditLavoroId, 'compenso', numValue.toString());
+        closeCompensoModal();
+    }
+
+    // Funzione generica per aggiornare un campo
+    async function updateField(lavoroId, field, value) {
+        try {
+            const res = await fetch(`/update_lavoro_field/${lavoroId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field: field, value: value })
+            });
+            
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore aggiornamento');
+            }
+            
+            // Aggiorna UI
+            await updateUI(lavoroId, field, value);
+        } catch (e) {
+            alert(e.message || 'Errore durante il salvataggio');
+        }
+    }
+
+    // Aggiorna l'interfaccia dopo il salvataggio
+    async function updateUI(lavoroId, field, value) {
+        const rows = document.querySelectorAll(`tr[data-id="${lavoroId}"]`);
+        if (!rows.length) return;
+        
+        const mesi = ['', 'gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+        
+        if (field === 'data_contatto') {
+            const cells = document.querySelectorAll(`tr[data-id="${lavoroId}"] .cell-data-contatto`);
+            if (value) {
+                const parts = value.split('-');
+                const dd = parts[2];
+                const mm = parseInt(parts[1], 10);
+                const display = `${dd}-${mesi[mm]}`;
+                cells.forEach(cell => { cell.textContent = display; });
+            } else {
+                cells.forEach(cell => { cell.textContent = '-'; });
+            }
+        } else if (field === 'note') {
+            const cells = document.querySelectorAll(`tr[data-id="${lavoroId}"] .cell-note`);
+            const display = value ? (value.length > 50 ? value.substring(0, 50) + '...' : value) : '-';
+            cells.forEach(cell => { cell.textContent = display; });
+        } else if (field === 'data_sollecito') {
+            const cells = document.querySelectorAll(`tr[data-id="${lavoroId}"] .cell-sollecito`);
+            if (value) {
+                const parts = value.split('-');
+                const dd = parts[2];
+                const mm = parseInt(parts[1], 10);
+                const display = `${dd}-${mesi[mm]}`;
+                cells.forEach(cell => { cell.innerHTML = display; });
+            } else {
+                cells.forEach(cell => { 
+                    cell.innerHTML = '<span class="badge grey">No</span>'; 
+                });
+            }
+        } else if (field === 'compenso') {
+            const cells = document.querySelectorAll(`tr[data-id="${lavoroId}"] .cell-compenso`);
+            const numValue = parseFloat(value) || 0;
+            const display = numValue > 0 
+                ? '€ ' + numValue.toLocaleString('it-IT', { maximumFractionDigits: 0 })
+                : '-';
+            cells.forEach(cell => { cell.textContent = display; });
+        }
+    }
+
+    // Gestione Enter ed Escape nelle modali
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (document.getElementById('dataContattoModal').classList.contains('active')) {
+                closeDataContattoModal();
+            } else if (document.getElementById('noteModal').classList.contains('active')) {
+                closeNoteModal();
+            } else if (document.getElementById('sollecitoModal').classList.contains('active')) {
+                closeSollecitoModal();
+            } else if (document.getElementById('compensoModal').classList.contains('active')) {
+                closeCompensoModal();
+            }
+        }
+    });
+</script>
+
+{% endblock %}

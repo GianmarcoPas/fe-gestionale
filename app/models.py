@@ -69,6 +69,13 @@ class LavoroAdmin(db.Model):
     data_pec = db.Column(db.Date, nullable=True)
     firma_esito = db.Column(db.String(20))  # 'OK' | 'AUTORIZZ.' oppure None
     
+    # Campi per utenti base
+    data_contatto = db.Column(db.Date, nullable=True)
+    note = db.Column(db.Text)
+    sollecito = db.Column(db.Boolean, default=False)
+    data_sollecito = db.Column(db.Date, nullable=True)
+    compenso = db.Column(db.Float, default=0.0)  # Compenso assegnato da Roberto all'utente base
+    
     # Stato
     stato = db.Column(db.String(50), default='vuoto') 
     

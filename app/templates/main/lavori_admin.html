@@ -676,7 +676,6 @@
                         <option value="da fatturare">Da Fatturare</option>
                         <option value="da incassare">Da Incassare</option>
                         <option value="incassata">Incassata</option>
-                        <option value="chiusa">Chiusa</option>
                     </select>
                 </div>
                 
@@ -829,7 +828,7 @@
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
-                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                 <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
                 {% endif %}
                 <td class="col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
@@ -881,15 +880,20 @@
                     {% endif %}
                 </td>
                 <td>
-                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
-                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
-                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
-                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
-                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
-                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
-                    </select>
+                    {% if (bene.stato or '')=='chiusa' %}
+                        <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% else %}
+                        <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                            <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                            <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
+                            <option value="da firmare" {% if (bene.stato or '')=='da firmare' %}selected{% endif %}>Da Firmare</option>
+                            <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                            <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                            <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                            <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        </select>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -1126,7 +1130,7 @@
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
-                <td class="col-fixed col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-fixed col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                 <td class="col-fixed col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
                 {% endif %}
                 <td class="col-fixed col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
@@ -1200,15 +1204,20 @@
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
                 {% endif %}
                 <td class="col-stato">
-                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
-                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
-                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
-                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
-                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
-                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
-                    </select>
+                    {% if (bene.stato or '')=='chiusa' %}
+                        <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% else %}
+                        <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                            <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                            <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
+                            <option value="da firmare" {% if (bene.stato or '')=='da firmare' %}selected{% endif %}>Da Firmare</option>
+                            <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                            <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                            <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                            <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        </select>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -1299,21 +1308,26 @@
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
                 {% if bene_idx == 0 %}
-                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.numero }}</td>
+                <td class="col-numero" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                 <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
                 {% endif %}
                 <td class="col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
                 <td class="col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td>
-                    <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
-                        onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
-                        <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
-                        <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
-                        <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
-                        <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
-                        <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
-                        <option value="chiusa" {% if (bene.stato or '')=='chiusa' %}selected{% endif %}>Chiusa</option>
-                    </select>
+                    {% if (bene.stato or '')=='chiusa' %}
+                        <span class="status-pill stato-chiusa">Chiusa</span>
+                    {% else %}
+                        <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
+                            <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
+                            <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
+                            <option value="da firmare" {% if (bene.stato or '')=='da firmare' %}selected{% endif %}>Da Firmare</option>
+                            <option value="pec da inviare" {% if (bene.stato or '')=='pec da inviare' %}selected{% endif %}>Pec da Inviare</option>
+                            <option value="da fatturare" {% if (bene.stato or '')=='da fatturare' %}selected{% endif %}>Da Fatturare</option>
+                            <option value="da incassare" {% if (bene.stato or '')=='da incassare' %}selected{% endif %}>Da Incassare</option>
+                            <option value="incassata" {% if (bene.stato or '')=='incassata' %}selected{% endif %}>Incassata</option>
+                        </select>
+                    {% endif %}
                 </td>
                 {% if bene_idx == 0 %}
                 <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
@@ -3502,11 +3516,66 @@
                     if (cell) cell.textContent = (rev > 0 ? `R${rev} ` : '') + dataBreve;
                 }
             }
+            
+            // Imposta immediatamente lo stato 'da firmare' per tutti i beni del lavoro
+            aggiornaStatoADaFirmare(id);
         } catch (e) {
             alert(e.message || 'Errore generazione offerta');
         } finally {
             closeGeneraOffertaModal();
         }
+    }
+
+    function aggiornaStatoADaFirmare(lavoroId) {
+        /**
+         * Aggiorna immediatamente lo stato a 'da firmare' per tutti i beni del lavoro specificato.
+         * Viene chiamata subito dopo la generazione o revisione di un'offerta, prima del ricaricamento della pagina.
+         */
+        // Trova tutte le righe della tabella associate a questo lavoro
+        const rows = document.querySelectorAll(`tr[data-id="${lavoroId}"]`);
+        
+        rows.forEach(row => {
+            // Trova tutti i dropdown degli stati in questa riga
+            const statusSelects = row.querySelectorAll('select.status-select');
+            
+            statusSelects.forEach(select => {
+                // Verifica se lo stato attuale non è già avanzato (non sovrascrivere stati avanzati)
+                const currentValue = select.value;
+                const statiAvanzati = ['da firmare', 'pec da inviare', 'da fatturare', 'da incassare', 'incassata', 'chiusa'];
+                
+                if (!statiAvanzati.includes(currentValue)) {
+                    // Imposta lo stato a 'da firmare'
+                    select.value = 'da firmare';
+                    
+                    // Aggiorna la classe CSS per riflettere il nuovo stato
+                    select.className = 'status-select stato-da-firmare';
+                    
+                    // Estrai il beneId dall'attributo onchange o chiama direttamente updateBeneStato
+                    // L'attributo onchange contiene: updateBeneStato(this, <beneId>)
+                    const onchangeAttr = select.getAttribute('onchange');
+                    if (onchangeAttr) {
+                        // Estrai il beneId dalla stringa onchange
+                        const match = onchangeAttr.match(/updateBeneStato\([^,]+,\s*(\d+)\)/);
+                        if (match && match[1]) {
+                            const beneId = parseInt(match[1], 10);
+                            if (beneId > 0) {
+                                // Chiama direttamente updateBeneStato per salvare nel backend
+                                updateBeneStato(select, beneId);
+                            } else {
+                                // Se beneId è 0, triggera solo l'evento change per aggiornare l'UI
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        } else {
+                            // Fallback: triggera l'evento change
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    } else {
+                        // Fallback: triggera l'evento change
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            });
+        });
     }
 
     async function revisionaOffertaDaForm(tipoOverride = null) {
@@ -3625,6 +3694,9 @@
                 }
             }
 
+            // Imposta immediatamente lo stato 'da firmare' per tutti i beni del lavoro
+            aggiornaStatoADaFirmare(lavoroId);
+            
             // Aggiorna subito le celle della tabella con i dati salvati (senza refresh pagina)
             await refreshLavoroRowsFromApi(lavoroId);
 

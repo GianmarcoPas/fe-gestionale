@@ -1699,6 +1699,18 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #999;
 }
 
+/* In Corso - Giallo */
+.stato-in-corso {
+    background: #fff9c4;
+    color: #f57f17;
+}
+
+/* Da Firmare - Arancione scuro */
+.stato-da-firmare {
+    background: #ffcc80;
+    color: #e65100;
+}
+
 /* Pec da inviare - Arancione */
 .stato-pec-da-inviare {
     background: #fff3e0;
@@ -1727,6 +1739,18 @@ input:checked + .slider:before { transform: translateX(22px); }
 .stato-chiusa {
     background: #c8e6c9;
     color: #2e7d32;
+}
+
+/* Status pill per stato chiusa (non selezionabile) */
+.status-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: default;
+    min-width: 80px;
+    text-align: center;
 }
 
 /* --- CHECKBOX STILIZZATI --- */

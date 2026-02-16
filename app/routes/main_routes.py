@@ -94,6 +94,21 @@ def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
     if has_prev_offerta and dirty:
         lavoro.offerta_revision = rev_to_use
     lavoro.offerta_dirty = False
+    
+    # Imposta automaticamente lo stato 'da firmare' quando viene generata o revisionata un'offerta
+    # Imposta lo stato a livello di lavoro e di tutti i beni
+    if lavoro.stato not in ['da firmare', 'pec da inviare', 'da fatturare', 'da incassare', 'incassata', 'chiusa']:
+        lavoro.stato = 'da firmare'
+    
+    # Imposta lo stato 'da firmare' per tutti i beni che non hanno già uno stato avanzato
+    if lavoro.beni_list:
+        for bene in lavoro.beni_list:
+            if bene.stato not in ['da firmare', 'pec da inviare', 'da fatturare', 'da incassare', 'incassata', 'chiusa']:
+                bene.stato = 'da firmare'
+    elif lavoro.stato == 'da firmare' and not lavoro.beni_list:
+        # Se non ci sono beni nella tabella separata, lo stato è già stato impostato a livello di lavoro
+        pass
+    
     db.session.commit()
 
     mesi = ["", "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
@@ -217,11 +232,8 @@ def dashboard():
         ).all()]
         in_corso = len(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
         
-        # Completati: lavori che hanno almeno un bene con stato "chiusa"
-        lavori_ids_completati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'chiusa'
-        ).all()]
-        completati = len(set(lavori_ids_completati))
+        # Completati: lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
+        completati = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').count()
         
         return render_template('main/dashboard.html',
                                role='admin',
@@ -287,33 +299,31 @@ def lavori_admin():
     if filtro_stato == 'in_lavorazione':
         # Lavori che hanno almeno un bene con stato "vuoto" o "-"
         # Oppure lavori senza beni
+        # ESCLUDI i lavori con stato "chiusa"
         lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == '')
+            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == ''),
+            LavoroAdmin.stato != 'chiusa'
         ).all()]
         lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
-            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id))
+            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id)),
+            LavoroAdmin.stato != 'chiusa'
         ).all()]
         tutti_ids = list(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
         if tutti_ids:
-            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(tutti_ids)).order_by(LavoroAdmin.numero.asc()).all()
+            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(tutti_ids), LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
         else:
             lavori = []
     elif filtro_stato == 'completati':
-        # Lavori che hanno almeno un bene con stato "chiusa"
-        lavori_ids_completati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'chiusa'
-        ).all()]
-        if lavori_ids_completati:
-            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(lavori_ids_completati)).order_by(LavoroAdmin.numero.asc()).all()
-        else:
-            lavori = []
+        # Lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
+        # Ordinati per ID (data di creazione) per mantenere l'ordine cronologico
+        lavori = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').order_by(LavoroAdmin.id.asc()).all()
     else:
-        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori
-        lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori ESCLUSI quelli chiusi
+        lavori = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
     
     # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
-    for lavoro in lavori:
+    for idx, lavoro in enumerate(lavori, start=1):
         beni_list = []
         if lavoro.beni_list:
             # Usa i beni dalla tabella separata
@@ -338,7 +348,18 @@ def lavori_admin():
                 # Un solo bene
                 beni_list.append({'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta})
         
-        lavori_with_beni.append({'lavoro': lavoro, 'beni': beni_list})
+        # Per la vista "completati", usa un numero sequenziale per la visualizzazione
+        # mantenendo il numero originale nel database
+        if filtro_stato == 'completati':
+            numero_visualizzazione = idx
+        else:
+            numero_visualizzazione = lavoro.numero
+        
+        lavori_with_beni.append({
+            'lavoro': lavoro, 
+            'beni': beni_list,
+            'numero_visualizzazione': numero_visualizzazione
+        })
     
     return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode=view_mode)
     
@@ -349,7 +370,8 @@ def lavori_focus():
     if current_user.role != 'admin' or current_user.admin_view_mode != 'extra2':
         return redirect(url_for('main.dashboard'))
     
-    lavori = LavoroAdmin.query.order_by(LavoroAdmin.numero.asc()).all()
+    # Escludi i lavori chiusi dalla vista focus
+    lavori = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
     
     # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
@@ -880,16 +902,37 @@ def to_float_it(val):
 @bp.route('/update_lavoro_field/<int:id>', methods=['POST'])
 @login_required
 def update_lavoro_field(id):
-    if current_user.role != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
     lavoro = LavoroAdmin.query.get_or_404(id)
     data = request.json
     field = data.get('field')
     value = data.get('value')
 
+    # Campi modificabili solo da admin
+    admin_only_fields = ['stato', 'data_offerta_check', 'data_offerta', 'offerta_revision', 
+                         'data_firma_check', 'data_firma', 'firma_esito', 'data_pec']
+    
+    # Campi modificabili da utenti base
+    base_user_fields = ['data_contatto', 'note', 'sollecito', 'data_sollecito', 'compenso']
+    
+    if field in admin_only_fields:
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif field in base_user_fields:
+        # Verifica che l'utente base abbia accesso a questo lavoro
+        if current_user.role == 'base':
+            collaboratore = _get_collaboratore_for_user(current_user.username)
+            if not collaboratore or lavoro.collaboratore != collaboratore:
+                return jsonify({'error': 'Unauthorized'}), 403
+    else:
+        # Campo non riconosciuto
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
     if field == 'stato':
-        lavoro.stato = value
+        # Impedisci l'impostazione manuale di "chiusa"
+        if value == 'chiusa':
+            return jsonify({'error': 'Lo stato "chiusa" non può essere impostato manualmente. Viene impostato automaticamente quando tutti i compensi interni hanno la fattura.'}), 400
+        lavoro.stato = value or 'vuoto'
     elif field == 'data_offerta_check':
         lavoro.data_offerta_check = value
     elif field == 'data_offerta':
@@ -916,6 +959,24 @@ def update_lavoro_field(id):
             lavoro.data_firma_check = False
     elif field == 'data_pec':
         if value: lavoro.data_pec = datetime.strptime(value, '%Y-%m-%d').date()
+    elif field == 'data_contatto':
+        if value: 
+            lavoro.data_contatto = datetime.strptime(value, '%Y-%m-%d').date()
+        else: 
+            lavoro.data_contatto = None
+    elif field == 'note':
+        lavoro.note = value if value else None
+    elif field == 'sollecito':
+        lavoro.sollecito = bool(value)
+    elif field == 'data_sollecito':
+        if value: 
+            lavoro.data_sollecito = datetime.strptime(value, '%Y-%m-%d').date()
+            lavoro.sollecito = True
+        else: 
+            lavoro.data_sollecito = None
+            lavoro.sollecito = False
+    elif field == 'compenso':
+        lavoro.compenso = float(value) if value else 0.0
     
     # Eventuale gestione altri campi inline...
 
@@ -935,6 +996,9 @@ def update_bene_field(id):
     value = data.get('value')
 
     if field == 'stato':
+        # Impedisci l'impostazione manuale di "chiusa"
+        if value == 'chiusa':
+            return jsonify({'error': 'Lo stato "chiusa" non può essere impostato manualmente. Viene impostato automaticamente quando tutti i compensi interni hanno la fattura.'}), 400
         bene.stato = value or 'vuoto'
     elif field == 'data_pec':
         if value:
@@ -986,6 +1050,10 @@ def update_fattura(id):
     field_name = fattura_field_map[fattura_type]
     setattr(lavoro, field_name, value)
     
+    # Se è una fattura interna (FE, AMIN, GALVAN, FH), verifica se il lavoro può essere chiuso
+    if fattura_type in ['fe', 'amin', 'galvan', 'fh']:
+        verifica_e_chiudi_lavoro(lavoro)
+    
     db.session.commit()
     return jsonify({'success': True})
     
@@ -1019,6 +1087,28 @@ def delete_lavoro_admin(id):
 
 # --- ROTTE BASE (Lavori 4.0 / 5.0) ---
 
+def _get_collaboratore_for_user(username):
+    """Mappa username utente base al nome collaboratore corrispondente"""
+    mapping = {
+        'Gianmarco': 'Passiatore',
+        'Marco': 'Fortin',
+        'Francescos': 'Simonetti',
+        'Giovanni': 'Lanzillotta',
+        'Francescou': 'Ulivi'
+    }
+    return mapping.get(username)
+
+def _get_user_for_collaboratore(collaboratore):
+    """Mappa nome collaboratore all'username utente base corrispondente"""
+    mapping = {
+        'Passiatore': 'Gianmarco',
+        'Fortin': 'Marco',
+        'Simonetti': 'Francescos',
+        'Lanzillotta': 'Giovanni',
+        'Ulivi': 'Francescou'
+    }
+    return mapping.get(collaboratore)
+
 @bp.route('/lavori')
 @login_required
 def lavori():
@@ -1026,14 +1116,65 @@ def lavori():
     if current_user.role == 'admin':
         return redirect(url_for('main.lavori_admin'))
 
-    tipo_lavoro = request.args.get('tipo', '40')
+    # Per gli utenti base, mostriamo i lavori assegnati da Roberto
+    collaboratore = _get_collaboratore_for_user(current_user.username)
+    if not collaboratore:
+        # Se l'utente non è mappato, mostra una tabella vuota
+        return render_template('main/lavori_base.html', lavori_with_beni=[], username=current_user.username)
     
-    if tipo_lavoro == '50':
-        items = Lavoro50.query.all()
-    else:
-        items = Lavoro40.query.all()
+    # Cerca i lavori assegnati a questo collaboratore
+    lavori_assegnati = LavoroAdmin.query.filter(
+        LavoroAdmin.collaboratore == collaboratore
+    ).order_by(LavoroAdmin.numero.asc()).all()
+    
+    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
+    lavori_with_beni = []
+    for idx, lavoro in enumerate(lavori_assegnati, start=1):
+        beni_list = []
+        if lavoro.beni_list:
+            # Usa i beni dalla tabella separata
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append({
+                    'id': bene.id,
+                    'descrizione': bene.descrizione,
+                    'valore': bene.valore,
+                    'importo_offerta': getattr(bene, 'importo_offerta', 0) or 0,
+                    'stato': getattr(bene, 'stato', 'vuoto') or 'vuoto',
+                    'data_pec': bene.data_pec
+                })
+        else:
+            # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
+            if lavoro.bene and ' | ' in lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ')
+                valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
+                importo_per_bene = lavoro.importo_offerta / len(beni_parts) if len(beni_parts) > 0 else lavoro.importo_offerta
+                for desc in beni_parts:
+                    beni_list.append({
+                        'id': None,
+                        'descrizione': desc.strip(), 
+                        'valore': valore_per_bene, 
+                        'importo_offerta': importo_per_bene,
+                        'stato': lavoro.stato or 'vuoto',
+                        'data_pec': lavoro.data_pec
+                    })
+            else:
+                # Un solo bene
+                beni_list.append({
+                    'id': None,
+                    'descrizione': lavoro.bene or '', 
+                    'valore': lavoro.valore_bene, 
+                    'importo_offerta': lavoro.importo_offerta,
+                    'stato': lavoro.stato or 'vuoto',
+                    'data_pec': lavoro.data_pec
+                })
         
-    return render_template('main/lavori.html', items=items, tipo=tipo_lavoro)
+        lavori_with_beni.append({
+            'lavoro': lavoro, 
+            'beni': beni_list,
+            'numero_visualizzazione': idx  # Numero sequenziale per la visualizzazione
+        })
+    
+    return render_template('main/lavori_base.html', lavori_with_beni=lavori_with_beni, username=current_user.username)
 
 @bp.route('/add_lavoro', methods=['POST'])
 @login_required
@@ -1278,6 +1419,114 @@ def api_caricamenti():
 
 # --- ROTTE FATTURAZIONE ---
 
+def ricalcola_numeri_sequenziali():
+    """
+    Ricalcola i numeri sequenziali dei lavori escludendo quelli con stato 'chiusa'.
+    I lavori 'chiusa' mantengono il loro numero originale, mentre i lavori attivi
+    vengono rinumerati sequenzialmente partendo da 1.
+    """
+    # Ottieni tutti i lavori NON chiusi, ordinati per numero attuale
+    lavori_attivi = LavoroAdmin.query.filter(
+        LavoroAdmin.stato != 'chiusa'
+    ).order_by(LavoroAdmin.numero.asc(), LavoroAdmin.id.asc()).all()
+    
+    # Assegna numeri sequenziali partendo da 1
+    for idx, lav in enumerate(lavori_attivi, start=1):
+        lav.numero = idx
+
+def verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=True):
+    """
+    Verifica se un lavoro può essere chiuso automaticamente.
+    Un lavoro è chiuso quando tutti i compensi interni (FE, AMIN, GALVAN, FH) 
+    con valore > 0 hanno una fattura inserita.
+    Se il lavoro è già chiuso ma non dovrebbe esserlo, lo riapre.
+    
+    Args:
+        lavoro: Il lavoro da verificare
+        ricalcola_numeri: Se True, ricalcola i numeri sequenziali dopo il cambio di stato.
+                         Impostare a False quando si processano più lavori in batch.
+    """
+    stato_precedente = lavoro.stato
+    
+    # Helper per verificare se un compenso ha valore > 0
+    def has_compenso(compenso):
+        return compenso is not None and float(compenso or 0) > 0
+    
+    # Helper per verificare se una fattura è presente
+    def has_fattura(fattura):
+        return fattura is not None and str(fattura).strip() != ''
+    
+    # Verifica FE
+    if has_compenso(lavoro.c_fe):
+        if not has_fattura(lavoro.f_fe):
+            # FE ha compenso ma non ha fattura - riapri il lavoro se era chiuso
+            if lavoro.stato == 'chiusa':
+                lavoro.stato = 'incassata'
+                if lavoro.beni_list:
+                    for bene in lavoro.beni_list:
+                        if bene.stato == 'chiusa':
+                            bene.stato = 'incassata'
+                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
+                if ricalcola_numeri:
+                    ricalcola_numeri_sequenziali()
+            return False
+    
+    # Verifica AMIN
+    if has_compenso(lavoro.c_amin):
+        if not has_fattura(lavoro.f_amin):
+            if lavoro.stato == 'chiusa':
+                lavoro.stato = 'incassata'
+                if lavoro.beni_list:
+                    for bene in lavoro.beni_list:
+                        if bene.stato == 'chiusa':
+                            bene.stato = 'incassata'
+                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
+                if ricalcola_numeri:
+                    ricalcola_numeri_sequenziali()
+            return False
+    
+    # Verifica GALVAN
+    if has_compenso(lavoro.c_galvan):
+        if not has_fattura(lavoro.f_galvan):
+            if lavoro.stato == 'chiusa':
+                lavoro.stato = 'incassata'
+                if lavoro.beni_list:
+                    for bene in lavoro.beni_list:
+                        if bene.stato == 'chiusa':
+                            bene.stato = 'incassata'
+                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
+                if ricalcola_numeri:
+                    ricalcola_numeri_sequenziali()
+            return False
+    
+    # Verifica FH
+    if has_compenso(lavoro.c_fh):
+        if not has_fattura(lavoro.f_fh):
+            if lavoro.stato == 'chiusa':
+                lavoro.stato = 'incassata'
+                if lavoro.beni_list:
+                    for bene in lavoro.beni_list:
+                        if bene.stato == 'chiusa':
+                            bene.stato = 'incassata'
+                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
+                if ricalcola_numeri:
+                    ricalcola_numeri_sequenziali()
+            return False
+    
+    # Tutti i compensi interni con valore > 0 hanno una fattura, chiudi il lavoro
+    if lavoro.stato != 'chiusa':
+        lavoro.stato = 'chiusa'
+        # Chiudi anche tutti i beni del lavoro
+        if lavoro.beni_list:
+            for bene in lavoro.beni_list:
+                if bene.stato != 'chiusa':
+                    bene.stato = 'chiusa'
+        # Ricalcola i numeri sequenziali quando un lavoro viene chiuso
+        if ricalcola_numeri:
+            ricalcola_numeri_sequenziali()
+    
+    return True
+
 @bp.route('/fatturazione/<tipo>')
 @login_required
 def fatturazione(tipo):
@@ -1409,7 +1658,12 @@ def salva_fatturazione():
     for lavoro in lavori_aggiornati:
         setattr(lavoro, campo_fattura, numero_fattura)
         setattr(lavoro, campo_data, data_fattura)
+        
+        # Verifica se il lavoro può essere chiuso automaticamente (senza ricalcolare i numeri ad ogni iterazione)
+        verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=False)
     
+    # Ricalcola i numeri sequenziali una sola volta dopo tutte le modifiche
+    ricalcola_numeri_sequenziali()
     db.session.commit()
     
     return jsonify({
@@ -1483,6 +1737,597 @@ def lista_fatture(tipo):
     
     return jsonify({'fatture': fatture_list})
 
+# --- ROTTE FATTURAZIONE ESTERNI ---
+
+@bp.route('/fatturazione_esterni/<tipo>')
+@login_required
+def fatturazione_esterni(tipo):
+    if current_user.role != 'admin':
+        return redirect(url_for('main.dashboard'))
+    
+    # Valida tipo
+    tipo_map = {
+        'bianc': ('c_bianc', 'f_bianc', 'data_fattura_bianc', 'BIANCHINI', None),
+        'deloitte': ('c_deloitte', 'f_deloitte', 'data_fattura_deloitte', 'DELOITTE', None),
+        'revisore': ('c_revisore', 'f_revisore', 'data_fattura_revisore', 'REVISORE', 'nome_revisore'),
+        'caricamento': ('c_caricamento', 'f_caricamento', 'data_fattura_caricamento', 'CARICAMENTO', 'nome_caricamento'),
+        'ext': ('c_ext', 'f_ext', 'data_fattura_ext', 'ESTERNI', 'nome_esterno')
+    }
+    
+    if tipo not in tipo_map:
+        flash('Tipo fatturazione non valido', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    campo_compenso, campo_fattura, campo_data, nome_display, campo_nome = tipo_map[tipo]
+    
+    # Filtro per nome (solo per revisore, caricamento, ext)
+    filtro_nome = request.args.get('nome', '').strip()
+    
+    # Query lavori con stato "incassata" o "chiusa" e compenso > 0 per questo tipo
+    # Gli esterni possono fatturare quando il lavoro è "incassata" o "chiusa"
+    lavori_ids_incassata_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
+        Bene.stato.in_(['incassata', 'chiusa'])
+    ).all()]
+    
+    lavori_ids_incassata_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+        LavoroAdmin.stato.in_(['incassata', 'chiusa'])
+    ).all()]
+    
+    lavori_ids_disponibili = list(set(lavori_ids_incassata_beni + lavori_ids_incassata_lavoro))
+    
+    if not lavori_ids_disponibili:
+        lavori = []
+    else:
+        # Query base
+        query = LavoroAdmin.query.filter(
+            LavoroAdmin.id.in_(lavori_ids_disponibili),
+            getattr(LavoroAdmin, campo_compenso) > 0
+        )
+        
+        # Filtro per nome se necessario
+        if campo_nome and filtro_nome:
+            query = query.filter(getattr(LavoroAdmin, campo_nome) == filtro_nome)
+        
+        # Escludi lavori già fatturati
+        campo_fattura_obj = getattr(LavoroAdmin, campo_fattura)
+        query = query.filter((campo_fattura_obj == None) | (campo_fattura_obj == ''))
+        
+        lavori = query.order_by(LavoroAdmin.numero.asc()).all()
+    
+    # Prepara dati per template
+    lavori_data = []
+    totale_compensi = 0.0
+    
+    for lavoro in lavori:
+        compenso = getattr(lavoro, campo_compenso) or 0.0
+        totale_compensi += compenso
+        
+        # Recupera beni con stato "incassata" o "chiusa" (gli esterni possono fatturare in entrambi i casi)
+        beni_disponibili = []
+        if lavoro.beni_list:
+            for b in lavoro.beni_list:
+                if b.stato in ['incassata', 'chiusa']:
+                    beni_disponibili.append({
+                        'id': b.id,
+                        'descrizione': b.descrizione,
+                        'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
+                    })
+        else:
+            # Se non ci sono beni nella tabella separata, controlla lo stato del lavoro
+            # Se il lavoro ha stato "incassata" o "chiusa", usa il campo concatenato
+            if lavoro.stato in ['incassata', 'chiusa'] and lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ') if ' | ' in lavoro.bene else [lavoro.bene]
+                importo_totale = lavoro.importo_offerta or 0.0
+                importo_per_bene = importo_totale / len(beni_parts) if beni_parts else 0.0
+                for desc in beni_parts:
+                    beni_disponibili.append({
+                        'id': None,
+                        'descrizione': desc.strip(),
+                        'importo': importo_per_bene
+                    })
+        
+        if beni_disponibili:
+            for idx, bene in enumerate(beni_disponibili):
+                lavori_data.append({
+                    'lavoro': lavoro,
+                    'bene': bene,
+                    'compenso': compenso if idx == 0 else None,
+                    'is_first_bene': idx == 0
+                })
+    
+    # Recupera lista nomi disponibili per il filtro (solo se necessario)
+    nomi_disponibili = []
+    if campo_nome:
+        nomi = db.session.query(getattr(LavoroAdmin, campo_nome))\
+            .filter(getattr(LavoroAdmin, campo_nome) != None)\
+            .filter(getattr(LavoroAdmin, campo_nome) != '')\
+            .filter(getattr(LavoroAdmin, campo_compenso) > 0)\
+            .distinct().order_by(getattr(LavoroAdmin, campo_nome)).all()
+        nomi_disponibili = [n[0] for n in nomi]
+    
+    return render_template('main/fatturazione_esterni.html', 
+                         lavori_data=lavori_data,
+                         tipo=tipo,
+                         nome_display=nome_display,
+                         totale_compensi=totale_compensi,
+                         campo_fattura=campo_fattura,
+                         campo_data=campo_data,
+                         campo_nome=campo_nome,
+                         filtro_nome=filtro_nome,
+                         nomi_disponibili=nomi_disponibili)
+
+@bp.route('/api/fatturazione_esterni/salva', methods=['POST'])
+@login_required
+def salva_fatturazione_esterni():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    lavori_ids = data.get('lavori_ids', [])
+    
+    if not numero_fattura:
+        return jsonify({'error': 'Numero fattura richiesto'}), 400
+    
+    tipo_map = {
+        'bianc': ('f_bianc', 'data_fattura_bianc'),
+        'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
+        'revisore': ('f_revisore', 'data_fattura_revisore'),
+        'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'ext': ('f_ext', 'data_fattura_ext')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    data_fattura = datetime.now().date()
+    
+    lavori_aggiornati = LavoroAdmin.query.filter(LavoroAdmin.id.in_(lavori_ids)).all()
+    
+    for lavoro in lavori_aggiornati:
+        setattr(lavoro, campo_fattura, numero_fattura)
+        setattr(lavoro, campo_data, data_fattura)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'lavori_aggiornati': len(lavori_aggiornati),
+        'data_fattura': data_fattura.strftime('%Y-%m-%d')
+    })
+
+@bp.route('/api/fatturazione_esterni/lista/<tipo>')
+@login_required
+def lista_fatture_esterni(tipo):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    tipo_map = {
+        'bianc': ('f_bianc', 'data_fattura_bianc', 'c_bianc'),
+        'deloitte': ('f_deloitte', 'data_fattura_deloitte', 'c_deloitte'),
+        'revisore': ('f_revisore', 'data_fattura_revisore', 'c_revisore'),
+        'caricamento': ('f_caricamento', 'data_fattura_caricamento', 'c_caricamento'),
+        'ext': ('f_ext', 'data_fattura_ext', 'c_ext')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data, campo_compenso = tipo_map[tipo]
+    
+    # Filtro per nome (se necessario)
+    filtro_nome = request.args.get('nome', '').strip()
+    campo_nome_map = {
+        'revisore': 'nome_revisore',
+        'caricamento': 'nome_caricamento',
+        'ext': 'nome_esterno'
+    }
+    campo_nome = campo_nome_map.get(tipo)
+    
+    fatture_dict = {}
+    
+    query = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) != None,
+        getattr(LavoroAdmin, campo_fattura) != ''
+    )
+    
+    if campo_nome and filtro_nome:
+        query = query.filter(getattr(LavoroAdmin, campo_nome) == filtro_nome)
+    
+    lavori = query.all()
+    
+    for lavoro in lavori:
+        num_fattura = getattr(lavoro, campo_fattura)
+        data_fattura = getattr(lavoro, campo_data)
+        compenso = getattr(lavoro, campo_compenso) or 0.0
+        
+        if num_fattura not in fatture_dict:
+            fatture_dict[num_fattura] = {
+                'numero': num_fattura,
+                'data': data_fattura.strftime('%Y-%m-%d') if data_fattura else None,
+                'lavori': [],
+                'totale_compensi': 0.0
+            }
+        
+        beni_list = []
+        if lavoro.beni_list:
+            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+                beni_list.append(bene.descrizione)
+        else:
+            if lavoro.bene:
+                beni_list = [b.strip() for b in lavoro.bene.split(' | ')]
+        
+        fatture_dict[num_fattura]['lavori'].append({
+            'id': lavoro.id,
+            'numero': lavoro.numero,
+            'cliente': lavoro.cliente_nome or '',
+            'beni': beni_list,
+            'compenso': compenso,
+            'importo': lavoro.importo_offerta or 0.0
+        })
+        
+        fatture_dict[num_fattura]['totale_compensi'] += compenso
+    
+    fatture_list = list(fatture_dict.values())
+    fatture_list.sort(key=lambda x: x['data'] or '', reverse=True)
+    
+    return jsonify({'fatture': fatture_list})
+
+@bp.route('/api/fatturazione_esterni/lavori-disponibili/<tipo>')
+@login_required
+def lavori_disponibili_fatturazione_esterni(tipo):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    tipo_map = {
+        'bianc': ('c_bianc', 'f_bianc'),
+        'deloitte': ('c_deloitte', 'f_deloitte'),
+        'revisore': ('c_revisore', 'f_revisore', 'nome_revisore'),
+        'caricamento': ('c_caricamento', 'f_caricamento', 'nome_caricamento'),
+        'ext': ('c_ext', 'f_ext', 'nome_esterno')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_compenso = tipo_map[tipo][0]
+    campo_fattura = tipo_map[tipo][1]
+    campo_nome = tipo_map[tipo][2] if len(tipo_map[tipo]) > 2 else None
+    
+    # Filtro per nome
+    filtro_nome = request.args.get('nome', '').strip()
+    # Parametro opzionale: numero fattura per includere anche i lavori già fatturati con quella fattura
+    numero_fattura_filtro = request.args.get('fattura', '').strip()
+    
+    # Query lavori con stato "incassata" o "chiusa" (gli esterni possono fatturare in entrambi i casi)
+    lavori_ids_disponibili_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
+        Bene.stato.in_(['incassata', 'chiusa'])
+    ).all()]
+    
+    lavori_ids_disponibili_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+        LavoroAdmin.stato.in_(['incassata', 'chiusa'])
+    ).all()]
+    
+    lavori_ids_disponibili = list(set(lavori_ids_disponibili_beni + lavori_ids_disponibili_lavoro))
+    
+    # Se è specificato un numero fattura, includi anche i lavori con quella fattura (anche se già fatturati)
+    lavori_ids_fatturati = []
+    if numero_fattura_filtro:
+        campo_fattura_obj = getattr(LavoroAdmin, campo_fattura)
+        query_fatturati = db.session.query(LavoroAdmin.id).filter(
+            campo_fattura_obj == numero_fattura_filtro,
+            getattr(LavoroAdmin, campo_compenso) > 0
+        )
+        if campo_nome and filtro_nome:
+            query_fatturati = query_fatturati.filter(getattr(LavoroAdmin, campo_nome) == filtro_nome)
+        lavori_ids_fatturati = [row[0] for row in query_fatturati.all()]
+    
+    # Unisci le due liste
+    tutti_ids = list(set(lavori_ids_disponibili + lavori_ids_fatturati))
+    
+    if not tutti_ids:
+        return jsonify({'lavori': []})
+    
+    query = LavoroAdmin.query.filter(
+        LavoroAdmin.id.in_(tutti_ids),
+        getattr(LavoroAdmin, campo_compenso) > 0
+    )
+    
+    if campo_nome and filtro_nome:
+        query = query.filter(getattr(LavoroAdmin, campo_nome) == filtro_nome)
+    
+    lavori = query.order_by(LavoroAdmin.numero.asc()).all()
+    
+    lavori_data = []
+    for lavoro in lavori:
+        # Recupera beni: mostra beni con stato "incassata" o "chiusa" (gli esterni possono fatturare in entrambi i casi)
+        beni_list = []
+        if lavoro.beni_list:
+            for b in lavoro.beni_list:
+                if b.stato in ['incassata', 'chiusa']:
+                    beni_list.append({
+                        'id': b.id,
+                        'descrizione': b.descrizione,
+                        'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
+                    })
+        else:
+            # Se non ci sono beni nella tabella separata, usa il campo concatenato
+            # Solo se il lavoro ha stato "incassata" o "chiusa"
+            if lavoro.stato in ['incassata', 'chiusa'] and lavoro.bene:
+                beni_parts = lavoro.bene.split(' | ') if ' | ' in lavoro.bene else [lavoro.bene]
+                importo_totale = lavoro.importo_offerta or 0.0
+                importo_per_bene = importo_totale / len(beni_parts) if beni_parts else 0.0
+                for desc in beni_parts:
+                    beni_list.append({
+                        'id': None,
+                        'descrizione': desc.strip(),
+                        'importo': importo_per_bene
+                    })
+        
+        # Includi il lavoro se ha beni disponibili
+        if beni_list:
+            compenso = getattr(lavoro, campo_compenso) or 0.0
+            numero_fattura_attuale = getattr(lavoro, campo_fattura)
+            # Converti None in stringa vuota per il frontend
+            if numero_fattura_attuale is None:
+                numero_fattura_attuale = ''
+            else:
+                numero_fattura_attuale = str(numero_fattura_attuale).strip()
+            
+            lavori_data.append({
+                'id': lavoro.id,
+                'numero': lavoro.numero,
+                'cliente': lavoro.cliente_nome or '',
+                'beni': beni_list,
+                'compenso': compenso,
+                'importo_totale': lavoro.importo_offerta or 0.0,
+                'fattura_attuale': numero_fattura_attuale,
+                'stato': lavoro.stato  # Aggiungi lo stato per distinguere incassata da chiusa
+            })
+    
+    return jsonify({'lavori': lavori_data})
+
+@bp.route('/api/fatturazione_esterni/aggiorna', methods=['POST'])
+@login_required
+def aggiorna_fatturazione_esterni():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    vecchio_numero = data.get('vecchio_numero', '').strip()
+    nuovo_numero = data.get('nuovo_numero', '').strip()
+    lavori_ids_inclusi = data.get('lavori_ids_inclusi', [])
+    
+    if not nuovo_numero:
+        return jsonify({'error': 'Numero fattura richiesto'}), 400
+    
+    tipo_map = {
+        'bianc': ('f_bianc', 'data_fattura_bianc'),
+        'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
+        'revisore': ('f_revisore', 'data_fattura_revisore'),
+        'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'ext': ('f_ext', 'data_fattura_ext')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    lavori_con_vecchia_fattura = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) == vecchio_numero
+    ).all()
+    
+    for lavoro in lavori_con_vecchia_fattura:
+        setattr(lavoro, campo_fattura, None)
+        setattr(lavoro, campo_data, None)
+    
+    if lavori_ids_inclusi:
+        lavori_da_aggiornare = LavoroAdmin.query.filter(
+            LavoroAdmin.id.in_(lavori_ids_inclusi)
+        ).all()
+        
+        data_fattura = datetime.now().date()
+        
+        for lavoro in lavori_da_aggiornare:
+            setattr(lavoro, campo_fattura, nuovo_numero)
+            setattr(lavoro, campo_data, data_fattura)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'lavori_aggiornati': len(lavori_ids_inclusi),
+        'data_fattura': datetime.now().date().strftime('%Y-%m-%d')
+    })
+
+@bp.route('/api/fatturazione_esterni/rimuovi-lavoro', methods=['POST'])
+@login_required
+def rimuovi_lavoro_da_fattura_esterni():
+    """Rimuove un lavoro da una fattura esterna e ripristina lo stato a 'incassata'"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    lavoro_id = data.get('lavoro_id')
+    
+    if not numero_fattura or not lavoro_id:
+        return jsonify({'error': 'Parametri mancanti'}), 400
+    
+    tipo_map = {
+        'bianc': ('f_bianc', 'data_fattura_bianc'),
+        'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
+        'revisore': ('f_revisore', 'data_fattura_revisore'),
+        'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'ext': ('f_ext', 'data_fattura_ext')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    # Trova il lavoro
+    lavoro = LavoroAdmin.query.get(lavoro_id)
+    if not lavoro:
+        return jsonify({'error': 'Lavoro non trovato'}), 404
+    
+    # Verifica che il lavoro abbia effettivamente questa fattura
+    fattura_attuale = getattr(lavoro, campo_fattura)
+    if not fattura_attuale or str(fattura_attuale).strip() != numero_fattura:
+        return jsonify({'error': 'Il lavoro non ha questa fattura'}), 400
+    
+    # Rimuovi la fattura
+    setattr(lavoro, campo_fattura, None)
+    setattr(lavoro, campo_data, None)
+    
+    # Ripristina lo stato a "incassata" se era "chiusa"
+    if lavoro.stato == 'chiusa':
+        lavoro.stato = 'incassata'
+        # Ripristina anche lo stato dei beni
+        if lavoro.beni_list:
+            for bene in lavoro.beni_list:
+                if bene.stato == 'chiusa':
+                    bene.stato = 'incassata'
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'messaggio': f'Lavoro rimosso dalla fattura {numero_fattura}. Stato ripristinato a "incassata".'
+    })
+
+@bp.route('/api/fatturazione_esterni/elimina', methods=['POST'])
+@login_required
+def elimina_fattura_esterni():
+    """Elimina un'intera fattura esterna e ripristina tutti i lavori associati a 'incassata'"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    
+    if not numero_fattura:
+        return jsonify({'error': 'Numero fattura mancante'}), 400
+    
+    tipo_map = {
+        'bianc': ('f_bianc', 'data_fattura_bianc'),
+        'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
+        'revisore': ('f_revisore', 'data_fattura_revisore'),
+        'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'ext': ('f_ext', 'data_fattura_ext')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    # Trova tutti i lavori con questa fattura
+    lavori_con_fattura = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) == numero_fattura
+    ).all()
+    
+    if not lavori_con_fattura:
+        return jsonify({'error': 'Nessun lavoro trovato con questa fattura'}), 404
+    
+    # Rimuovi la fattura da tutti i lavori e ripristina lo stato
+    lavori_aggiornati = 0
+    for lavoro in lavori_con_fattura:
+        setattr(lavoro, campo_fattura, None)
+        setattr(lavoro, campo_data, None)
+        
+        # Ripristina lo stato a "incassata" se era "chiusa"
+        if lavoro.stato == 'chiusa':
+            lavoro.stato = 'incassata'
+            # Ripristina anche lo stato dei beni
+            if lavoro.beni_list:
+                for bene in lavoro.beni_list:
+                    if bene.stato == 'chiusa':
+                        bene.stato = 'incassata'
+        
+        # Verifica se il lavoro deve essere riaperto
+        verifica_e_chiudi_lavoro(lavoro)
+        lavori_aggiornati += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'messaggio': f'Fattura {numero_fattura} eliminata. {lavori_aggiornati} lavori sono tornati disponibili per la fatturazione.',
+        'lavori_aggiornati': lavori_aggiornati
+    })
+
+@bp.route('/api/fatturazione/elimina', methods=['POST'])
+@login_required
+def elimina_fattura():
+    """Elimina un'intera fattura e ripristina tutti i lavori associati a 'incassata'"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    
+    if not numero_fattura:
+        return jsonify({'error': 'Numero fattura mancante'}), 400
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin'),
+        'fe': ('f_fe', 'data_fattura_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    # Trova tutti i lavori con questa fattura
+    lavori_con_fattura = LavoroAdmin.query.filter(
+        getattr(LavoroAdmin, campo_fattura) == numero_fattura
+    ).all()
+    
+    if not lavori_con_fattura:
+        return jsonify({'error': 'Nessun lavoro trovato con questa fattura'}), 404
+    
+    # Rimuovi la fattura da tutti i lavori e ripristina lo stato
+    lavori_aggiornati = 0
+    for lavoro in lavori_con_fattura:
+        setattr(lavoro, campo_fattura, None)
+        setattr(lavoro, campo_data, None)
+        
+        # Ripristina lo stato a "incassata" se era "chiusa"
+        if lavoro.stato == 'chiusa':
+            lavoro.stato = 'incassata'
+            # Ripristina anche lo stato dei beni
+            if lavoro.beni_list:
+                for bene in lavoro.beni_list:
+                    if bene.stato == 'chiusa':
+                        bene.stato = 'incassata'
+        
+        # Verifica se il lavoro deve essere riaperto (senza ricalcolare i numeri ad ogni iterazione)
+        # La ricalcolazione verrà fatta una volta alla fine
+        verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=False)
+        lavori_aggiornati += 1
+    
+    # Ricalcola i numeri sequenziali una sola volta dopo tutte le modifiche
+    ricalcola_numeri_sequenziali()
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'messaggio': f'Fattura {numero_fattura} eliminata. {lavori_aggiornati} lavori sono tornati disponibili per la fatturazione.',
+        'lavori_aggiornati': lavori_aggiornati
+    })
+
 @bp.route('/api/fatturazione/lavori-disponibili/<tipo>')
 @login_required
 def lavori_disponibili_fatturazione(tipo):
@@ -1502,62 +2347,97 @@ def lavori_disponibili_fatturazione(tipo):
     
     campo_compenso, campo_fattura = tipo_map[tipo]
     
-    # Query lavori con stato "incassata" e compenso > 0 per questo tipo
-    lavori_ids_incassata_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
-        Bene.stato == 'incassata'
+    # Parametro opzionale: numero fattura per includere anche i lavori già fatturati con quella fattura
+    numero_fattura_filtro = request.args.get('fattura', '').strip()
+    
+    # Query lavori con stato "incassata" o "chiusa" e compenso > 0 per questo tipo
+    # Gli esterni possono fatturare quando il lavoro è "incassata" o "chiusa"
+    lavori_ids_disponibili_beni = [row[0] for row in db.session.query(Bene.lavoro_id).distinct().filter(
+        Bene.stato.in_(['incassata', 'chiusa'])
     ).all()]
     
-    lavori_ids_incassata_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
-        LavoroAdmin.stato == 'incassata'
+    lavori_ids_disponibili_lavoro = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+        LavoroAdmin.stato.in_(['incassata', 'chiusa'])
     ).all()]
     
-    lavori_ids_incassata = list(set(lavori_ids_incassata_beni + lavori_ids_incassata_lavoro))
+    lavori_ids_disponibili = list(set(lavori_ids_disponibili_beni + lavori_ids_disponibili_lavoro))
     
-    if not lavori_ids_incassata:
+    # Se è specificato un numero fattura, includi anche i lavori con stato "chiusa" che hanno quella fattura
+    lavori_ids_chiusa = []
+    if numero_fattura_filtro:
+        campo_fattura_obj = getattr(LavoroAdmin, campo_fattura)
+        lavori_ids_chiusa = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
+            LavoroAdmin.stato == 'chiusa',
+            campo_fattura_obj == numero_fattura_filtro,
+            getattr(LavoroAdmin, campo_compenso) > 0
+        ).all()]
+    
+    # Unisci le due liste
+    tutti_ids = list(set(lavori_ids_incassata + lavori_ids_chiusa))
+    
+    if not tutti_ids:
         return jsonify({'lavori': []})
     
-    # Ottieni tutti i lavori (inclusi quelli già fatturati)
+    # Ottieni tutti i lavori (inclusi quelli già fatturati se specificato numero fattura)
     lavori = LavoroAdmin.query.filter(
-        LavoroAdmin.id.in_(lavori_ids_incassata),
+        LavoroAdmin.id.in_(tutti_ids),
         getattr(LavoroAdmin, campo_compenso) > 0
     ).order_by(LavoroAdmin.numero.asc()).all()
     
     lavori_data = []
     for lavoro in lavori:
-        # Recupera beni con stato "incassata"
-        beni_incassata = []
+        # Recupera beni: se il lavoro è "incassata" mostra solo beni "incassata",
+        # se è "chiusa" mostra tutti i beni (perché sono già stati fatturati)
+        beni_list = []
         if lavoro.beni_list:
             for b in lavoro.beni_list:
-                if b.stato == 'incassata':
-                    beni_incassata.append({
+                # Per lavori incassata: solo beni incassata
+                # Per lavori chiusa: tutti i beni (per mostrare cosa è stato fatturato)
+                if lavoro.stato == 'incassata':
+                    if b.stato == 'incassata':
+                        beni_list.append({
+                            'id': b.id,
+                            'descrizione': b.descrizione,
+                            'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
+                        })
+                else:  # lavoro.stato == 'chiusa'
+                    beni_list.append({
                         'id': b.id,
                         'descrizione': b.descrizione,
                         'importo': getattr(b, 'importo_offerta', 0.0) or 0.0
                     })
         else:
-            if lavoro.stato == 'incassata' and lavoro.bene:
+            # Se non ci sono beni nella tabella separata, usa il campo concatenato
+            if lavoro.bene:
                 beni_parts = lavoro.bene.split(' | ') if ' | ' in lavoro.bene else [lavoro.bene]
                 importo_totale = lavoro.importo_offerta or 0.0
                 importo_per_bene = importo_totale / len(beni_parts) if beni_parts else 0.0
                 for desc in beni_parts:
-                    beni_incassata.append({
+                    beni_list.append({
                         'id': None,
                         'descrizione': desc.strip(),
                         'importo': importo_per_bene
                     })
         
-        if beni_incassata:
+        # Includi il lavoro se ha beni (per incassata) o se è chiusa (già fatturato)
+        if beni_list or lavoro.stato == 'chiusa':
             compenso = getattr(lavoro, campo_compenso) or 0.0
-            numero_fattura_attuale = getattr(lavoro, campo_fattura) or None
+            numero_fattura_attuale = getattr(lavoro, campo_fattura)
+            # Converti None in stringa vuota per il frontend
+            if numero_fattura_attuale is None:
+                numero_fattura_attuale = ''
+            else:
+                numero_fattura_attuale = str(numero_fattura_attuale).strip()
             
             lavori_data.append({
                 'id': lavoro.id,
                 'numero': lavoro.numero,
                 'cliente': lavoro.cliente_nome or '',
-                'beni': beni_incassata,
+                'beni': beni_list,
                 'compenso': compenso,
                 'importo_totale': lavoro.importo_offerta or 0.0,
-                'fattura_attuale': numero_fattura_attuale
+                'fattura_attuale': numero_fattura_attuale,
+                'stato': lavoro.stato  # Aggiungi lo stato per distinguere incassata da chiusa
             })
     
     return jsonify({'lavori': lavori_data})
@@ -1650,9 +2530,12 @@ def aggiorna_fatturazione():
         getattr(LavoroAdmin, campo_fattura) == vecchio_numero
     ).all()
     
+    lavori_modificati_ids = set()
+    
     for lavoro in lavori_con_vecchia_fattura:
         setattr(lavoro, campo_fattura, None)
         setattr(lavoro, campo_data, None)
+        lavori_modificati_ids.add(lavoro.id)
     
     # 2. Aggiungi la nuova fattura ai lavori selezionati
     if lavori_ids_inclusi:
@@ -1665,11 +2548,76 @@ def aggiorna_fatturazione():
         for lavoro in lavori_da_aggiornare:
             setattr(lavoro, campo_fattura, nuovo_numero)
             setattr(lavoro, campo_data, data_fattura)
+            lavori_modificati_ids.add(lavoro.id)
     
+    # 3. Verifica e chiudi automaticamente i lavori modificati (senza ricalcolare i numeri ad ogni iterazione)
+    lavori_modificati = LavoroAdmin.query.filter(LavoroAdmin.id.in_(list(lavori_modificati_ids))).all()
+    for lavoro in lavori_modificati:
+        verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=False)
+    
+    # Ricalcola i numeri sequenziali una sola volta dopo tutte le modifiche
+    ricalcola_numeri_sequenziali()
     db.session.commit()
     
     return jsonify({
         'success': True,
         'lavori_aggiornati': len(lavori_ids_inclusi),
         'data_fattura': datetime.now().date().strftime('%Y-%m-%d')
+    })
+
+@bp.route('/api/fatturazione/rimuovi-lavoro', methods=['POST'])
+@login_required
+def rimuovi_lavoro_da_fattura():
+    """Rimuove un lavoro da una fattura e ripristina lo stato a 'incassata'"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    tipo = data.get('tipo')
+    numero_fattura = data.get('numero_fattura', '').strip()
+    lavoro_id = data.get('lavoro_id')
+    
+    if not numero_fattura or not lavoro_id:
+        return jsonify({'error': 'Parametri mancanti'}), 400
+    
+    tipo_map = {
+        'amin': ('f_amin', 'data_fattura_amin'),
+        'fe': ('f_fe', 'data_fattura_fe'),
+        'galvan': ('f_galvan', 'data_fattura_galvan'),
+        'fh': ('f_fh', 'data_fattura_fh')
+    }
+    
+    if tipo not in tipo_map:
+        return jsonify({'error': 'Tipo non valido'}), 400
+    
+    campo_fattura, campo_data = tipo_map[tipo]
+    
+    # Trova il lavoro
+    lavoro = LavoroAdmin.query.get(lavoro_id)
+    if not lavoro:
+        return jsonify({'error': 'Lavoro non trovato'}), 404
+    
+    # Verifica che il lavoro abbia effettivamente questa fattura
+    fattura_attuale = getattr(lavoro, campo_fattura)
+    if not fattura_attuale or str(fattura_attuale).strip() != numero_fattura:
+        return jsonify({'error': 'Il lavoro non ha questa fattura'}), 400
+    
+    # Rimuovi la fattura
+    setattr(lavoro, campo_fattura, None)
+    setattr(lavoro, campo_data, None)
+    
+    # Ripristina lo stato a "incassata" se era "chiusa"
+    if lavoro.stato == 'chiusa':
+        lavoro.stato = 'incassata'
+        # Ripristina anche lo stato dei beni
+        if lavoro.beni_list:
+            for bene in lavoro.beni_list:
+                if bene.stato == 'chiusa':
+                    bene.stato = 'incassata'
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'messaggio': f'Lavoro rimosso dalla fattura {numero_fattura}. Stato ripristinato a "incassata".'
     })
