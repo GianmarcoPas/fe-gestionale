@@ -1280,8 +1280,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* ROSSO (Abbandonati) */
 .style-red {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-    box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%) !important;
+    box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4) !important;
 }
 
 /* --- BOLLE DECORATIVE (Fixed) --- */
@@ -1754,8 +1754,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* Abbandonato - Rosso/Grigio */
 .stato-abbandonato {
-    background: #ffcdd2;
-    color: #c62828;
+    background: #ffcdd2 !important;
+    color: #c62828 !important;
 }
 
 /* Status pill per stato chiusa e abbandonato (non selezionabili) */
