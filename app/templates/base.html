@@ -64,6 +64,33 @@
     <!-- Toast Notifications Container -->
     <div id="toast-container"></div>
     
+    <!-- Modal Changelog -->
+    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+    <div id="modalChangelog" class="modal-changelog" style="display: none;">
+        <div class="modal-changelog-content">
+            <div class="modal-changelog-header">
+                <div>
+                    <h3 id="changelogTitolo">Novità</h3>
+                    <span class="changelog-versione" id="changelogVersione"></span>
+                </div>
+                <button class="btn-close-modal" onclick="chiudiModalChangelog()">&times;</button>
+            </div>
+            <div class="modal-changelog-body">
+                <div id="changelogContenuto" class="changelog-content"></div>
+            </div>
+            <div class="modal-changelog-footer">
+                <label class="changelog-checkbox-label">
+                    <input type="checkbox" id="changelogDontShow">
+                    <span>Non mostrare più questo changelog</span>
+                </label>
+                <div class="changelog-buttons">
+                    <button class="btn-secondary" onclick="chiudiModalChangelog()">Chiudi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <script>
@@ -132,6 +159,49 @@
                 }, 300);
             }, 4000);
         }
+        
+        // Gestione Changelog (solo per admin)
+        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        function caricaChangelog() {
+            fetch('/api/changelog')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.changelog) {
+                        document.getElementById('changelogTitolo').textContent = data.changelog.titolo;
+                        document.getElementById('changelogVersione').textContent = 'v' + data.changelog.versione + ' • ' + data.changelog.data_pubblicazione;
+                        // Il contenuto può essere HTML, quindi lo inseriamo direttamente
+                        document.getElementById('changelogContenuto').innerHTML = data.changelog.contenuto;
+                        document.getElementById('modalChangelog').setAttribute('data-changelog-id', data.changelog.id);
+                        document.getElementById('modalChangelog').style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento del changelog:', error);
+                });
+        }
+        
+        function chiudiModalChangelog() {
+            const modal = document.getElementById('modalChangelog');
+            const dontShow = document.getElementById('changelogDontShow').checked;
+            const changelogId = modal.getAttribute('data-changelog-id');
+            
+            if (dontShow && changelogId) {
+                // Segna come visto (non mostrare più)
+                fetch('/api/changelog/dismiss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ changelog_id: parseInt(changelogId) })
+                });
+            }
+            
+            modal.style.display = 'none';
+        }
+        
+        // Carica changelog al caricamento della pagina
+        document.addEventListener('DOMContentLoaded', function() {
+            caricaChangelog();
+        });
+        {% endif %}
     </script>
 
 </body>

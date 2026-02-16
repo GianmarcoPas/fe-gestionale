@@ -38,6 +38,40 @@ def create_app():
     with app.app_context():
         db.create_all()
         
+        # Auto-migrazione: aggiunge colonne mancanti alla tabella user
+        try:
+            inspector = db.inspect(db.engine)
+            if inspector.has_table('user'):
+                user_columns = [col['name'] for col in inspector.get_columns('user')]
+                from sqlalchemy import text
+                if 'last_seen_note_id' not in user_columns:
+                    db.session.execute(text('ALTER TABLE user ADD COLUMN last_seen_note_id INTEGER DEFAULT 0'))
+                if 'dismissed_changelog_id' not in user_columns:
+                    db.session.execute(text('ALTER TABLE user ADD COLUMN dismissed_changelog_id INTEGER DEFAULT 0'))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        
+        # Auto-migrazione: crea tabella changelog se non esiste
+        try:
+            inspector = db.inspect(db.engine)
+            if not inspector.has_table('changelog'):
+                from sqlalchemy import text
+                db.session.execute(text('''
+                    CREATE TABLE changelog (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        versione VARCHAR(50) NOT NULL,
+                        titolo VARCHAR(200) NOT NULL,
+                        contenuto TEXT NOT NULL,
+                        data_pubblicazione DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        attivo BOOLEAN DEFAULT 1,
+                        ordine INTEGER DEFAULT 0
+                    )
+                '''))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        
         # Crea utenti admin/base di default SOLO se non esistono
         # NOTA: Non resettiamo le password degli utenti esistenti per evitare problemi su PythonAnywhere
         # Usa init_users.py per resettare manualmente le password quando necessario

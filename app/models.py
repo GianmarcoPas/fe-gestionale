@@ -10,6 +10,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(20), default='base')
     admin_view_mode = db.Column(db.String(20), default='extra2')
+    last_seen_note_id = db.Column(db.Integer, default=0)  # ID dell'ultima nota vista
+    dismissed_changelog_id = db.Column(db.Integer, default=0)  # ID dell'ultimo changelog visto
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -177,3 +179,23 @@ class Lavoro50(db.Model):
     perc_20 = db.Column(db.Boolean, default=False)
     ex_post = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# --- NOTE ADMIN (Note condivise tra admin) ---
+class NoteAdmin(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    contenuto = db.Column(db.Text, nullable=False)
+    autore_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    autore = db.relationship('User', backref='note_admin')
+
+# --- CHANGELOG (Novità e aggiornamenti) ---
+class Changelog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    versione = db.Column(db.String(50), nullable=False)  # Es: "1.0.0" o "2024-02-16"
+    titolo = db.Column(db.String(200), nullable=False)
+    contenuto = db.Column(db.Text, nullable=False)  # Markdown o HTML
+    data_pubblicazione = db.Column(db.DateTime, default=datetime.utcnow)
+    attivo = db.Column(db.Boolean, default=True)  # Se False, non viene mostrato
+    ordine = db.Column(db.Integer, default=0)  # Per ordinare i changelog (più recenti prima)

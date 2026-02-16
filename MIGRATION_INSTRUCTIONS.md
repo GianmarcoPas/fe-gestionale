@@ -126,3 +126,92 @@ Il database sul server non ha ancora le colonne aggiunte per gli utenti base. Se
 - `compenso` (REAL) - Compenso assegnato da Roberto
 
 Lo script è sicuro e può essere eseguito più volte: controlla se le colonne esistono già prima di aggiungerle.
+
+---
+
+## Migrazione: Note Admin + Notifiche nuove note
+
+Crea la tabella `note_admin` per le note condivise tra admin e aggiunge il campo `last_seen_note_id` alla tabella `user` per il sistema di notifica nuove note.
+
+### Passaggi
+
+1. **Vai su PythonAnywhere Dashboard** (https://www.pythonanywhere.com)
+
+2. **Apri una Bash console** (Console tab)
+
+3. **Vai nella directory del progetto:**
+   ```bash
+   cd ~/fe-gestionale
+   ```
+
+4. **Attiva il virtualenv:**
+   ```bash
+   source ~/.virtualenvs/my-venv/bin/activate
+   ```
+
+5. **Esegui lo script di migrazione:**
+   ```bash
+   python migrate_create_note_admin_table.py
+   ```
+
+6. **Verifica che l'output mostri:**
+   ```
+   [OK] Migrazione completata con successo!
+   ```
+
+7. **Ricarica l'applicazione web** (Web tab > Reload)
+
+### Cosa fa lo script
+
+- Crea la tabella `note_admin` con i campi: `id`, `contenuto`, `autore_id`, `created_at`, `updated_at`
+- Aggiunge la colonna `last_seen_note_id` (INTEGER, default 0) alla tabella `user` per tracciare l'ultima nota vista da ciascun admin
+
+Lo script è sicuro e può essere eseguito più volte: controlla se la tabella/colonna esiste già prima di crearla.
+
+---
+
+## Migrazione: Changelog + Sistema Notifiche
+
+Crea la tabella `changelog` per mostrare le novità agli admin e aggiunge il campo `dismissed_changelog_id` alla tabella `user` per tracciare quali changelog sono stati visti.
+
+### Passaggi
+
+1. **Vai su PythonAnywhere Dashboard** (https://www.pythonanywhere.com)
+
+2. **Apri una Bash console** (Console tab)
+
+3. **Vai nella directory del progetto:**
+   ```bash
+   cd ~/fe-gestionale
+   ```
+
+4. **Attiva il virtualenv:**
+   ```bash
+   source ~/.virtualenvs/my-venv/bin/activate
+   ```
+
+5. **Esegui lo script di migrazione:**
+   ```bash
+   python migrate_add_changelog.py
+   ```
+
+6. **Inizializza il primo changelog:**
+   ```bash
+   python init_changelog.py
+   ```
+
+7. **Verifica che l'output mostri:**
+   ```
+   [OK] Migrazione completata con successo!
+   [OK] Changelog creato con successo!
+   ```
+
+8. **Ricarica l'applicazione web** (Web tab > Reload)
+
+### Cosa fa lo script
+
+- Crea la tabella `changelog` con i campi: `id`, `versione`, `titolo`, `contenuto`, `data_pubblicazione`, `attivo`, `ordine`
+- Aggiunge la colonna `dismissed_changelog_id` (INTEGER, default 0) alla tabella `user` per tracciare l'ultimo changelog visto da ciascun admin
+- Crea il primo changelog con le novità di febbraio 2024
+
+Lo script è sicuro e può essere eseguito più volte: controlla se la tabella/colonna esiste già prima di crearla.

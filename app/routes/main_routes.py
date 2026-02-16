@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import func
 from app import db 
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import Lavoro40, Lavoro50, LavoroAdmin, User, Cliente, Bene
+from app.models import Lavoro40, Lavoro50, LavoroAdmin, User, Cliente, Bene, NoteAdmin, Changelog
 from dateutil.relativedelta import relativedelta
 from pathlib import Path
 
@@ -268,11 +268,21 @@ def dashboard():
         ).all()]
         abbandonati = len(set(lavori_ids_abbandonati))
         
+        # Recupera tutte le note per la card (scrollabile)
+        tutte_note = NoteAdmin.query.order_by(NoteAdmin.created_at.desc()).all()
+        
+        # Conta le note non viste dall'utente corrente
+        last_seen = current_user.last_seen_note_id or 0
+        nuove_note_count = NoteAdmin.query.filter(
+            NoteAdmin.id > last_seen,
+            NoteAdmin.autore_id != current_user.id
+        ).count()
+        
         return render_template('main/dashboard.html',
                                role='admin',
                                tot_importo=tot_importo, tot_fe=tot_fe, tot_amin=tot_amin, tot_galvan=tot_galvan, tot_fh=tot_fh,
                                total_lavori=total_lavori, in_corso=in_corso, completati=completati, abbandonati=abbandonati,
-                               timeline=timeline)
+                               timeline=timeline, tutte_note=tutte_note, nuove_note_count=nuove_note_count)
 
     else:
         # TIMELINE BASE (Basata su Lavoro40 + Lavoro50)
@@ -292,6 +302,217 @@ def dashboard():
                                timeline=timeline)
 
 # --- API E ROTTE ADMIN (NUOVE FUNZIONALITÀ) ---
+
+# --- API NOTE ADMIN ---
+@bp.route('/api/note', methods=['GET'])
+@login_required
+def api_note():
+    """Restituisce tutte le note in ordine cronologico (più recenti prima)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    note = NoteAdmin.query.order_by(NoteAdmin.created_at.desc()).all()
+    note_list = []
+    for nota in note:
+        note_list.append({
+            'id': nota.id,
+            'contenuto': nota.contenuto,
+            'autore': nota.autore.username,
+            'created_at': nota.created_at.strftime('%d/%m/%Y %H:%M'),
+            'updated_at': nota.updated_at.strftime('%d/%m/%Y %H:%M') if nota.updated_at else None
+        })
+    
+    return jsonify({'note': note_list})
+
+@bp.route('/api/note', methods=['POST'])
+@login_required
+def api_note_create():
+    """Crea una nuova nota"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    data = request.get_json()
+    contenuto = data.get('contenuto', '').strip()
+    
+    if not contenuto:
+        return jsonify({'error': 'Il contenuto della nota non può essere vuoto'}), 400
+    
+    nuova_nota = NoteAdmin(
+        contenuto=contenuto,
+        autore_id=current_user.id
+    )
+    
+    db.session.add(nuova_nota)
+    db.session.commit()
+    
+    return jsonify({
+        'id': nuova_nota.id,
+        'contenuto': nuova_nota.contenuto,
+        'autore': nuova_nota.autore.username,
+        'created_at': nuova_nota.created_at.strftime('%d/%m/%Y %H:%M'),
+        'updated_at': nuova_nota.updated_at.strftime('%d/%m/%Y %H:%M') if nuova_nota.updated_at else None
+    }), 201
+
+@bp.route('/api/note/<int:note_id>', methods=['PUT'])
+@login_required
+def api_note_update(note_id):
+    """Modifica una nota esistente"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    nota = NoteAdmin.query.get_or_404(note_id)
+    data = request.get_json()
+    contenuto = data.get('contenuto', '').strip()
+    
+    if not contenuto:
+        return jsonify({'error': 'Il contenuto della nota non può essere vuoto'}), 400
+    
+    nota.contenuto = contenuto
+    nota.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': nota.id,
+        'contenuto': nota.contenuto,
+        'autore': nota.autore.username,
+        'created_at': nota.created_at.strftime('%d/%m/%Y %H:%M'),
+        'updated_at': nota.updated_at.strftime('%d/%m/%Y %H:%M') if nota.updated_at else None
+    })
+
+@bp.route('/api/note/<int:note_id>', methods=['DELETE'])
+@login_required
+def api_note_delete(note_id):
+    """Elimina una nota"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    nota = NoteAdmin.query.get_or_404(note_id)
+    db.session.delete(nota)
+    db.session.commit()
+    
+    return jsonify({'message': 'Nota eliminata con successo'}), 200
+
+@bp.route('/api/note/mark-seen', methods=['POST'])
+@login_required
+def api_note_mark_seen():
+    """Segna tutte le note come viste per l'utente corrente"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    ultima_nota = NoteAdmin.query.order_by(NoteAdmin.id.desc()).first()
+    if ultima_nota:
+        current_user.last_seen_note_id = ultima_nota.id
+        db.session.commit()
+    
+    return jsonify({'ok': True})
+
+# --- API CHANGELOG ---
+@bp.route('/api/changelog', methods=['GET'])
+@login_required
+def api_changelog():
+    """Restituisce il changelog più recente non visto dall'utente (solo per admin)"""
+    if current_user.role != 'admin':
+        return jsonify({'changelog': None})
+    
+    # Trova il changelog più recente attivo che l'utente non ha ancora visto
+    dismissed_id = current_user.dismissed_changelog_id or 0
+    changelog = Changelog.query.filter(
+        Changelog.attivo == True,
+        Changelog.id > dismissed_id
+    ).order_by(Changelog.ordine.desc(), Changelog.id.desc()).first()
+    
+    if changelog:
+        return jsonify({
+            'changelog': {
+                'id': changelog.id,
+                'versione': changelog.versione,
+                'titolo': changelog.titolo,
+                'contenuto': changelog.contenuto,
+                'data_pubblicazione': changelog.data_pubblicazione.strftime('%d/%m/%Y')
+            }
+        })
+    
+    return jsonify({'changelog': None})
+
+@bp.route('/api/changelog/dismiss', methods=['POST'])
+@login_required
+def api_changelog_dismiss():
+    """Segna il changelog come visto (non mostrare più)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    data = request.get_json()
+    changelog_id = data.get('changelog_id')
+    
+    if changelog_id:
+        current_user.dismissed_changelog_id = changelog_id
+        db.session.commit()
+    
+    return jsonify({'ok': True})
+
+@bp.route('/api/changelog/all', methods=['GET'])
+@login_required
+def api_changelog_all():
+    """Restituisce tutti i changelog (solo per admin, per gestione)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    changelogs = Changelog.query.order_by(Changelog.ordine.desc(), Changelog.id.desc()).all()
+    changelog_list = []
+    for ch in changelogs:
+        changelog_list.append({
+            'id': ch.id,
+            'versione': ch.versione,
+            'titolo': ch.titolo,
+            'contenuto': ch.contenuto,
+            'data_pubblicazione': ch.data_pubblicazione.strftime('%d/%m/%Y'),
+            'attivo': ch.attivo,
+            'ordine': ch.ordine
+        })
+    
+    return jsonify({'changelogs': changelog_list})
+
+@bp.route('/api/changelog', methods=['POST'])
+@login_required
+def api_changelog_create():
+    """Crea o aggiorna un changelog (solo per admin)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Accesso negato'}), 403
+    
+    data = request.get_json()
+    changelog_id = data.get('id')
+    
+    if changelog_id:
+        # Update
+        changelog = Changelog.query.get_or_404(changelog_id)
+        changelog.versione = data.get('versione', changelog.versione)
+        changelog.titolo = data.get('titolo', changelog.titolo)
+        changelog.contenuto = data.get('contenuto', changelog.contenuto)
+        changelog.attivo = data.get('attivo', changelog.attivo)
+        changelog.ordine = data.get('ordine', changelog.ordine)
+    else:
+        # Create
+        changelog = Changelog(
+            versione=data.get('versione', ''),
+            titolo=data.get('titolo', ''),
+            contenuto=data.get('contenuto', ''),
+            attivo=data.get('attivo', True),
+            ordine=data.get('ordine', 0)
+        )
+        db.session.add(changelog)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': changelog.id,
+        'versione': changelog.versione,
+        'titolo': changelog.titolo,
+        'contenuto': changelog.contenuto,
+        'data_pubblicazione': changelog.data_pubblicazione.strftime('%d/%m/%Y'),
+        'attivo': changelog.attivo,
+        'ordine': changelog.ordine
+    })
 
 @bp.route('/api/clienti')
 @login_required
