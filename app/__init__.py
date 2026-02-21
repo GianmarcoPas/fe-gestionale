@@ -96,4 +96,43 @@ def create_app():
             
         db.session.commit()
 
+        # Auto-seed changelog: aggiunge il nuovo changelog se non esiste
+        try:
+            from app.models import Changelog
+            if not Changelog.query.filter_by(versione="2026-02-21").first():
+                nuovo_changelog = Changelog(
+                    versione="2026-02-21",
+                    titolo="Aggiornamento Dashboard e Fatturazione",
+                    contenuto="""<h4>💰 Fatturazione Differenziata</h4>
+<p>La logica di fatturazione è stata aggiornata per distinguere i diversi soggetti:</p>
+<p><em>...video in arrivo...</em></p>
+
+<h4>📊 Card Fatturazione Aggiornata</h4>
+<p>La card di fatturazione nella dashboard ora mostra informazioni più dettagliate:</p>
+<ul>
+    <li><strong>Lavori da fatturare</strong>: numero di lavori per cui manca ancora la fattura (divisi per soggetto)</li>
+    <li><strong>Lavori incassati</strong>: lavori per cui la fattura è stata emessa e il pagamento ricevuto</li>
+    <li>Visione chiara e immediata dello stato di fatturazione complessivo</li>
+</ul>
+
+<h4>💸 Card Lavori da Incassare</h4>
+<p>Nuova card dedicata ai lavori da incassare:</p>
+<ul>
+    <li>Mostra i lavori per i quali la fattura FE è stata emessa ma il <strong>pagamento non è ancora stato ricevuto</strong></li>
+    <li>Permette di tenere sotto controllo i crediti in sospeso</li>
+</ul>
+
+<h4>🎨 Miglioramenti Layout Dashboard</h4>
+<ul>
+    <li><strong>Card stati lavori riposizionate</strong>: le card che mostrano gli stati dei lavori sono state spostate per migliorare l'utilizzo dello spazio</li>
+    <li>Layout più compatto e leggibile, con le informazioni più importanti in primo piano</li>
+</ul>""",
+                    attivo=True,
+                    ordine=2
+                )
+                db.session.add(nuovo_changelog)
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     return app

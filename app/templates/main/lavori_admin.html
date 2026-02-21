@@ -892,6 +892,7 @@
                               title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            data-previous-value="{{ bene.stato or 'vuoto' }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
                             <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
                             <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
@@ -1225,6 +1226,7 @@
                               title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            data-previous-value="{{ bene.stato or 'vuoto' }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
                             <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
                             <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
@@ -1344,6 +1346,7 @@
                               title="Clicca per vedere il motivo dell'abbandono">Abbandonato</span>
                     {% else %}
                         <select class="status-select stato-{{ (bene.stato or 'vuoto')|replace(' ', '-') }}"
+                            data-previous-value="{{ bene.stato or 'vuoto' }}"
                             onchange="updateBeneStato(this, {{ bene.id or 0 }})" {% if not bene.id %}disabled{% endif %}>
                             <option value="vuoto" {% if (bene.stato or 'vuoto')=='vuoto' %}selected{% endif %}>-</option>
                             <option value="in corso" {% if (bene.stato or '')=='in corso' %}selected{% endif %}>In Corso</option>
@@ -3097,38 +3100,84 @@
     let currentAbbandonoBeneId = null;
     let currentAbbandonoSelect = null;
 
+    // Ordine cronologico degli stati (per rilevare regressioni)
+    const STATI_ORDINE = {
+        'vuoto': 0,
+        'in corso': 1,
+        'da firmare': 2,
+        'pec da inviare': 3,
+        'da fatturare': 4,
+        'da incassare': 5,
+        'incassata': 6,
+        'chiusa': 7
+    };
+    
+    const STATI_NOMI = {
+        'vuoto': 'Vuoto',
+        'in corso': 'In Corso',
+        'da firmare': 'Da Firmare',
+        'pec da inviare': 'Pec da Inviare',
+        'da fatturare': 'Da Fatturare',
+        'da incassare': 'Da Incassare',
+        'incassata': 'Incassata',
+        'chiusa': 'Chiusa'
+    };
+
     async function updateBeneStato(select, beneId) {
         if (!beneId) return;
         
+        const newValue = select.value;
+        const previousValue = select.getAttribute('data-previous-value') || 'vuoto';
+        
         // Se si seleziona "abbandonato", apri la modale invece di salvare direttamente
-        if (select.value === 'abbandonato') {
+        if (newValue === 'abbandonato') {
             currentAbbandonoBeneId = beneId;
             currentAbbandonoSelect = select;
             // Ripristina il valore precedente nel select
-            const previousValue = select.getAttribute('data-previous-value') || 'vuoto';
             select.value = previousValue;
             // Apri la modale
             openAbbandonoModal();
             return;
         }
         
+        // Controlla se si sta tornando a uno stato precedente (regressione)
+        // Il warning si attiva solo se lo stato corrente è uno di questi 4 stati critici
+        const statiConWarning = ['pec da inviare', 'da fatturare', 'da incassare', 'incassata'];
+        const ordinePrec = STATI_ORDINE[previousValue];
+        const ordineNuovo = STATI_ORDINE[newValue];
+        
+        if (statiConWarning.includes(previousValue) && ordinePrec !== undefined && ordineNuovo !== undefined && ordineNuovo < ordinePrec) {
+            const nomePrec = STATI_NOMI[previousValue] || previousValue;
+            const nomeNuovo = STATI_NOMI[newValue] || newValue;
+            
+            const conferma = confirm(
+                `Stai cercando di cambiare lo stato passando ad uno step precedente da "${nomePrec}" a "${nomeNuovo}", sei sicuro?`
+            );
+            
+            if (!conferma) {
+                // Annullato: ripristina il valore precedente
+                select.value = previousValue;
+                return;
+            }
+        }
+        
         // Salva il valore corrente come precedente per il prossimo cambio
-        select.setAttribute('data-previous-value', select.value);
+        select.setAttribute('data-previous-value', newValue);
         
         const res = await fetch(`/update_bene_field/${beneId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ field: 'stato', value: select.value })
+            body: JSON.stringify({ field: 'stato', value: newValue })
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             alert(err.error || 'Errore aggiornamento stato');
             // Ripristina il valore precedente in caso di errore
-            const previousValue = select.getAttribute('data-previous-value') || 'vuoto';
             select.value = previousValue;
+            select.setAttribute('data-previous-value', previousValue);
             return;
         }
-        select.className = 'status-select stato-' + select.value.replace(/ /g, '-');
+        select.className = 'status-select stato-' + newValue.replace(/ /g, '-');
     }
 
     function openAbbandonoModal() {
@@ -4978,6 +5027,26 @@
                 alert('Hai attivato "Caricamento" ma non hai inserito il compenso.');
                 document.getElementById('carVal').focus();
                 return false;
+            }
+        }
+
+        // Validazione Esterno: se origine è "ext", verifica che ci sia un compenso
+        const origineVal = document.getElementById('selOrigine').value;
+        if (origineVal === 'ext') {
+            const extTypeVal = document.getElementById('extType').value;
+            const extValRaw = document.getElementById('extVal').value;
+            let extCompenso = 0;
+            if (extTypeVal === 'euro') {
+                extCompenso = parseCurrency(extValRaw);
+            } else {
+                extCompenso = parseFloat(extValRaw.replace(',', '.')) || 0;
+            }
+            if (extCompenso <= 0) {
+                const conferma = confirm('Hai selezionato "Esterno" come origine ma non hai inserito il compenso per l\'esterno.\n\nVuoi salvare comunque senza compenso per l\'esterno?');
+                if (!conferma) {
+                    document.getElementById('extVal').focus();
+                    return false;
+                }
             }
         }
 

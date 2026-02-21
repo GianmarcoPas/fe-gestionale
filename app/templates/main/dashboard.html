@@ -33,41 +33,78 @@
                         {% endif %}
                     </div>
                     <div class="date" id="displayName">Totale Lavori</div>
+                    <div class="date" id="displayAmount2" style="font-size: 1.2rem; margin-top: 8px; opacity: 0.9;">
+                        {% if tot_importo_da_fatturare is defined %}
+                            € {{ "{:,.2f}".format(tot_importo_da_fatturare).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        {% else %}
+                            € 0,00
+                        {% endif %}
+                    </div>
+                    <div class="date" id="displayName2" style="font-size: 0.75rem; margin-top: 2px;">Da Fatturare</div>
+                    <div class="date" id="displayAmount3" style="font-size: 1.2rem; margin-top: 8px; opacity: 0.9;">
+                        {% if tot_importo_incassata is defined %}
+                            € {{ "{:,.2f}".format(tot_importo_incassata).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        {% else %}
+                            € 0,00
+                        {% endif %}
+                    </div>
+                    <div class="date" id="displayName3" style="font-size: 0.75rem; margin-top: 2px;">Incassati</div>
                 </div>
             </div>
             <div class="days-section">
-                <a href="{{ url_for('main.fatturazione', tipo='fe') }}" class="days-section-link" onmouseenter="updateWidget('FE', '{{ tot_fe }}')" onmouseleave="resetWidget()">
+                <a href="{{ url_for('main.fatturazione', tipo='fe') }}" class="days-section-link" onmouseenter="updateWidget('FE', '{{ tot_fe }}', '{{ tot_fe_incassata }}', '{{ tot_fe_fatturato }}')" onmouseleave="resetWidget()">
                     <button>FE</button>
                 </a>
-                <a href="{{ url_for('main.fatturazione', tipo='amin') }}" class="days-section-link" onmouseenter="updateWidget('AMIN', '{{ tot_amin }}')" onmouseleave="resetWidget()">
+                <a href="{{ url_for('main.fatturazione', tipo='amin') }}" class="days-section-link" onmouseenter="updateWidget('AMIN', '{{ tot_amin }}', '{{ tot_amin_incassata }}', '{{ tot_amin_fatturato }}')" onmouseleave="resetWidget()">
                     <button>AMIN</button>
                 </a>
-                <a href="{{ url_for('main.fatturazione', tipo='galvan') }}" class="days-section-link" onmouseenter="updateWidget('GALV', '{{ tot_galvan }}')" onmouseleave="resetWidget()">
+                <a href="{{ url_for('main.fatturazione', tipo='galvan') }}" class="days-section-link" onmouseenter="updateWidget('GALV', '{{ tot_galvan }}', '{{ tot_galvan_incassata }}', '{{ tot_galvan_fatturato }}')" onmouseleave="resetWidget()">
                     <button>GALV</button>
                 </a>
-                <a href="{{ url_for('main.fatturazione', tipo='fh') }}" class="days-section-link" onmouseenter="updateWidget('FH', '{{ tot_fh }}')" onmouseleave="resetWidget()">
+                <a href="{{ url_for('main.fatturazione', tipo='fh') }}" class="days-section-link" onmouseenter="updateWidget('FH', '{{ tot_fh }}', '{{ tot_fh_incassata }}', '{{ tot_fh_fatturato }}')" onmouseleave="resetWidget()">
                     <button>FH</button>
                 </a>
             </div>
         </div>
 
-        <!-- Card Timeline Lavori -->
-        <div class="card-timeline-compact">
-            <div class="card-header-row">
-                <h4>Timeline Lavori</h4>
-                <span class="badge">{{ timeline[0].label if timeline else 'N/A' }}</span>
-            </div>
-            <div class="timeline-placeholder-compact">
-                {% for item in timeline %}
-                <div class="timeline-row">
-                    <div style="font-size: 0.75rem; font-weight: 600; width: 35px;">{{ item.label }}</div>
-                    <div style="flex: 1; background: #f0f0f0; border-radius: 8px; height: 10px; position: relative; overflow: hidden;">
-                        <div class="fake-bar" style="width: {{ item.width }}%; background: {{ item.color }}; height: 100%; border-radius: 8px;"></div>
+        <!-- Card Stati Lavori Unificata -->
+        <div class="card-stati-lavori-unificata">
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='tutti') }}" class="stato-item-link">
+                <div class="stato-item style-blue-item">
+                    <div class="stato-icon"><i class="bi bi-folder-fill"></i></div>
+                    <div class="stato-content">
+                        <div class="stato-number">{{ total_lavori }}</div>
+                        <div class="stato-label">Totale Lavori</div>
                     </div>
-                    <div style="font-size: 0.7rem; color: #888; width: 25px; text-align: right;">{{ item.count }}</div>
                 </div>
-                {% endfor %}
-            </div>
+            </a>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='in_lavorazione') }}" class="stato-item-link">
+                <div class="stato-item style-orange-item">
+                    <div class="stato-icon"><i class="bi bi-clock-history"></i></div>
+                    <div class="stato-content">
+                        <div class="stato-number">{{ in_corso }}</div>
+                        <div class="stato-label">In Lavorazione</div>
+                    </div>
+                </div>
+            </a>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='completati') }}" class="stato-item-link">
+                <div class="stato-item style-green-item">
+                    <div class="stato-icon"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="stato-content">
+                        <div class="stato-number">{{ completati }}</div>
+                        <div class="stato-label">Completati</div>
+                    </div>
+                </div>
+            </a>
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='abbandonati') }}" class="stato-item-link">
+                <div class="stato-item style-red-item">
+                    <div class="stato-icon"><i class="bi bi-x-circle-fill"></i></div>
+                    <div class="stato-content">
+                        <div class="stato-number">{{ abbandonati }}</div>
+                        <div class="stato-label">Abbandonati</div>
+                    </div>
+                </div>
+            </a>
         </div>
 
         <!-- Card Note -->
@@ -100,67 +137,101 @@
         </div>
     </div>
 
-    <!-- SECONDA RIGA: 4 Card Stato Lavori -->
+    <!-- SECONDA RIGA: Da Incassare (span 2) + Timeline (span 1) -->
     <div class="dashboard-second-row">
-        <a href="{{ url_for('main.lavori_admin', filtro_stato='tutti') }}" style="text-decoration: none; color: inherit;">
-            <div class="card-styled style-blue" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
-                <div class="background-design pos-variant-1">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
+        <!-- Card Da Incassare (occupa 2 colonne) -->
+        <div class="card-incasso-split">
+            <!-- Sezione Superiore: Riepilogo -->
+            <a href="{{ url_for('main.lavori_admin', filtro_stato='da_incassare') }}" class="incasso-top-link">
+                <div class="incasso-top">
+                    <div class="incasso-top-icon">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                    <div class="incasso-top-info">
+                        <div class="incasso-top-number">{{ da_incassare_totale }}</div>
+                        <div class="incasso-top-label">Da Incassare FE</div>
+                    </div>
+                    <div class="incasso-top-amount">
+                        € {{ "{:,.2f}".format(importo_da_incassare).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                    </div>
                 </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-folder-fill"></i></div>
-                    <div class="card-number-large">{{ total_lavori }}</div>
-                    <div class="card-label-large">Totale Lavori</div>
+            </a>
+            <!-- Sezione Inferiore: Solleciti per settimane -->
+            <div class="incasso-bottom">
+                <div class="incasso-week-item incasso-week-2w {% if da_incassare_2w == 0 %}incasso-week-empty{% endif %}" onclick="{% if da_incassare_2w > 0 %}mostraDettagliIncasso(2){% endif %}">
+                    <div class="incasso-week-icon"><i class="bi bi-exclamation-circle"></i></div>
+                    <div class="incasso-week-info">
+                        <span class="incasso-week-count">{{ da_incassare_2w }}</span>
+                        <span class="incasso-week-label">da 2+ sett.</span>
+                    </div>
+                </div>
+                <div class="incasso-week-item incasso-week-3w {% if da_incassare_3w == 0 %}incasso-week-empty{% endif %}" onclick="{% if da_incassare_3w > 0 %}mostraDettagliIncasso(3){% endif %}">
+                    <div class="incasso-week-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="incasso-week-info">
+                        <span class="incasso-week-count">{{ da_incassare_3w }}</span>
+                        <span class="incasso-week-label">da 3+ sett.</span>
+                    </div>
+                </div>
+                <div class="incasso-week-item incasso-week-4w {% if da_incassare_4w == 0 %}incasso-week-empty{% endif %}" onclick="{% if da_incassare_4w > 0 %}mostraDettagliIncasso(4){% endif %}">
+                    <div class="incasso-week-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                    <div class="incasso-week-info">
+                        <span class="incasso-week-count">{{ da_incassare_4w }}</span>
+                        <span class="incasso-week-label">da 4+ sett.</span>
+                    </div>
                 </div>
             </div>
-        </a>
+        </div>
 
-        <a href="{{ url_for('main.lavori_admin', filtro_stato='in_lavorazione') }}" style="text-decoration: none; color: inherit;">
-            <div class="card-styled style-orange" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
-                <div class="background-design pos-variant-2">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-clock-history"></i></div>
-                    <div class="card-number-large">{{ in_corso }}</div>
-                    <div class="card-label-large">In Lavorazione</div>
-                </div>
+        <!-- Card Timeline (stessa dimensione di Note) -->
+        <div class="card-timeline-compact">
+            <div class="card-header-row">
+                <h4>Timeline Lavori</h4>
+                <span class="badge">{{ timeline[0].label if timeline else 'N/A' }}</span>
             </div>
-        </a>
+            <div class="timeline-placeholder-compact">
+                {% for item in timeline %}
+                <div class="timeline-row">
+                    <div style="font-size: 0.75rem; font-weight: 600; width: 35px;">{{ item.label }}</div>
+                    <div style="flex: 1; background: #f0f0f0; border-radius: 8px; height: 10px; position: relative; overflow: hidden;">
+                        <div class="fake-bar" style="width: {{ item.width }}%; background: {{ item.color }}; height: 100%; border-radius: 8px;"></div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: #888; width: 25px; text-align: right;">{{ item.count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 
-        <a href="{{ url_for('main.lavori_admin', filtro_stato='completati') }}" style="text-decoration: none; color: inherit;">
-            <div class="card-styled style-green" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
-                <div class="background-design pos-variant-3">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-check-circle-fill"></i></div>
-                    <div class="card-number-large">{{ completati }}</div>
-                    <div class="card-label-large">Completati</div>
-                </div>
+    <!-- Modal Dettagli Da Incassare -->
+    <div id="modalIncasso" class="modal-note">
+        <div class="modal-note-content modal-incasso-content">
+            <div class="modal-note-header">
+                <h3 id="modalIncassoTitolo">Lavori Da Incassare</h3>
+                <button class="btn-close-modal" onclick="chiudiModalIncasso()">&times;</button>
             </div>
-        </a>
-
-        <a href="{{ url_for('main.lavori_admin', filtro_stato='abbandonati') }}" style="text-decoration: none; color: inherit;">
-            <div class="card-styled style-red" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow=''">
-                <div class="background-design pos-variant-4">
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                    <div class="circle"></div>
-                </div>
-                <div class="card-content-centered">
-                    <div class="card-icon-large"><i class="bi bi-x-circle-fill"></i></div>
-                    <div class="card-number-large">{{ abbandonati }}</div>
-                    <div class="card-label-large">Abbandonati</div>
-                </div>
+            <div class="modal-note-body" style="overflow-x: auto;">
+                <table class="incasso-table" id="incassoTable">
+                    <thead>
+                        <tr>
+                            <th>Cat.</th>
+                            <th>N°</th>
+                            <th>Cliente</th>
+                            <th>Bene/i</th>
+                            <th>Importo</th>
+                            <th>Sp. Amm.</th>
+                            <th>Rev.</th>
+                            <th>Car.</th>
+                            <th>Fattura FE</th>
+                            <th>Data Fatt.</th>
+                            <th>Giorni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incassoTableBody">
+                    </tbody>
+                </table>
+                <div id="incassoEmpty" class="nota-empty" style="display: none;">Nessun lavoro trovato per questo periodo.</div>
             </div>
-        </a>
+        </div>
     </div>
 
     <!-- Modal Note -->
@@ -203,6 +274,10 @@
     <script>
         const defaultAmount = "{% if tot_importo is defined %}€ {{ '{:,.2f}'.format(tot_importo).replace(',', 'X').replace('.', ',').replace('X', '.') }}{% else %}€ 0,00{% endif %}";
         const defaultName = "Totale Lavori";
+        const defaultAmount2 = "{% if tot_importo_da_fatturare is defined %}€ {{ '{:,.2f}'.format(tot_importo_da_fatturare).replace(',', 'X').replace('.', ',').replace('X', '.') }}{% else %}€ 0,00{% endif %}";
+        const defaultName2 = "Da Fatturare";
+        const defaultAmount3 = "{% if tot_importo_incassata is defined %}€ {{ '{:,.2f}'.format(tot_importo_incassata).replace(',', 'X').replace('.', ',').replace('X', '.') }}{% else %}€ 0,00{% endif %}";
+        const defaultName3 = "Incassati";
         
         function formatCurrency(value) {
             // Formatta: € prima, punto per migliaia, virgola per decimali
@@ -220,14 +295,52 @@
             return '€ ' + integerPart + ',' + decimalPart;
         }
         
-        function updateWidget(name, amount) {
-            let formatted = formatCurrency(amount);
-            document.getElementById('displayAmount').innerText = formatted;
+        function updateWidget(name, totale, daFatturare, fatturato) {
+            // Mostra i tre valori per l'azienda
+            document.getElementById('displayAmount').innerText = formatCurrency(totale);
             document.getElementById('displayName').innerText = "Compenso " + name;
+            
+            // Per FE: non mostrare "da fatturare", mostra "-"
+            if (name === 'FE') {
+                document.getElementById('displayAmount2').innerText = '-';
+                document.getElementById('displayName2').innerText = "Da Fatturare";
+            } else {
+                document.getElementById('displayAmount2').innerText = formatCurrency(daFatturare);
+                document.getElementById('displayName2').innerText = "Da Fatturare";
+            }
+            
+            // Aggiungi una terza riga per i fatturati
+            let displayAmount3 = document.getElementById('displayAmount3');
+            let displayName3 = document.getElementById('displayName3');
+            if (!displayAmount3) {
+                const leftSide = document.querySelector('.left-side');
+                displayAmount3 = document.createElement('div');
+                displayAmount3.id = 'displayAmount3';
+                displayAmount3.className = 'date';
+                displayAmount3.style.cssText = 'font-size: 1.2rem; margin-top: 8px; opacity: 0.9;';
+                displayName3 = document.createElement('div');
+                displayName3.id = 'displayName3';
+                displayName3.className = 'date';
+                displayName3.style.cssText = 'font-size: 0.75rem; margin-top: 2px;';
+                leftSide.appendChild(displayAmount3);
+                leftSide.appendChild(displayName3);
+            }
+            displayAmount3.innerText = formatCurrency(fatturato);
+            displayName3.innerText = (name === 'FE') ? "Cassa" : "Fatturato";
         }
         function resetWidget() {
             document.getElementById('displayAmount').innerText = defaultAmount;
             document.getElementById('displayName').innerText = defaultName;
+            document.getElementById('displayAmount2').innerText = defaultAmount2;
+            document.getElementById('displayName2').innerText = defaultName2;
+            document.getElementById('displayAmount3').innerText = defaultAmount3;
+            document.getElementById('displayName3').innerText = defaultName3;
+            const displayAmount4 = document.getElementById('displayAmount4');
+            const displayName4 = document.getElementById('displayName4');
+            if (displayAmount4) {
+                displayAmount4.remove();
+                displayName4.remove();
+            }
         }
 
         // Gestione Note
@@ -445,10 +558,59 @@
             return div.innerHTML;
         }
 
+        // --- GESTIONE MODAL DA INCASSARE ---
+        function mostraDettagliIncasso(settimane) {
+            const titoli = {2: 'Da Incassare — 2+ Settimane', 3: 'Da Incassare — 3+ Settimane', 4: 'Da Incassare — 4+ Settimane'};
+            document.getElementById('modalIncassoTitolo').textContent = titoli[settimane] || 'Lavori Da Incassare';
+            document.getElementById('modalIncasso').style.display = 'flex';
+            document.getElementById('incassoEmpty').style.display = 'none';
+            document.getElementById('incassoTableBody').innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 20px;">Caricamento...</td></tr>';
+
+            fetch('/api/da-incassare?settimane=' + settimane)
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('incassoTableBody');
+                    tbody.innerHTML = '';
+                    if (data.lavori && data.lavori.length > 0) {
+                        document.getElementById('incassoTable').style.display = '';
+                        document.getElementById('incassoEmpty').style.display = 'none';
+                        data.lavori.forEach(l => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="cat-dot" style="background:${l.categoria_colore}" title="${l.categoria_label}"></span></td>
+                                <td><strong>${l.numero || '-'}</strong></td>
+                                <td>${escapeHtml(l.cliente)}</td>
+                                <td class="incasso-beni-cell">${escapeHtml(l.beni)}</td>
+                                <td style="white-space:nowrap;">€ ${Number(l.importo).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                                <td style="text-align:center;">${l.spese_amministrative ? '<i class="bi bi-check-circle-fill" style="color:#00A651"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
+                                <td style="text-align:center;">${l.has_revisore ? '<i class="bi bi-check-circle-fill" style="color:#007AFF"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
+                                <td style="text-align:center;">${l.has_caricamento ? '<i class="bi bi-check-circle-fill" style="color:#ff9f43"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
+                                <td>${escapeHtml(l.fattura_fe)}</td>
+                                <td style="white-space:nowrap;">${l.data_fattura_fe}</td>
+                                <td><span class="giorni-badge giorni-${l.giorni_ritardo >= 28 ? 'critico' : l.giorni_ritardo >= 21 ? 'alto' : 'medio'}">${l.giorni_ritardo}g</span></td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        document.getElementById('incassoTable').style.display = 'none';
+                        document.getElementById('incassoEmpty').style.display = 'block';
+                    }
+                })
+                .catch(err => {
+                    console.error('Errore:', err);
+                    document.getElementById('incassoTableBody').innerHTML = '<tr><td colspan="11" style="text-align:center; color:red;">Errore nel caricamento</td></tr>';
+                });
+        }
+
+        function chiudiModalIncasso() {
+            document.getElementById('modalIncasso').style.display = 'none';
+        }
+
         // Chiudi modal cliccando fuori
         window.onclick = function(event) {
             if (event.target == document.getElementById('modalNote')) chiudiModalNote();
             if (event.target == document.getElementById('modalNuovaNota')) chiudiModalNuovaNota();
+            if (event.target == document.getElementById('modalIncasso')) chiudiModalIncasso();
         }
     </script>
 

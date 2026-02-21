@@ -72,6 +72,7 @@
                 <div>
                     <h3 id="changelogTitolo">Novità</h3>
                     <span class="changelog-versione" id="changelogVersione"></span>
+                    <span class="changelog-counter" id="changelogCounter"></span>
                 </div>
                 <button class="btn-close-modal" onclick="chiudiModalChangelog()">&times;</button>
             </div>
@@ -81,10 +82,16 @@
             <div class="modal-changelog-footer">
                 <label class="changelog-checkbox-label">
                     <input type="checkbox" id="changelogDontShow">
-                    <span>Non mostrare più questo changelog</span>
+                    <span>Non mostrare più i changelog</span>
                 </label>
                 <div class="changelog-buttons">
-                    <button class="btn-secondary" onclick="chiudiModalChangelog()">Chiudi</button>
+                    <button class="btn-secondary" id="btnChangelogIndietro" onclick="changelogIndietro()" style="display:none;">
+                        <i class="bi bi-arrow-left"></i> Indietro
+                    </button>
+                    <button class="btn-secondary" id="btnChangelogAvanti" onclick="changelogAvanti()" style="display:none;">
+                        Avanti <i class="bi bi-arrow-right"></i>
+                    </button>
+                    <button class="btn-secondary" id="btnChangelogChiudi" onclick="chiudiModalChangelog()">Chiudi</button>
                 </div>
             </div>
         </div>
@@ -160,18 +167,19 @@
             }, 4000);
         }
         
-        // Gestione Changelog (solo per admin)
+        // Gestione Changelog con navigazione (solo per admin)
         {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        let changelogList = [];
+        let changelogIndex = 0;
+        
         function caricaChangelog() {
             fetch('/api/changelog')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.changelog) {
-                        document.getElementById('changelogTitolo').textContent = data.changelog.titolo;
-                        document.getElementById('changelogVersione').textContent = 'v' + data.changelog.versione + ' • ' + data.changelog.data_pubblicazione;
-                        // Il contenuto può essere HTML, quindi lo inseriamo direttamente
-                        document.getElementById('changelogContenuto').innerHTML = data.changelog.contenuto;
-                        document.getElementById('modalChangelog').setAttribute('data-changelog-id', data.changelog.id);
+                    if (data.changelogs && data.changelogs.length > 0) {
+                        changelogList = data.changelogs;
+                        changelogIndex = 0;
+                        mostraChangelogCorrente();
                         document.getElementById('modalChangelog').style.display = 'flex';
                     }
                 })
@@ -180,17 +188,84 @@
                 });
         }
         
+        function mostraChangelogCorrente() {
+            const ch = changelogList[changelogIndex];
+            const totale = changelogList.length;
+            const isUltimo = changelogIndex === totale - 1;
+            const isPrimo = changelogIndex === 0;
+            
+            document.getElementById('changelogTitolo').textContent = ch.titolo;
+            document.getElementById('changelogVersione').textContent = 'v' + ch.versione + ' \u2022 ' + ch.data_pubblicazione;
+            document.getElementById('changelogContenuto').innerHTML = ch.contenuto;
+            document.getElementById('modalChangelog').setAttribute('data-changelog-id', ch.id);
+            
+            // Contatore
+            const counter = document.getElementById('changelogCounter');
+            if (totale > 1) {
+                counter.textContent = (changelogIndex + 1) + ' di ' + totale;
+                counter.style.display = 'inline';
+            } else {
+                counter.style.display = 'none';
+            }
+            
+            // Scroll body to top
+            document.querySelector('.modal-changelog-body').scrollTop = 0;
+            
+            // Gestione bottoni
+            const btnIndietro = document.getElementById('btnChangelogIndietro');
+            const btnAvanti = document.getElementById('btnChangelogAvanti');
+            const btnChiudi = document.getElementById('btnChangelogChiudi');
+            
+            if (totale === 1) {
+                // Solo un changelog: mostra solo Chiudi
+                btnIndietro.style.display = 'none';
+                btnAvanti.style.display = 'none';
+                btnChiudi.style.display = 'inline-flex';
+            } else if (isUltimo) {
+                // Ultimo changelog: mostra Indietro + Chiudi
+                btnIndietro.style.display = 'inline-flex';
+                btnAvanti.style.display = 'none';
+                btnChiudi.style.display = 'inline-flex';
+            } else if (isPrimo) {
+                // Primo changelog: mostra solo Avanti
+                btnIndietro.style.display = 'none';
+                btnAvanti.style.display = 'inline-flex';
+                btnChiudi.style.display = 'none';
+            } else {
+                // Changelog intermedio: mostra Indietro + Avanti
+                btnIndietro.style.display = 'inline-flex';
+                btnAvanti.style.display = 'inline-flex';
+                btnChiudi.style.display = 'none';
+            }
+        }
+        
+        function changelogAvanti() {
+            if (changelogIndex < changelogList.length - 1) {
+                changelogIndex++;
+                mostraChangelogCorrente();
+            }
+        }
+        
+        function changelogIndietro() {
+            if (changelogIndex > 0) {
+                changelogIndex--;
+                mostraChangelogCorrente();
+            }
+        }
+        
         function chiudiModalChangelog() {
             const modal = document.getElementById('modalChangelog');
             const dontShow = document.getElementById('changelogDontShow').checked;
-            const changelogId = modal.getAttribute('data-changelog-id');
             
-            if (dontShow && changelogId) {
-                // Segna come visto (non mostrare più)
+            // Prendi l'ID dell'ultimo changelog nella lista (il più recente)
+            const ultimoChangelogId = changelogList.length > 0 ? changelogList[changelogList.length - 1].id : null;
+            
+            if (dontShow && ultimoChangelogId) {
+                // Segna come visto fino all'ultimo changelog (non mostrare più nessuno)
                 fetch('/api/changelog/dismiss', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ changelog_id: parseInt(changelogId) })
+                    body: JSON.stringify({ changelog_id: ultimoChangelogId })
                 });
             }
             

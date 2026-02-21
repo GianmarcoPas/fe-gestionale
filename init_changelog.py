@@ -1,7 +1,7 @@
 """
-Script per inizializzare il primo changelog con le novità di oggi.
+Script per inizializzare i changelog con le novità.
 
-Eseguire questo script per creare il primo changelog:
+Eseguire questo script per creare/aggiornare i changelog:
 python init_changelog.py
 """
 
@@ -13,18 +13,13 @@ app = create_app()
 
 with app.app_context():
     try:
-        # Verifica se esiste già un changelog
-        existing = Changelog.query.first()
-        if existing:
-            print(f"Changelog già esistente: '{existing.titolo}' (ID: {existing.id})")
-            print("Per creare un nuovo changelog, usa l'API o modifica quello esistente.")
-            exit(0)
-        
-        # Crea il primo changelog
-        changelog = Changelog(
-            versione="2024-02-16",
-            titolo="Nuove Funzionalità - Febbraio 2024",
-            contenuto="""<h4>🎯 Gestione Lavori Abbandonati</h4>
+        # Changelog 1 - Febbraio 2024 (originale)
+        existing_1 = Changelog.query.filter_by(versione="2024-02-16").first()
+        if not existing_1:
+            changelog_1 = Changelog(
+                versione="2024-02-16",
+                titolo="Nuove Funzionalità - Febbraio 2024",
+                contenuto="""<h4>🎯 Gestione Lavori Abbandonati</h4>
 <p>È stata aggiunta una nuova funzionalità per gestire i lavori abbandonati:</p>
 <ul>
     <li><strong>Nuovo stato "Abbandonato"</strong>: Ora puoi segnare un bene come abbandonato direttamente dalla tabella lavori</li>
@@ -57,17 +52,54 @@ with app.app_context():
 </ul>
 
 <p><strong>💡 Suggerimento</strong>: Clicca sul pulsante "+" nella card Note per aggiungere una nuova nota, oppure clicca sulla card stessa per vedere tutte le note e gestirle.</p>""",
-            attivo=True,
-            ordine=1
-        )
-        
-        db.session.add(changelog)
+                attivo=True,
+                ordine=1
+            )
+            db.session.add(changelog_1)
+            print("[OK] Changelog v2024-02-16 creato!")
+        else:
+            print("Changelog v2024-02-16 già esistente, skip.")
+
+        # Changelog 2 - Febbraio 2026 (nuovo)
+        existing_2 = Changelog.query.filter_by(versione="2026-02-21").first()
+        if not existing_2:
+            changelog_2 = Changelog(
+                versione="2026-02-21",
+                titolo="Aggiornamento Dashboard e Fatturazione",
+                contenuto="""<h4>💰 Fatturazione Differenziata</h4>
+<p>La logica di fatturazione è stata aggiornata per distinguere i diversi soggetti:</p>
+<p><em>...video in arrivo...</em></p>
+
+<h4>📊 Card Fatturazione Aggiornata</h4>
+<p>La card di fatturazione nella dashboard ora mostra informazioni più dettagliate:</p>
+<ul>
+    <li><strong>Lavori da fatturare</strong>: numero di lavori per cui manca ancora la fattura (divisi per soggetto)</li>
+    <li><strong>Lavori incassati</strong>: lavori per cui la fattura è stata emessa e il pagamento ricevuto</li>
+    <li>Visione chiara e immediata dello stato di fatturazione complessivo</li>
+</ul>
+
+<h4>💸 Card Lavori da Incassare</h4>
+<p>Nuova card dedicata ai lavori da incassare:</p>
+<ul>
+    <li>Mostra i lavori per i quali la fattura FE è stata emessa ma il <strong>pagamento non è ancora stato ricevuto</strong></li>
+    <li>Permette di tenere sotto controllo i crediti in sospeso</li>
+</ul>
+
+<h4>🎨 Miglioramenti Layout Dashboard</h4>
+<ul>
+    <li><strong>Card stati lavori riposizionate</strong>: le card che mostrano gli stati dei lavori sono state spostate per migliorare l'utilizzo dello spazio</li>
+    <li>Layout più compatto e leggibile, con le informazioni più importanti in primo piano</li>
+</ul>""",
+                attivo=True,
+                ordine=2
+            )
+            db.session.add(changelog_2)
+            print("[OK] Changelog v2026-02-21 creato!")
+        else:
+            print("Changelog v2026-02-21 già esistente, skip.")
+
         db.session.commit()
-        
-        print(f"[OK] Changelog creato con successo!")
-        print(f"     Titolo: {changelog.titolo}")
-        print(f"     Versione: {changelog.versione}")
-        print(f"     ID: {changelog.id}")
+        print("\n[OK] Inizializzazione changelog completata con successo!")
         
     except Exception as e:
         db.session.rollback()

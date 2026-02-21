@@ -127,6 +127,7 @@
         padding: 15px;
         border-bottom: 1px solid #eee;
         font-size: 0.9rem;
+        vertical-align: top;
     }
     
     .fatturazione-table tbody tr:hover {
@@ -135,6 +136,31 @@
     
     .fatturazione-table tbody tr.selected {
         background: #e3f2fd;
+    }
+    
+    .bene-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+    }
+    
+    .bene-row:not(:last-child) {
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 6px;
+        margin-bottom: 4px;
+    }
+    
+    .bene-nome {
+        flex: 1;
+        color: var(--text-dark);
+    }
+    
+    .bene-importo {
+        font-weight: 500;
+        color: #555;
+        white-space: nowrap;
+        margin-left: 15px;
     }
     
     .fatturazione-input-group {
@@ -545,38 +571,27 @@
                 <th>N°</th>
                 <th>Cliente</th>
                 <th>Beni</th>
-                <th>Importo</th>
                 <th>Compenso {{ nome_display }}</th>
             </tr>
         </thead>
         <tbody>
             {% for item in lavori_data %}
-            <tr data-lavoro-id="{{ item.lavoro.id }}" {% if not item.is_first_bene %}style="background-color: #fafafa;"{% endif %}>
+            <tr data-lavoro-id="{{ item.lavoro.id }}">
                 <td class="checkbox-cell">
                     <input type="checkbox" class="lavoro-checkbox" value="{{ item.lavoro.id }}" onchange="updateSelectedCount()">
                 </td>
+                <td style="font-weight: 600;">{{ loop.index }}</td>
+                <td>{{ item.lavoro.cliente_nome or '-' }}</td>
                 <td>
-                    {% if item.is_first_bene %}
-                        {{ item.lavoro.numero }}
-                    {% else %}
-                        <span style="color: #999;">└</span>
-                    {% endif %}
+                    {% for bene in item.beni %}
+                    <div class="bene-row">
+                        <span class="bene-nome">{{ bene.descrizione }}</span>
+                        <span class="bene-importo">€ {{ "{:,.2f}".format(bene.importo).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
+                    </div>
+                    {% endfor %}
                 </td>
-                <td>
-                    {% if item.is_first_bene %}
-                        {{ item.lavoro.cliente_nome or '-' }}
-                    {% else %}
-                        <span style="color: #999;">-</span>
-                    {% endif %}
-                </td>
-                <td>{{ item.bene.descrizione }}</td>
-                <td>€ {{ "{:,.2f}".format(item.bene.importo).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td style="font-weight: 600; color: var(--primary);">
-                    {% if item.compenso is not none %}
-                        € {{ "{:,.2f}".format(item.compenso).replace(",", "X").replace(".", ",").replace("X", ".") }}
-                    {% else %}
-                        <span style="color: #999;">-</span>
-                    {% endif %}
+                    € {{ "{:,.2f}".format(item.compenso).replace(",", "X").replace(".", ",").replace("X", ".") }}
                 </td>
             </tr>
             {% endfor %}
@@ -750,56 +765,8 @@
         .then(data => {
             if (data.success) {
                 showToast(`Fattura ${numeroFattura} salvata su ${data.lavori_aggiornati} lavori`, 'success');
-                
-                const lavoriFatturati = Array.from(selectedLavori);
-                
-                document.getElementById('numeroFattura').value = '';
-                document.querySelectorAll('.lavoro-checkbox').forEach(cb => cb.checked = false);
-                document.getElementById('selectAll').checked = false;
-                selectedLavori.clear();
-                
-                const sezioneLavori = document.querySelector('.fatturazione-section:first-of-type');
-                const sezioneFatture = document.getElementById('sezioneFattureEmesse');
-                
-                if (sezioneFatture && sezioneLavori && sezioneLavori !== sezioneFatture) {
-                    const tabellaLavori = sezioneLavori.querySelector('.fatturazione-table');
-                    if (tabellaLavori) {
-                        const tbodyLavori = tabellaLavori.querySelector('tbody');
-                        if (tbodyLavori) {
-                            lavoriFatturati.forEach(id => {
-                                const rows = tbodyLavori.querySelectorAll(`tr[data-lavoro-id="${id}"]`);
-                                rows.forEach(row => row.remove());
-                            });
-                            
-                            updateSelectedCount();
-                            
-                            const remainingRows = tbodyLavori.querySelectorAll('tr');
-                            if (remainingRows.length === 0) {
-                                tbodyLavori.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">Nessun lavoro da fatturare</td></tr>';
-                                const countEl = document.getElementById('countLavori');
-                                if (countEl) {
-                                    countEl.textContent = '0';
-                                }
-                            } else {
-                                const countEl = document.getElementById('countLavori');
-                                if (countEl) {
-                                    countEl.textContent = remainingRows.length;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                setTimeout(() => {
-                    try {
-                        caricaFattureEmesse();
-                    } catch (error) {
-                        console.error('Errore nel caricamento delle fatture:', error);
-                        setTimeout(() => {
-                            caricaFattureEmesse();
-                        }, 500);
-                    }
-                }, 100);
+                // Ricarica la pagina per aggiornare tutto
+                setTimeout(() => { window.location.reload(); }, 1000);
             } else {
                 showToast(data.error || 'Errore nel salvataggio', 'error');
                 btn.disabled = false;
@@ -816,9 +783,7 @@
     
     function caricaFattureEmesse() {
         const sezioneFatture = document.getElementById('sezioneFattureEmesse');
-        if (!sezioneFatture) {
-            return;
-        }
+        if (!sezioneFatture) return;
         
         const container = document.getElementById('fattureEmesseList');
         if (!container) {
@@ -826,9 +791,7 @@
             return;
         }
         
-        if (!sezioneFatture.contains(container)) {
-            return;
-        }
+        if (!sezioneFatture.contains(container)) return;
         
         const currentContent = container.innerHTML.trim();
         if (!currentContent || currentContent.includes('Caricamento fatture') || currentContent.includes('hourglass')) {
@@ -842,17 +805,11 @@
         
         fetch(url)
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`Errore HTTP: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
             return response.json();
         })
         .then(data => {
-            if (!data) {
-                throw new Error('Nessun dato ricevuto dal server');
-            }
-            
-            if (!data.fatture) {
+            if (!data || !data.fatture) {
                 const containerCheck = document.getElementById('fattureEmesseList');
                 if (containerCheck) {
                     containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel formato dei dati</p></div>';
@@ -861,9 +818,7 @@
             }
             
             const containerCheck = document.getElementById('fattureEmesseList');
-            if (!containerCheck) {
-                return;
-            }
+            if (!containerCheck) return;
             
             if (data.fatture.length > 0) {
                 containerCheck.innerHTML = '';
@@ -891,10 +846,9 @@
                             ${fattura.lavori.map(lavoro => `
                                 <div class="lavoro-item">
                                     <div class="lavoro-item-header">
-                                        <span class="lavoro-numero">Lavoro #${lavoro.numero}</span>
+                                        <span class="lavoro-numero">${lavoro.cliente}</span>
                                         <span class="lavoro-compenso">€ ${formatCurrency(lavoro.compenso)}</span>
                                     </div>
-                                    <div class="lavoro-item-cliente">${lavoro.cliente}</div>
                                     <div class="lavoro-item-beni">${lavoro.beni.join(', ')}</div>
                                 </div>
                             `).join('')}
@@ -908,14 +862,10 @@
         })
         .catch(error => {
             console.error('Errore nel caricamento delle fatture:', error);
-            
             if (container) {
                 container.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel caricamento delle fatture. Riprovo...</p></div>';
             }
-            
-            setTimeout(() => {
-                caricaFattureEmesse();
-            }, 2000);
+            setTimeout(() => { caricaFattureEmesse(); }, 2000);
         });
     }
     
@@ -932,28 +882,19 @@
         try {
             const sezioneFatture = document.getElementById('sezioneFattureEmesse');
             const container = document.getElementById('fattureEmesseList');
-            
             if (sezioneFatture && container) {
                 caricaFattureEmesse();
             } else {
                 setTimeout(initCaricaFatture, 100);
             }
         } catch (error) {
-            console.error('Errore nell\'inizializzazione del caricamento fatture:', error);
-            setTimeout(() => {
-                try {
-                    caricaFattureEmesse();
-                } catch (e) {
-                    console.error('Errore nel secondo tentativo:', e);
-                }
-            }, 500);
+            console.error('Errore nell\'inizializzazione:', error);
+            setTimeout(() => { caricaFattureEmesse(); }, 500);
         }
     }
     
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            initCaricaFatture();
-        });
+        document.addEventListener('DOMContentLoaded', initCaricaFatture);
     } else {
         initCaricaFatture();
     }
@@ -975,7 +916,6 @@
         fatturaCorrente = numeroFattura;
         document.getElementById('modalNumeroFattura').value = numeroFattura;
         document.getElementById('modalModificaFattura').classList.add('active');
-        
         caricaLavoriDisponibili(numeroFattura);
     }
     
@@ -1024,8 +964,6 @@
         });
         
         Object.values(lavoriUnici).forEach(lavoro => {
-            // Verifica se questo lavoro è già incluso nella fattura
-            // Confronta come stringhe, gestendo null/undefined e spazi
             const fatturaAttuale = (lavoro.fattura_attuale || '').toString().trim();
             const numeroFatturaTrim = (numeroFattura || '').toString().trim();
             const isIncluso = fatturaAttuale === numeroFatturaTrim && fatturaAttuale !== '';
@@ -1050,10 +988,9 @@
                        onchange="updateModalSelected()">
                 <div class="modal-lavoro-info">
                     <div class="modal-lavoro-numero">
-                        Lavoro #${lavoro.numero}
+                        ${lavoro.cliente}
                         ${isChiusa && isIncluso ? '<span style="color: #2e7d32; font-size: 0.75rem; margin-left: 8px;">(Chiusa)</span>' : ''}
                     </div>
-                    <div class="modal-lavoro-cliente">${lavoro.cliente}</div>
                     <div class="modal-lavoro-beni">${beniList}</div>
                 </div>
                 <div class="modal-lavoro-importi">
@@ -1070,12 +1007,7 @@
     function updateModalSelected() {
         const btn = document.getElementById('btnSalvaModifica');
         const input = document.getElementById('modalNumeroFattura');
-        
-        if (input.value.trim()) {
-            btn.disabled = false;
-        } else {
-            btn.disabled = true;
-        }
+        btn.disabled = !input.value.trim();
     }
     
     function salvaModificaFattura() {
@@ -1118,10 +1050,7 @@
             if (data.success) {
                 showToast(`Fattura ${nuovoNumero} aggiornata su ${data.lavori_aggiornati} lavori`, 'success');
                 chiudiModalModifica();
-                
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                setTimeout(() => { window.location.reload(); }, 1000);
             } else {
                 showToast(data.error || 'Errore nel salvataggio', 'error');
                 btn.disabled = false;
@@ -1142,8 +1071,6 @@
     }
     
     function eliminaFatturaEsterni(numeroFattura) {
-        const tipo = '{{ tipo }}';
-        
         if (!confirm(`Sei sicuro di voler eliminare l'intera fattura ${numeroFattura}? Tutti i lavori associati torneranno disponibili per la fatturazione.`)) {
             return;
         }
@@ -1162,12 +1089,7 @@
         .then(data => {
             if (data.success) {
                 showToast(`Fattura ${numeroFattura} eliminata. I lavori sono tornati disponibili per la fatturazione.`, 'success');
-                // Ricarica la lista delle fatture emesse
-                setTimeout(() => {
-                    caricaFattureEmesse();
-                    // Ricarica anche la pagina per aggiornare i lavori disponibili
-                    window.location.reload();
-                }, 500);
+                setTimeout(() => { window.location.reload(); }, 500);
             } else {
                 showToast(data.error || 'Errore nell\'eliminazione', 'error');
             }

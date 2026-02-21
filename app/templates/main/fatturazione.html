@@ -97,6 +97,7 @@
         padding: 15px;
         border-bottom: 1px solid #eee;
         font-size: 0.9rem;
+        vertical-align: top;
     }
     
     .fatturazione-table tbody tr:hover {
@@ -105,6 +106,49 @@
     
     .fatturazione-table tbody tr.selected {
         background: #e3f2fd;
+    }
+    
+    .bene-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+    }
+    
+    .bene-row:not(:last-child) {
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 6px;
+        margin-bottom: 4px;
+    }
+    
+    .bene-nome {
+        flex: 1;
+        color: var(--text-dark);
+    }
+    
+    .bene-importo {
+        font-weight: 500;
+        color: #555;
+        white-space: nowrap;
+        margin-left: 15px;
+    }
+    
+    .badge-sp-amm {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .badge-sp-amm.si {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+    
+    .badge-sp-amm.no {
+        background: #fce4ec;
+        color: #c62828;
     }
     
     .fatturazione-input-group {
@@ -490,8 +534,8 @@
     </div>
 </div>
 
-<div class="fatturazione-section">
-    <h2>Lavori con Stato "Incassata"</h2>
+<div class="fatturazione-section" id="sezioneLavoriDaFatturare">
+    <h2>{% if is_fe %}Lavori con Stato "Da Fatturare"{% else %}Lavori con Stato "Incassata"{% endif %}</h2>
     
     {% if lavori_data %}
     <table class="fatturazione-table">
@@ -503,38 +547,39 @@
                 <th>N°</th>
                 <th>Cliente</th>
                 <th>Beni</th>
-                <th>Importo</th>
+                {% if is_fe %}
+                <th>Sp. Amm.</th>
+                {% endif %}
                 <th>Compenso {{ nome_display }}</th>
             </tr>
         </thead>
         <tbody>
             {% for item in lavori_data %}
-            <tr data-lavoro-id="{{ item.lavoro.id }}" {% if not item.is_first_bene %}style="background-color: #fafafa;"{% endif %}>
+            <tr data-lavoro-id="{{ item.lavoro.id }}">
                 <td class="checkbox-cell">
                     <input type="checkbox" class="lavoro-checkbox" value="{{ item.lavoro.id }}" onchange="updateSelectedCount()">
                 </td>
+                <td style="font-weight: 600;">{{ loop.index }}</td>
+                <td>{{ item.lavoro.cliente_nome or '-' }}</td>
                 <td>
-                    {% if item.is_first_bene %}
-                        {{ item.lavoro.numero }}
+                    {% for bene in item.beni %}
+                    <div class="bene-row">
+                        <span class="bene-nome">{{ bene.descrizione }}</span>
+                        <span class="bene-importo">€ {{ "{:,.2f}".format(bene.importo).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
+                    </div>
+                    {% endfor %}
+                </td>
+                {% if is_fe %}
+                <td style="text-align: center;">
+                    {% if item.spese_amministrative %}
+                        <span class="badge-sp-amm si">Sì</span>
                     {% else %}
-                        <span style="color: #999;">└</span>
+                        <span class="badge-sp-amm no">No</span>
                     {% endif %}
                 </td>
-                <td>
-                    {% if item.is_first_bene %}
-                        {{ item.lavoro.cliente_nome or '-' }}
-                    {% else %}
-                        <span style="color: #999;">-</span>
-                    {% endif %}
-                </td>
-                <td>{{ item.bene.descrizione }}</td>
-                <td>€ {{ "{:,.2f}".format(item.bene.importo).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                {% endif %}
                 <td style="font-weight: 600; color: var(--primary);">
-                    {% if item.compenso is not none %}
-                        € {{ "{:,.2f}".format(item.compenso).replace(",", "X").replace(".", ",").replace("X", ".") }}
-                    {% else %}
-                        <span style="color: #999;">-</span>
-                    {% endif %}
+                    € {{ "{:,.2f}".format(item.compenso).replace(",", "X").replace(".", ",").replace("X", ".") }}
                 </td>
             </tr>
             {% endfor %}
@@ -553,7 +598,7 @@
     {% else %}
     <div class="empty-state">
         <i class="bi bi-inbox"></i>
-        <p>Nessun lavoro con stato "incassata" e compenso {{ nome_display }} > 0</p>
+        <p>Nessun lavoro {% if is_fe %}con stato "da fatturare"{% else %}con stato "incassata"{% endif %} e compenso {{ nome_display }} > 0</p>
     </div>
     {% endif %}
 </div>
@@ -638,6 +683,7 @@
 
 <script>
     const tipo = '{{ tipo }}';
+    const isFe = {{ 'true' if is_fe else 'false' }};
     let selectedLavori = new Set();
     
     function toggleAll(checkbox) {
@@ -678,20 +724,17 @@
             }
         }
         
-        // Aggiorna count lavori selezionati
         const countEl = document.getElementById('countLavori');
         if (countEl) {
             if (count > 0) {
                 countEl.textContent = count + ' selezionati';
             } else {
-                // Ripristina il conteggio originale dei lavori totali
                 const totalRows = document.querySelectorAll('.lavoro-checkbox').length;
                 countEl.textContent = totalRows;
             }
         }
     }
     
-    // Aggiungi listener solo se l'input esiste (potrebbe non esistere se non ci sono lavori da fatturare)
     const numeroFatturaInput = document.getElementById('numeroFattura');
     if (numeroFatturaInput) {
         numeroFatturaInput.addEventListener('input', updateSelectedCount);
@@ -730,70 +773,10 @@
             if (data.success) {
                 showToast(`Fattura ${numeroFattura} salvata su ${data.lavori_aggiornati} lavori`, 'success');
                 
-                // Salva gli ID dei lavori fatturati prima di pulire selectedLavori
-                const lavoriFatturati = Array.from(selectedLavori);
-                
-                // Reset form
-                document.getElementById('numeroFattura').value = '';
-                document.querySelectorAll('.lavoro-checkbox').forEach(cb => cb.checked = false);
-                document.getElementById('selectAll').checked = false;
-                selectedLavori.clear();
-                
-                // Rimuovi tutte le righe dei lavori fatturati dalla lista
-                // IMPORTANTE: Usa un selettore molto specifico per NON toccare la sezione "Fatture Emesse"
-                // Cerca SOLO la sezione "Lavori con Stato 'Incassata'" (la prima sezione)
-                const sezioneLavori = document.querySelector('.fatturazione-section:first-of-type');
-                const sezioneFatture = document.getElementById('sezioneFattureEmesse');
-                
-                // Verifica che la sezione fatture esista e non venga toccata
-                if (sezioneFatture && sezioneLavori && sezioneLavori !== sezioneFatture) {
-                    const tabellaLavori = sezioneLavori.querySelector('.fatturazione-table');
-                    if (tabellaLavori) {
-                        const tbodyLavori = tabellaLavori.querySelector('tbody');
-                        if (tbodyLavori) {
-                            lavoriFatturati.forEach(id => {
-                                // Rimuovi tutte le righe associate a questo lavoro (potrebbero esserci più righe per più beni)
-                                const rows = tbodyLavori.querySelectorAll(`tr[data-lavoro-id="${id}"]`);
-                                rows.forEach(row => row.remove());
-                            });
-                            
-                            // Aggiorna il conteggio
-                            updateSelectedCount();
-                            
-                            // Se non ci sono più lavori, mostra il messaggio vuoto
-                            const remainingRows = tbodyLavori.querySelectorAll('tr');
-                            if (remainingRows.length === 0) {
-                                tbodyLavori.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">Nessun lavoro da fatturare</td></tr>';
-                                // Aggiorna anche il conteggio nella card summary
-                                const countEl = document.getElementById('countLavori');
-                                if (countEl) {
-                                    countEl.textContent = '0';
-                                }
-                            } else {
-                                // Aggiorna il conteggio nella card summary
-                                const countEl = document.getElementById('countLavori');
-                                if (countEl) {
-                                    countEl.textContent = remainingRows.length;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // IMPORTANTE: Ricarica lista fatture SEMPRE, indipendentemente dalla rimozione dei lavori
-                // Questo deve essere eseguito anche se non ci sono lavori da fatturare
-                // Usa un timeout per assicurarsi che venga eseguito dopo tutte le altre operazioni
+                // Ricarica la pagina per aggiornare tutto
                 setTimeout(() => {
-                    try {
-                        caricaFattureEmesse();
-                    } catch (error) {
-                        console.error('Errore nel caricamento delle fatture:', error);
-                        // Anche in caso di errore, prova a ricaricare le fatture
-                        setTimeout(() => {
-                            caricaFattureEmesse();
-                        }, 500);
-                    }
-                }, 100);
+                    window.location.reload();
+                }, 1000);
             } else {
                 showToast(data.error || 'Errore nel salvataggio', 'error');
                 btn.disabled = false;
@@ -809,32 +792,17 @@
     }
     
     function caricaFattureEmesse() {
-        console.log('[DEBUG] caricaFattureEmesse chiamata');
-        
-        // Verifica che la sezione esista ancora nel DOM
         const sezioneFatture = document.getElementById('sezioneFattureEmesse');
-        if (!sezioneFatture) {
-            console.error('[DEBUG] Sezione fatture emesse non trovata nel DOM');
-            return;
-        }
+        if (!sezioneFatture) return;
         
         const container = document.getElementById('fattureEmesseList');
         if (!container) {
-            console.error('[DEBUG] Container fattureEmesseList non trovato');
-            // Riprova dopo un breve delay
             setTimeout(caricaFattureEmesse, 200);
             return;
         }
         
-        // Verifica che il container sia ancora dentro la sezione (non sia stato rimosso)
-        if (!sezioneFatture.contains(container)) {
-            console.error('[DEBUG] Container fattureEmesseList non è più dentro la sezione');
-            return;
-        }
+        if (!sezioneFatture.contains(container)) return;
         
-        console.log('[DEBUG] Chiamata API per caricare fatture');
-        
-        // Mostra stato di caricamento solo se il container è vuoto o mostra ancora "Caricamento fatture..."
         const currentContent = container.innerHTML.trim();
         if (!currentContent || currentContent.includes('Caricamento fatture') || currentContent.includes('hourglass')) {
             container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento fatture...</p></div>';
@@ -842,21 +810,11 @@
         
         fetch(`/api/fatturazione/lista/${tipo}`)
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`Errore HTTP: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
             return response.json();
         })
         .then(data => {
-            console.log('[DEBUG] Dati ricevuti dall\'API:', data);
-            
-            if (!data) {
-                throw new Error('Nessun dato ricevuto dal server');
-            }
-            
-            if (!data.fatture) {
-                console.warn('[DEBUG] Risposta API senza campo fatture:', data);
-                // Verifica che il container esista ancora
+            if (!data || !data.fatture) {
                 const containerCheck = document.getElementById('fattureEmesseList');
                 if (containerCheck) {
                     containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel formato dei dati</p></div>';
@@ -864,17 +822,11 @@
                 return;
             }
             
-            // Verifica che il container esista ancora prima di modificarlo
             const containerCheck = document.getElementById('fattureEmesseList');
-            if (!containerCheck) {
-                console.error('[DEBUG] Container non trovato durante l\'aggiornamento');
-                return;
-            }
-            
-            console.log('[DEBUG] Numero fatture trovate:', data.fatture.length);
+            if (!containerCheck) return;
             
             if (data.fatture.length > 0) {
-                container.innerHTML = '';
+                containerCheck.innerHTML = '';
                 data.fatture.forEach(fattura => {
                     const item = document.createElement('div');
                     item.className = 'fattura-item';
@@ -899,34 +851,26 @@
                             ${fattura.lavori.map(lavoro => `
                                 <div class="lavoro-item">
                                     <div class="lavoro-item-header">
-                                        <span class="lavoro-numero">Lavoro #${lavoro.numero}</span>
+                                        <span class="lavoro-numero">${lavoro.cliente}</span>
                                         <span class="lavoro-compenso">€ ${formatCurrency(lavoro.compenso)}</span>
                                     </div>
-                                    <div class="lavoro-item-cliente">${lavoro.cliente}</div>
                                     <div class="lavoro-item-beni">${lavoro.beni.join(', ')}</div>
                                 </div>
                             `).join('')}
                         </div>
                     `;
-                    container.appendChild(item);
+                    containerCheck.appendChild(item);
                 });
             } else {
-                container.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessuna fattura emessa</p></div>';
+                containerCheck.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>Nessuna fattura emessa</p></div>';
             }
         })
         .catch(error => {
             console.error('Errore nel caricamento delle fatture:', error);
-            
-            // Mostra messaggio di errore
             if (container) {
                 container.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Errore nel caricamento delle fatture. Riprovo...</p></div>';
             }
-            
-            // Riprova dopo 2 secondi
-            setTimeout(() => {
-                console.log('Tentativo di ricaricare le fatture...');
-                caricaFattureEmesse();
-            }, 2000);
+            setTimeout(() => { caricaFattureEmesse(); }, 2000);
         });
     }
     
@@ -940,58 +884,34 @@
     }
     
     // Carica fatture emesse al caricamento della pagina
-    // Usa multiple strategie per assicurarsi che venga sempre eseguito
     function initCaricaFatture() {
-        console.log('[DEBUG] initCaricaFatture chiamata');
         try {
             const sezioneFatture = document.getElementById('sezioneFattureEmesse');
             const container = document.getElementById('fattureEmesseList');
-            
             if (sezioneFatture && container) {
-                console.log('[DEBUG] Sezione e container trovati, carico fatture');
                 caricaFattureEmesse();
             } else {
-                console.warn('[DEBUG] Sezione o container non trovati, riprovo tra 100ms');
-                // Se il container non esiste ancora, riprova dopo un breve delay
                 setTimeout(initCaricaFatture, 100);
             }
         } catch (error) {
-            console.error('Errore nell\'inizializzazione del caricamento fatture:', error);
-            // Riprova dopo un delay
-            setTimeout(() => {
-                try {
-                    caricaFattureEmesse();
-                } catch (e) {
-                    console.error('Errore nel secondo tentativo:', e);
-                }
-            }, 500);
+            console.error('Errore nell\'inizializzazione:', error);
+            setTimeout(() => { caricaFattureEmesse(); }, 500);
         }
     }
     
-    // Esegui quando il DOM è pronto
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[DEBUG] DOMContentLoaded, inizializzo caricamento fatture');
-            initCaricaFatture();
-        });
+        document.addEventListener('DOMContentLoaded', initCaricaFatture);
     } else {
-        // DOM già caricato, esegui immediatamente
-        console.log('[DEBUG] DOM già caricato, inizializzo immediatamente');
         initCaricaFatture();
     }
     
-    // Backup: esegui anche dopo un breve delay per sicurezza
     setTimeout(() => {
-        console.log('[DEBUG] Timeout backup, verifico se devo ricaricare');
         const container = document.getElementById('fattureEmesseList');
         if (container) {
             const content = container.innerHTML.trim();
             if (content.includes('Caricamento fatture') || content.includes('hourglass') || content === '') {
-                console.log('[DEBUG] Container ancora in caricamento o vuoto, ricarico');
                 caricaFattureEmesse();
             }
-        } else {
-            console.warn('[DEBUG] Container non trovato nel timeout backup');
         }
     }, 1000);
     
@@ -1016,8 +936,6 @@
         fatturaCorrente = numeroFattura;
         document.getElementById('modalNumeroFattura').value = numeroFattura;
         document.getElementById('modalModificaFattura').classList.add('active');
-        
-        // Carica tutti i lavori disponibili
         caricaLavoriDisponibili(numeroFattura);
     }
     
@@ -1031,13 +949,10 @@
         const container = document.getElementById('modalLavoriList');
         container.innerHTML = '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>Caricamento lavori...</p></div>';
         
-        // Passa il numero fattura come parametro per includere anche i lavori già fatturati con quella fattura
         fetch(`/api/fatturazione/lavori-disponibili/${tipo}?fattura=${encodeURIComponent(numeroFattura)}`)
         .then(response => response.json())
         .then(data => {
             tuttiLavoriDisponibili = data.lavori || [];
-            console.log('[DEBUG] Numero fattura da cercare:', numeroFattura);
-            console.log('[DEBUG] Lavori caricati:', tuttiLavoriDisponibili.map(l => ({id: l.id, numero: l.numero, fattura_attuale: l.fattura_attuale, stato: l.stato})));
             mostraLavoriNelModal(numeroFattura);
         })
         .catch(error => {
@@ -1056,7 +971,6 @@
         
         container.innerHTML = '';
         
-        // Raggruppa i lavori per ID per evitare duplicati
         const lavoriUnici = {};
         tuttiLavoriDisponibili.forEach(lavoro => {
             if (!lavoriUnici[lavoro.id]) {
@@ -1065,19 +979,14 @@
         });
         
         Object.values(lavoriUnici).forEach(lavoro => {
-            // Verifica se questo lavoro è già incluso nella fattura
-            // Confronta come stringhe, gestendo null/undefined e spazi
             const fatturaAttuale = (lavoro.fattura_attuale || '').toString().trim();
             const numeroFatturaTrim = (numeroFattura || '').toString().trim();
             const isIncluso = fatturaAttuale === numeroFatturaTrim && fatturaAttuale !== '';
             const isChiusa = lavoro.stato === 'chiusa';
             
-            console.log(`[DEBUG] Lavoro #${lavoro.numero}: fattura_attuale="${fatturaAttuale}", numeroFattura="${numeroFatturaTrim}", isIncluso=${isIncluso}, stato=${lavoro.stato}`);
-            
             const item = document.createElement('div');
             item.className = 'modal-lavoro-item';
             
-            // Mostra tutti i beni separati da virgola
             const beniList = lavoro.beni && lavoro.beni.length > 0 
                 ? lavoro.beni.map(b => b.descrizione).join(', ')
                 : 'Nessun bene';
@@ -1094,10 +1003,9 @@
                        onchange="updateModalSelected()">
                 <div class="modal-lavoro-info">
                     <div class="modal-lavoro-numero">
-                        Lavoro #${lavoro.numero}
+                        ${lavoro.cliente}
                         ${isChiusa && isIncluso ? '<span style="color: #2e7d32; font-size: 0.75rem; margin-left: 8px;">(Chiusa)</span>' : ''}
                     </div>
-                    <div class="modal-lavoro-cliente">${lavoro.cliente}</div>
                     <div class="modal-lavoro-beni">${beniList}</div>
                 </div>
                 <div class="modal-lavoro-importi">
@@ -1112,15 +1020,9 @@
     }
     
     function updateModalSelected() {
-        // Aggiorna il pulsante salva
         const btn = document.getElementById('btnSalvaModifica');
         const input = document.getElementById('modalNumeroFattura');
-        
-        if (input.value.trim()) {
-            btn.disabled = false;
-        } else {
-            btn.disabled = true;
-        }
+        btn.disabled = !input.value.trim();
     }
     
     function salvaModificaFattura() {
@@ -1136,7 +1038,6 @@
             return;
         }
         
-        // Raccogli tutti i lavori selezionati (unici per ID)
         const checkboxes = document.querySelectorAll('.modal-lavoro-checkbox:checked');
         const lavoriSelezionati = new Set();
         checkboxes.forEach(cb => {
@@ -1164,11 +1065,7 @@
             if (data.success) {
                 showToast(`Fattura ${nuovoNumero} aggiornata su ${data.lavori_aggiornati} lavori`, 'success');
                 chiudiModalModifica();
-                
-                // Ricarica la pagina per aggiornare le liste
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                setTimeout(() => { window.location.reload(); }, 1000);
             } else {
                 showToast(data.error || 'Errore nel salvataggio', 'error');
                 btn.disabled = false;
@@ -1183,15 +1080,12 @@
         });
     }
     
-    // Aggiorna il pulsante quando si modifica il numero fattura (solo se il modal esiste)
     const modalNumeroFatturaInput = document.getElementById('modalNumeroFattura');
     if (modalNumeroFatturaInput) {
         modalNumeroFatturaInput.addEventListener('input', updateModalSelected);
     }
     
     function eliminaFattura(numeroFattura) {
-        const tipo = '{{ tipo }}';
-        
         if (!confirm(`Sei sicuro di voler eliminare l'intera fattura ${numeroFattura}? Tutti i lavori associati torneranno disponibili per la fatturazione.`)) {
             return;
         }
@@ -1210,12 +1104,7 @@
         .then(data => {
             if (data.success) {
                 showToast(`Fattura ${numeroFattura} eliminata. I lavori sono tornati disponibili per la fatturazione.`, 'success');
-                // Ricarica la lista delle fatture emesse
-                setTimeout(() => {
-                    caricaFattureEmesse();
-                    // Ricarica anche la pagina per aggiornare i lavori disponibili
-                    window.location.reload();
-                }, 500);
+                setTimeout(() => { window.location.reload(); }, 500);
             } else {
                 showToast(data.error || 'Errore nell\'eliminazione', 'error');
             }
