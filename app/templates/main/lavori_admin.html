@@ -622,6 +622,33 @@
     #focusTable thead th.gruppo-esterni:nth-child(23) {
         background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
     }
+
+    /* ============================================================
+       ROW HOVER HIGHLIGHT – illumina riga lavoro + beni collegati
+       (tabella principale + overlay compensi/fatture/procacciatori)
+       ============================================================ */
+    .oneui-table tbody tr > td {
+        transition: background-color 0.15s ease;
+    }
+
+    /* Regola base per la tabella principale */
+    tr.row-hover-highlight > td {
+        background: rgba(0, 122, 255, 0.08) !important;
+    }
+
+    /* Override overlay (specificity > #id .class element element) */
+    #overlayCompensi .overlay-table tbody tr.row-hover-highlight > td,
+    #overlayFatture .overlay-table tbody tr.row-hover-highlight > td,
+    #overlayProcacciatori .overlay-table tbody tr.row-hover-highlight > td {
+        background: rgba(0, 122, 255, 0.08) !important;
+    }
+
+    /* Override focus table colonne compensi e fatture */
+    #focusTable tbody tr.row-hover-highlight > td,
+    #focusTable tbody tr.row-hover-highlight > td.gruppo-interni,
+    #focusTable tbody tr.row-hover-highlight > td.gruppo-esterni {
+        background: rgba(0, 122, 255, 0.08) !important;
+    }
 </style>
 
 <div class="header-section">
@@ -5238,6 +5265,51 @@
     }
     {% endif %}
 
+    /* ==========================================================
+       ROW HOVER HIGHLIGHT – evidenzia tutte le righe dello stesso
+       lavoro (data-id) in tabella principale + overlay aperti
+       ========================================================== */
+    (function initRowHoverHighlight() {
+        let currentHighlightId = null;
+
+        function highlightRows(lavoroId) {
+            if (currentHighlightId === lavoroId) return;
+            clearHighlight();
+            if (!lavoroId) return;
+            currentHighlightId = lavoroId;
+            const rows = document.querySelectorAll('tr[data-id="' + lavoroId + '"]');
+            rows.forEach(function(r) { r.classList.add('row-hover-highlight'); });
+        }
+
+        function clearHighlight() {
+            if (!currentHighlightId) return;
+            const rows = document.querySelectorAll('tr.row-hover-highlight');
+            rows.forEach(function(r) { r.classList.remove('row-hover-highlight'); });
+            currentHighlightId = null;
+        }
+
+        // Usa event delegation su tutto il documento per catturare
+        // sia la tabella principale sia le tabelle overlay
+        document.addEventListener('mouseover', function(e) {
+            var tr = e.target.closest('tbody tr[data-id]');
+            if (tr) {
+                highlightRows(tr.getAttribute('data-id'));
+            }
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var tr = e.target.closest('tbody tr[data-id]');
+            if (tr) {
+                var related = e.relatedTarget;
+                // Se il mouse si sposta su un'altra cella della stessa riga, ignora
+                if (related && related.closest && related.closest('tbody tr[data-id]')) {
+                    var newId = related.closest('tbody tr[data-id]').getAttribute('data-id');
+                    if (newId === tr.getAttribute('data-id')) return;
+                }
+                clearHighlight();
+            }
+        });
+    })();
 
 </script>
 

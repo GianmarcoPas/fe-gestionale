@@ -246,6 +246,19 @@
         background-color: #f5f5f5;
         color: #666;
     }
+
+    /* ROW HOVER HIGHLIGHT – illumina riga lavoro + beni collegati */
+    .oneui-table tbody tr > td {
+        transition: background-color 0.15s ease;
+    }
+    tr.row-hover-highlight > td {
+        background: rgba(0, 122, 255, 0.08) !important;
+    }
+    /* Override per righe ready-to-work (specificità alta) */
+    .oneui-table tbody tr.row-hover-highlight td,
+    .oneui-table tbody tr.row-hover-highlight.ready-to-work td {
+        background: rgba(0, 122, 255, 0.08) !important;
+    }
 </style>
 
 <div class="header-section">
@@ -950,6 +963,46 @@
             }
         }
     });
+
+    /* ROW HOVER HIGHLIGHT – evidenzia tutte le righe dello stesso lavoro */
+    (function initRowHoverHighlight() {
+        let currentHighlightId = null;
+
+        function highlightRows(lavoroId) {
+            if (currentHighlightId === lavoroId) return;
+            clearHighlight();
+            if (!lavoroId) return;
+            currentHighlightId = lavoroId;
+            const rows = document.querySelectorAll('tr[data-id="' + lavoroId + '"]');
+            rows.forEach(function(r) { r.classList.add('row-hover-highlight'); });
+        }
+
+        function clearHighlight() {
+            if (!currentHighlightId) return;
+            const rows = document.querySelectorAll('tr.row-hover-highlight');
+            rows.forEach(function(r) { r.classList.remove('row-hover-highlight'); });
+            currentHighlightId = null;
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            var tr = e.target.closest('tbody tr[data-id]');
+            if (tr) {
+                highlightRows(tr.getAttribute('data-id'));
+            }
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var tr = e.target.closest('tbody tr[data-id]');
+            if (tr) {
+                var related = e.relatedTarget;
+                if (related && related.closest && related.closest('tbody tr[data-id]')) {
+                    var newId = related.closest('tbody tr[data-id]').getAttribute('data-id');
+                    if (newId === tr.getAttribute('data-id')) return;
+                }
+                clearHighlight();
+            }
+        });
+    })();
 </script>
 
 {% endblock %}
