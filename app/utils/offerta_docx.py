@@ -238,6 +238,36 @@ def _populate_beni_table(doc: Document, beni: list[dict[str, Any]]) -> None:
             table._tbl.remove(row._tr)
 
 
+def _remove_paragraphs_matching(doc: Document, patterns: list[str]) -> None:
+    """
+    Rimuove dal documento i paragrafi il cui testo contiene almeno uno dei
+    pattern indicati (confronto case-insensitive).
+    Cerca sia nel corpo del documento sia dentro le celle di tutte le tabelle.
+    """
+    # Paragrafi nel corpo del documento
+    for p in list(doc.paragraphs):
+        text = (p.text or "").lower()
+        for pat in patterns:
+            if pat.lower() in text:
+                parent = p._element.getparent()
+                if parent is not None:
+                    parent.remove(p._element)
+                break
+
+    # Paragrafi dentro le tabelle (incluse tabelle annidate)
+    for table in _iter_all_tables(doc):
+        for row in table.rows:
+            for cell in row.cells:
+                for p in list(cell.paragraphs):
+                    text = (p.text or "").lower()
+                    for pat in patterns:
+                        if pat.lower() in text:
+                            parent = p._element.getparent()
+                            if parent is not None:
+                                parent.remove(p._element)
+                            break
+
+
 def generate_offerta_docx(
     template_path: Path,
     *,
@@ -270,6 +300,16 @@ def generate_offerta_docx(
 
     _replace_everywhere(doc, mapping)
     _populate_beni_table(doc, beni)
+
+    # ── Rimuovi righe relative a caricamento / revisione se importo è 0 ──
+    caricamento_val = float(importo_caricamento or 0)
+    revisione_val = float(importo_revisione or 0)
+
+    if caricamento_val == 0:
+        _remove_paragraphs_matching(doc, ["pto c)"])
+
+    if revisione_val == 0:
+        _remove_paragraphs_matching(doc, ["pto d)"])
 
     buf = BytesIO()
     doc.save(buf)

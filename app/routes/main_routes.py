@@ -132,7 +132,10 @@ def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
     base_name = f"Prev. First Eng_{sanitize_filename(cliente_nome)}_{tipo_suffix}"
     if rev_to_use > 0:
         base_name = f"{base_name} (Rev. {rev_to_use})"
-    download_name = f"{base_name}.docx"
+
+    # Prefisso data AAAAMMGG del giorno di generazione / revisione offerta
+    date_prefix = today.strftime("%Y%m%d")
+    download_name = f"{date_prefix}_{base_name}.docx"
 
     resp = send_file(
         buf,

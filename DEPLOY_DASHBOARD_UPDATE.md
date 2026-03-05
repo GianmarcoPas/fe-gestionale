@@ -1,5 +1,7 @@
 # Guida Completa: Deploy Aggiornamento Dashboard e Nuove Funzionalità
 
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
 Questa guida spiega come portare sul server PythonAnywhere tutte le modifiche fatte da quando abbiamo ridisposto la dashboard.
 
 ## 📋 Riepilogo Modifiche
