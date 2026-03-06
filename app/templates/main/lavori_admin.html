@@ -1590,7 +1590,7 @@
 </div>
 
 <div id="addModal" class="modal-overlay">
-    <div class="modal-glass modal-large">
+    <div id="addModalFormBox" class="modal-glass modal-large" data-categoria="">
         <div class="modal-header">
             <h3 id="modalTitle">Nuovo Lavoro</h3>
             <button class="btn-close" onclick="closeAddModal()"><i class="bi bi-x-lg"></i></button>
@@ -2105,6 +2105,14 @@
         }
     });
 
+    /* Campi numerici/valuta: al focus se il valore è 0 / 0,00 seleziona tutto per poter digitare subito */
+    document.getElementById('formAddLavoro').addEventListener('focusin', function(e) {
+        const t = e.target;
+        if (t.tagName === 'INPUT' && (t.classList.contains('currency-input') || t.classList.contains('small-input') || ['revVal','carVal','extVal','inputRevisione'].includes(t.id))) {
+            selectAllIfZero(t);
+        }
+    });
+
     /* ==================== FORMATTAZIONE VALUTA (MANUALE E FORZATA) ==================== */
 
     function parseCurrency(value) {
@@ -2134,6 +2142,15 @@
 
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         return parts.join(',');
+    }
+
+    /** Al focus, se il valore è solo zero (0 / 0,00 / 0.00) seleziona tutto così si può digitare subito senza cancellare */
+    function selectAllIfZero(input) {
+        if (!input || input.tagName !== 'INPUT') return;
+        const v = (input.value || '').trim();
+        if (v === '0' || v === '0,00' || v === '0.00') {
+            input.select();
+        }
     }
 
     function formatCurrencyInput(input) {
@@ -4363,6 +4380,7 @@
             };
             const categoriaLabel = categoria ? ` - ${categoriaLabels[categoria] || categoria}` : '';
             document.getElementById('modalTitle').textContent = `Modifica Lavoro #${data.numero}${categoriaLabel}`;
+            setFormBoxCategoria(categoria);
             
             // Reset del form
             document.getElementById('formAddLavoro').reset();
@@ -4653,6 +4671,9 @@
                         parseCurrency(document.getElementById('c_caricamento').value) || 0
                     );
                 }
+                
+                // Per 4.0 OLD la revisione non è prevista: spegni e blocca il flag
+                applyRevisioneLockForCategoria(categoria);
             }, 100);
             
         } catch (error) {
@@ -4693,6 +4714,7 @@
             document.getElementById('categoriaInput').value = '';
             document.getElementById('modalTitle').textContent = 'Nuovo Lavoro';
         }
+        setFormBoxCategoria(categoria);
         
         // Nascondi pulsanti categoria (solo per nuovo lavoro)
         document.getElementById('categoriaButtonsSection').style.display = 'none';
@@ -4719,6 +4741,8 @@
 
         toggleSpese();
         toggleExtInput();
+        // Per nuovo lavoro 4.0 OLD: revisione spenta e bloccata
+        applyRevisioneLockForCategoria(categoria || '');
     }
     
     function openCategoryModal() {
@@ -4748,8 +4772,14 @@
         }, 200);
     }
     
+    function setFormBoxCategoria(categoria) {
+        const box = document.getElementById('addModalFormBox');
+        if (box) box.setAttribute('data-categoria', (categoria || '').toLowerCase());
+    }
+
     function selectCategoria(categoria) {
         document.getElementById('categoriaInput').value = categoria;
+        setFormBoxCategoria(categoria);
         // Aggiorna lo stato attivo dei pulsanti
         document.querySelectorAll('.category-select-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -4757,6 +4787,9 @@
                 btn.classList.add('active');
             }
         });
+        
+        // Per 4.0 OLD la revisione non è prevista: spegni e blocca il flag
+        applyRevisioneLockForCategoria(categoria);
         
         // Aggiorna il titolo
         const lavoroId = document.getElementById('lavoroId').value;
@@ -4770,10 +4803,37 @@
             document.getElementById('modalTitle').textContent = `Modifica Lavoro #${lavoroId} - ${categoriaLabels[categoria] || categoria}`;
         }
     }
+    
+    /** Per lavori 4.0 OLD la revisione non è prevista: checkbox revisione spenta e disabilitata */
+    function applyRevisioneLockForCategoria(categoria) {
+        const chk = document.getElementById('chkRevisione');
+        const divImp = document.getElementById('divImportoRevisione');
+        const impRev = document.getElementById('impRevisione');
+        const revOpt = document.getElementById('revOptions');
+        const fieldRev = document.getElementById('fieldRev');
+        const isOld = (categoria || '').toLowerCase() === 'old';
+        if (!chk) return;
+        if (isOld) {
+            chk.checked = false;
+            chk.disabled = true;
+            if (divImp) divImp.style.display = 'none';
+            if (impRev) impRev.value = formatCurrency(0);
+            if (revOpt) revOpt.style.display = 'none';
+            if (fieldRev) fieldRev.style.display = 'none';
+            const togglesRevCar = document.getElementById('togglesRevCar');
+            const hasCar = document.getElementById('chkCaricamento').checked;
+            const isExt = document.getElementById('selOrigine').value === 'ext';
+            if (togglesRevCar) togglesRevCar.style.display = (hasCar || isExt) ? 'flex' : 'none';
+            calcolaCompensi();
+        } else {
+            chk.disabled = false;
+            toggleSpese(); // riapplica visibilità in base a has_revisore/has_caricamento
+        }
+    }
 
     function closeAddModal() {
         document.getElementById('addModal').classList.remove('active');
-
+        setFormBoxCategoria('');
         // --- FIX: RIATTIVA LO SCROLL DELLA PAGINA ---
         document.body.style.overflow = '';
         // --------------------------------------------

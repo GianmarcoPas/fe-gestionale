@@ -2197,6 +2197,67 @@ input:checked + .slider:before { transform: translateX(22px); }
     width: 95%;
 }
 
+/* Cornice e tonalità categoria sul form inserimento/modifica lavoro (bianco resta dominante) */
+#addModalFormBox[data-categoria="old"] {
+    border: 4px solid #9c27b0;
+    background: #fefbff; /* bianco con leggerissima tonalità viola */
+}
+#addModalFormBox[data-categoria="old"] .form-section {
+    background: #fefbff;
+    border-color: rgba(156, 39, 176, 0.15);
+}
+#addModalFormBox[data-categoria="old"] .one-ui-input,
+#addModalFormBox[data-categoria="old"] input.one-ui-input,
+#addModalFormBox[data-categoria="old"] select.one-ui-input {
+    background: #fdfaff;
+    border-color: rgba(156, 39, 176, 0.2);
+}
+
+#addModalFormBox[data-categoria="iperamm"] {
+    border: 4px solid #00A651;
+    background: #f8fffc;
+}
+#addModalFormBox[data-categoria="iperamm"] .form-section {
+    background: #f8fffc;
+    border-color: rgba(0, 166, 81, 0.15);
+}
+#addModalFormBox[data-categoria="iperamm"] .one-ui-input,
+#addModalFormBox[data-categoria="iperamm"] input.one-ui-input,
+#addModalFormBox[data-categoria="iperamm"] select.one-ui-input {
+    background: #f2fcf7;
+    border-color: rgba(0, 166, 81, 0.2);
+}
+
+#addModalFormBox[data-categoria="rsid"] {
+    border: 4px solid #007AFF;
+    background: #f8fbff;
+}
+#addModalFormBox[data-categoria="rsid"] .form-section {
+    background: #f8fbff;
+    border-color: rgba(0, 122, 255, 0.15);
+}
+#addModalFormBox[data-categoria="rsid"] .one-ui-input,
+#addModalFormBox[data-categoria="rsid"] input.one-ui-input,
+#addModalFormBox[data-categoria="rsid"] select.one-ui-input {
+    background: #f2f8ff;
+    border-color: rgba(0, 122, 255, 0.2);
+}
+
+#addModalFormBox[data-categoria="varie"] {
+    border: 4px solid #ff9f43;
+    background: #fffdf8;
+}
+#addModalFormBox[data-categoria="varie"] .form-section {
+    background: #fffdf8;
+    border-color: rgba(255, 159, 67, 0.2);
+}
+#addModalFormBox[data-categoria="varie"] .one-ui-input,
+#addModalFormBox[data-categoria="varie"] input.one-ui-input,
+#addModalFormBox[data-categoria="varie"] select.one-ui-input {
+    background: #fffaf5;
+    border-color: rgba(255, 159, 67, 0.25);
+}
+
 .form-section {
     background: #ffffff;       /* Sfondo BIANCO invece di grigio */
     padding: 20px;
