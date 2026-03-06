@@ -698,19 +698,29 @@
                     <label>Stato</label>
                     <select id="filterStato" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
                         <option value="">Tutti</option>
+                        <option value="in corso">In Corso</option>
+                        <option value="da firmare">Da Firmare</option>
                         <option value="vuoto">Vuoto</option>
                         <option value="pec da inviare">Pec da Inviare</option>
                         <option value="da fatturare">Da Fatturare</option>
                         <option value="da incassare">Da Incassare</option>
                         <option value="incassata">Incassata</option>
+                        <option value="completati" {% if filtro_stato == 'completati' %}selected{% endif %}>Completati</option>
+                        <option value="abbandonati" {% if filtro_stato == 'abbandonati' %}selected{% endif %}>Abbandonati</option>
                     </select>
                 </div>
                 
                 <!-- Filtro Collaboratore -->
                 <div class="filter-group">
                     <label>Collaboratore</label>
-                    <input type="text" id="filterCollaboratore" class="one-ui-input" placeholder="Cerca collaboratore..." 
-                           oninput="applyFilters()" style="width: 100%;">
+                    <select id="filterCollaboratore" class="one-ui-input" onchange="applyFilters()" style="width: 100%;">
+                        <option value="">Tutti</option>
+                        <option value="Passiatore">Passiatore</option>
+                        <option value="Fortin">Fortin</option>
+                        <option value="Simonetti">Simonetti</option>
+                        <option value="Lanzillotta">Lanzillotta</option>
+                        <option value="Ulivi">Ulivi</option>
+                    </select>
                 </div>
                 
                 <!-- Filtro Origine -->
@@ -722,7 +732,7 @@
                         <option value="AMIN">AMIN</option>
                         <option value="GALVAN">GALVAN</option>
                         <option value="FH">FH</option>
-                        <option value="BIANC">BIANC</option>
+                        <option value="BIANC">BIANCHINI</option>
                         <option value="DELOITTE">DELOITTE</option>
                     </select>
                 </div>
@@ -775,7 +785,7 @@
                 <i class="bi bi-person"></i> FH
             </div>
             <div class="menu-item" onclick="setRedattoreFilter('BIANC')">
-                <i class="bi bi-person"></i> BIANC
+                <i class="bi bi-person"></i> BIANCHINI
             </div>
             <div class="menu-item" onclick="setRedattoreFilter('DELOITTE')">
                 <i class="bi bi-person"></i> DELOITTE
@@ -850,7 +860,7 @@
                 data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
                 data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
                 data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
-                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% if filtro_stato != 'abbandonati' %}oncontextmenu="showContextMenu(event, {{ l.id }})"{% endif %}
                 {% endif %}
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
@@ -974,15 +984,15 @@
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fe or item.c_fe == 0) else ('€ ' + "{:,.2f}".format(item.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_amin or item.c_amin == 0) else ('€ ' + "{:,.2f}".format(item.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_galvan or item.c_galvan == 0) else ('€ ' + "{:,.2f}".format(item.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fh or item.c_fh == 0) else ('€ ' + "{:,.2f}".format(item.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_bianc or item.c_bianc == 0) else ('€ ' + "{:,.2f}".format(item.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_deloitte or item.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(item.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1162,7 +1172,7 @@
                 data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
                 data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
                 data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
-                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% if filtro_stato != 'abbandonati' %}oncontextmenu="showContextMenu(event, {{ l.id }})"{% endif %}
                 {% endif %}
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
@@ -1221,15 +1231,15 @@
                     {% endif %}
                 </td>
                 {% if bene_idx == 0 %}
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
-                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fe or item.c_fe == 0) else ('€ ' + "{:,.2f}".format(item.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_amin or item.c_amin == 0) else ('€ ' + "{:,.2f}".format(item.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_galvan or item.c_galvan == 0) else ('€ ' + "{:,.2f}".format(item.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fh or item.c_fh == 0) else ('€ ' + "{:,.2f}".format(item.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_bianc or item.c_bianc == 0) else ('€ ' + "{:,.2f}".format(item.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_deloitte or item.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(item.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
@@ -1307,7 +1317,7 @@
                 <th>N°</th>
                 <th>Cliente</th>
                 <th>Bene</th>
-                <th>Valore</th>
+                <th>Importo</th>
                 <th>Stato</th>
                 <th class="gruppo-interni">C. FE</th>
                 <th class="gruppo-interni">F. FE</th>
@@ -1350,7 +1360,7 @@
                 data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
                 data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
                 data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
-                oncontextmenu="showContextMenu(event, {{ l.id }})"
+                {% if filtro_stato != 'abbandonati' %}oncontextmenu="showContextMenu(event, {{ l.id }})"{% endif %}
                 {% endif %}
                 data-bene="{{ (bene.descrizione or '')|lower }}"
                 data-stato="{{ (bene.stato or 'vuoto')|lower }}">
@@ -1359,7 +1369,7 @@
                 <td class="col-cliente" rowspan="{{ num_beni }}" style="vertical-align: middle;">{{ l.cliente_nome }}</td>
                 {% endif %}
                 <td class="col-bene-desc text-truncate">{{ bene.descrizione if bene.descrizione else '-' }}</td>
-                <td class="col-bene-valore">€ {{ "{:,.2f}".format(bene.valore if bene.valore else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                <td class="col-bene-importo">€ {{ "{:,.2f}".format(bene.importo_offerta if bene.importo_offerta else 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                 <td>
                     {% if (bene.stato or '')=='chiusa' %}
                         <span class="status-pill stato-chiusa">Chiusa</span>
@@ -1387,23 +1397,23 @@
                     {% endif %}
                 </td>
                 {% if bene_idx == 0 %}
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fe or item.c_fe == 0) else ('€ ' + "{:,.2f}".format(item.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_amin or item.c_amin == 0) else ('€ ' + "{:,.2f}".format(item.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_galvan or item.c_galvan == 0) else ('€ ' + "{:,.2f}".format(item.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
-                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-interni" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fh or item.c_fh == 0) else ('€ ' + "{:,.2f}".format(item.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-interni cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fh')" data-fattura-type="fh" data-lavoro-id="{{ l.id }}">{{ l.f_fh or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_bianc or item.c_bianc == 0) else ('€ ' + "{:,.2f}".format(item.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'bianc')" data-fattura-type="bianc" data-lavoro-id="{{ l.id }}">{{ l.f_bianc or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_deloitte or l.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(l.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_deloitte or item.c_deloitte == 0) else ('€ ' + "{:,.2f}".format(item.c_deloitte).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center;">{{ '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'ext')" data-fattura-type="ext" data-lavoro-id="{{ l.id }}">{{ l.f_ext or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
-                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
                 {% endif %}
             </tr>
@@ -1447,14 +1457,14 @@
                     {% if bene_idx == 0 %}
                     <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
                     <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fe or l.c_fe == 0) else ('€ ' + "{:,.2f}".format(l.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_amin or l.c_amin == 0) else ('€ ' + "{:,.2f}".format(l.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_galvan or l.c_galvan == 0) else ('€ ' + "{:,.2f}".format(l.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_fh or l.c_fh == 0) else ('€ ' + "{:,.2f}".format(l.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_bianc or l.c_bianc == 0) else ('€ ' + "{:,.2f}".format(l.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_ext or l.c_ext == 0) else ('€ ' + "{:,.0f}".format(l.c_ext).replace(",", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_revisore or l.c_revisore == 0) else ('€ ' + "{:,.0f}".format(l.c_revisore).replace(",", ".")) }}</td>
-                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not l.c_caricamento or l.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(l.c_caricamento).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fe or item.c_fe == 0) else ('€ ' + "{:,.2f}".format(item.c_fe).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_amin or item.c_amin == 0) else ('€ ' + "{:,.2f}".format(item.c_amin).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_galvan or item.c_galvan == 0) else ('€ ' + "{:,.2f}".format(item.c_galvan).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_fh or item.c_fh == 0) else ('€ ' + "{:,.2f}".format(item.c_fh).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_bianc or item.c_bianc == 0) else ('€ ' + "{:,.2f}".format(item.c_bianc).replace(",", "X").replace(".", ",").replace("X", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1512,9 +1522,24 @@
 </div>
 
 <div class="bottom-floating-bar">
+    {% if view_mode == 'focus_special' %}
+    <div style="display: flex; gap: 8px;">
+        <button class="pill-btn" id="btnToggleGruppoBottom" onclick="toggleGruppoFocus()">
+            <i class="bi bi-arrow-left-right"></i> Passa a Esterni
+        </button>
+        <button class="pill-btn" id="btnToggleChiusiBottom" onclick="toggleChiusiFocus()">
+            {% if (focus_show_mode or 'attivi') == 'chiusi' %}
+                <i class="bi bi-check-circle"></i> Mostra Attivi
+            {% else %}
+                <i class="bi bi-archive"></i> Mostra Chiusi
+            {% endif %}
+        </button>
+    </div>
+    {% else %}
     <button class="pill-btn" id="btnToggleGruppo" onclick="toggleGruppoFocus()">
         <i class="bi bi-arrow-left-right"></i> Passa a Esterni
     </button>
+    {% endif %}
 </div>
 
 {% endif %}
@@ -1772,7 +1797,7 @@
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
                             <option value="FH">FH</option>
-                            <option value="BIANC">BIANC</option>
+                            <option value="BIANC">BIANCHINI</option>
                             <option value="DELOITTE">DELOITTE</option>
                             <option value="ext">Esterno</option>
                         </select>
@@ -1793,7 +1818,8 @@
                             <option value="">-- Seleziona --</option>
                             <option value="AMIN">AMIN</option>
                             <option value="GALVAN">GALVAN</option>
-                            <option value="BIANC">BIANC</option>
+                            <option value="FH">FH</option>
+                            <option value="BIANC">BIANCHINI</option>
                             <option value="DELOITTE">DELOITTE</option>
                         </select>
                     </div>
@@ -1816,7 +1842,15 @@
 
             <div class="form-section result-section">
                 <h4 style="display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="bi bi-calculator"></i> Ripartizione Compensi</span>
+                    <span style="display: flex; flex-direction: column;">
+                        <span>
+                            <i class="bi bi-calculator"></i> Ripartizione Compensi
+                        </span>
+                        <span id="ripartizioneTotaleOfferta"
+                              style="font-size: 0.85rem; color: #666; margin-left: 0; white-space: nowrap;">
+                            (Totale offerta: € 0,00)
+                        </span>
+                    </span>
                     <span style="display: flex; gap: 15px; font-size: 14px; font-weight: normal;">
                         <a href="#" onclick="azzeraCompensi(); return false;" style="color: #666; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#666'">
                             <i class="bi bi-x-circle"></i> Azzera
@@ -1831,16 +1865,16 @@
                     <div id="revOptions" class="toggle-option" style="display:none;">
                         <span>Compenso Revisore:</span>
                         <select id="revType" name="rev_type" class="small-select" onchange="calcolaCompensi()">
-                            <option value="perc">%</option>
                             <option value="euro">€</option>
+                            <option value="perc">%</option>
                         </select>
                         <input type="text" id="revVal" name="rev_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
                     <div id="carOptions" class="toggle-option" style="display:none;">
                         <span>Compenso Caricamento:</span>
                         <select id="carType" name="car_type" class="small-select" onchange="calcolaCompensi()">
-                            <option value="perc">%</option>
                             <option value="euro">€</option>
+                            <option value="perc">%</option>
                         </select>
                         <input type="text" id="carVal" name="car_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
@@ -1877,7 +1911,7 @@
                     </div>
 
                     <div class="c-item" id="fieldBianc" style="display:none;">
-                        <label>BIANC</label>
+                        <label>BIANCHINI</label>
                         <input type="text" name="c_bianc" id="c_bianc" class="one-ui-input compact currency-input"
                             oninput="formatCurrencyInput(this)" onblur="formatCurrencyBlur(this)">
                     </div>
@@ -2561,8 +2595,22 @@
     }
     
     function applyFilters() {
-        activeFilters.stato = document.getElementById('filterStato').value.toLowerCase();
-        activeFilters.collaboratore = document.getElementById('filterCollaboratore').value.toLowerCase().trim();
+        const statoVal = document.getElementById('filterStato').value.toLowerCase();
+        activeFilters.stato = statoVal;
+
+        // Completati e Abbandonati richiedono ricarica pagina con filtro_stato (stessa logica delle card dashboard)
+        if (statoVal === 'completati' || statoVal === 'abbandonati') {
+            const url = new URL('{{ url_for("main.lavori_admin") }}', window.location.origin);
+            url.searchParams.set('filtro_stato', statoVal);
+            window.location.href = url.toString();
+            return;
+        }
+        if (!statoVal && (window.location.search.includes('filtro_stato=completati') || window.location.search.includes('filtro_stato=abbandonati'))) {
+            window.location.href = '{{ url_for("main.lavori_admin") }}';
+            return;
+        }
+
+        activeFilters.collaboratore = document.getElementById('filterCollaboratore').value.toLowerCase();
         activeFilters.origine = document.getElementById('filterOrigine').value.toLowerCase();
         activeFilters.revisore = document.getElementById('filterRevisore').value;
         activeFilters.caricamento = document.getElementById('filterCaricamento').value;
@@ -3022,6 +3070,11 @@
         document.getElementById('searchInput').value = '';
         document.getElementById('filterStato').value = '';
         document.getElementById('filterCollaboratore').value = '';
+
+        if (window.location.search.includes('filtro_stato=completati') || window.location.search.includes('filtro_stato=abbandonati')) {
+            window.location.href = '{{ url_for("main.lavori_admin") }}';
+            return;
+        }
         
         // Reset filtri pill
         const redattoreText = document.getElementById('redattoreFilterText');
@@ -3099,12 +3152,56 @@
 
     function toggleGruppoFocus() {
         showingEsterni = !showingEsterni;
-        const btn = document.getElementById('btnToggleGruppo');
         document.querySelectorAll('.gruppo-interni').forEach(el => el.style.display = showingEsterni ? 'none' : '');
         document.querySelectorAll('.gruppo-esterni').forEach(el => el.style.display = showingEsterni ? '' : 'none');
-        btn.innerHTML = showingEsterni
-            ? '<i class="bi bi-arrow-left-right"></i> Passa a Interni'
-            : '<i class="bi bi-arrow-left-right"></i> Passa a Esterni';
+
+        const btnTop = document.getElementById('btnToggleGruppo');
+        const btnBottom = document.getElementById('btnToggleGruppoBottom');
+        const labelInterni = '<i class="bi bi-arrow-left-right"></i> Passa a Interni';
+        const labelEsterni = '<i class="bi bi-arrow-left-right"></i> Passa a Esterni';
+
+        if (btnTop) {
+            btnTop.innerHTML = showingEsterni ? labelInterni : labelEsterni;
+        }
+        if (btnBottom) {
+            btnBottom.innerHTML = showingEsterni ? labelInterni : labelEsterni;
+        }
+    }
+
+    function updateRipartizioneTotaleOfferta() {
+        const label = document.getElementById('ripartizioneTotaleOfferta');
+        const impOff = document.getElementById('impOfferta');
+        const impRev = document.getElementById('impRevisione');
+        const impCar = document.getElementById('impCaricamento');
+        if (!label || !impOff) return;
+
+        const totNum = parseCurrency(impOff.value || '0');
+        const parts = [];
+        parts.push('Totale offerta: € ' + formatCurrency(totNum));
+
+        if (impRev && (impRev.value || '').trim() !== '') {
+            const revNum = parseCurrency(impRev.value || '0');
+            if (revNum > 0) {
+                parts.push('Revisione: € ' + formatCurrency(revNum));
+            }
+        }
+
+        if (impCar && (impCar.value || '').trim() !== '') {
+            const carNum = parseCurrency(impCar.value || '0');
+            if (carNum > 0) {
+                parts.push('Caricamento: € ' + formatCurrency(carNum));
+            }
+        }
+
+        label.textContent = '(' + parts.join(' • ') + ')';
+    }
+
+    function toggleChiusiFocus() {
+        const url = new URL(window.location.href);
+        const currentShow = url.searchParams.get('show') || '{{ focus_show_mode or "attivi" }}';
+        const nextShow = currentShow === 'chiusi' ? 'attivi' : 'chiusi';
+        url.searchParams.set('show', nextShow);
+        window.location.href = url.toString();
     }
 
     function toggleDateField(chk, field, id) {
@@ -4061,7 +4158,7 @@
     }
 
     async function refreshLavoroRowsFromApi(lavoroId) {
-        const res = await fetch(`/api/lavoro/${lavoroId}`);
+        const res = await fetch(`/api/lavoro/${lavoroId}?_t=${Date.now()}`);
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
         if (!data) return;
@@ -4069,14 +4166,7 @@
         const rows = Array.from(document.querySelectorAll(`.oneui-table tbody tr[data-id="${lavoroId}"]`));
         if (!rows.length) return;
 
-        const beni = Array.isArray(data.beni) ? data.beni : [];
-        if (beni.length && beni.length !== rows.length) {
-            // Caso raro: cambiato numero beni. Non tocchiamo il DOM per non rompere i rowspan.
-            // L’utente può ricaricare se ha aggiunto/rimosso beni.
-            return;
-        }
-
-        // Aggiorna celle "rowspan" sulla prima riga (se presenti)
+        // Aggiorna celle "rowspan" sulla prima riga (sempre, anche se il numero beni è cambiato)
         const first = rows[0];
         const cNum = first.querySelector('.col-numero');
         if (cNum) cNum.textContent = data.numero ?? cNum.textContent;
@@ -4095,6 +4185,15 @@
 
         const cImpCar = first.querySelector('.col-imp-car');
         if (cImpCar) cImpCar.textContent = _formatEuroCell(data.importo_caricamento || 0, 0);
+
+        // Aggiorna data-attributes
+        first.setAttribute('data-has-revisore', data.has_revisore ? 'si' : 'no');
+        first.setAttribute('data-has-caricamento', data.has_caricamento ? 'si' : 'no');
+
+        const beni = Array.isArray(data.beni) ? data.beni : [];
+        if (beni.length && beni.length !== rows.length) {
+            return;
+        }
 
         // Aggiorna righe bene
         rows.forEach((row, idx) => {
@@ -4228,7 +4327,7 @@
         
         try {
             // Recupera i dati del lavoro
-            const response = await fetch(`/api/lavoro/${id}`);
+            const response = await fetch(`/api/lavoro/${id}?_t=${Date.now()}`);
             if (!response.ok) {
                 throw new Error('Errore nel recupero dei dati');
             }
@@ -4690,19 +4789,28 @@
         document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
         document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
 
+        if (!hasRev) {
+            document.getElementById('impRevisione').value = formatCurrency(0);
+            document.getElementById('inpNomeRevisore').value = '';
+        }
+        if (!hasCar) {
+            document.getElementById('impCaricamento').value = formatCurrency(0);
+            document.getElementById('inpNomeCaricamento').value = '';
+        }
+
         document.getElementById('revOptions').style.display = hasRev ? 'flex' : 'none';
         document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
 
         document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
         document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
 
-        // Aggiorna la visibilità del toggle row includendo anche ext
         document.getElementById('togglesRevCar').style.display = (hasRev || hasCar || isExt) ? 'flex' : 'none';
 
         calcolaCompensi();
     }
 
     function calcolaCompensi() {
+        updateRipartizioneTotaleOfferta();
         const origine = document.getElementById('selOrigine').value;
         const redattore = document.getElementById('selRedattore').value;
         
@@ -4833,6 +4941,7 @@
             valFH = resto * 0.30;
             if (redattore === 'AMIN') valAmin = resto * 0.70;
             else if (redattore === 'GALVAN') valGalvan = resto * 0.70;
+            else if (redattore === 'FH') valFH += resto * 0.70;  // FH prende anche la quota redattore
             else if (redattore === 'BIANC') valBianc = resto * 0.70;
             else if (redattore === 'DELOITTE') valDeloitte = resto * 0.70;
         } else if (origine === 'AMIN' && redattore === 'AMIN') {
@@ -4842,9 +4951,14 @@
             valGalvan = resto * 0.70;
             valFH = resto * 0.30;
         } else if (origine === 'FH') {
-            valFH = resto * 0.50;
-            if (redattore === 'AMIN') valAmin = resto * 0.50;
-            else if (redattore === 'GALVAN') valGalvan = resto * 0.50;
+            if (redattore === 'FH') {
+                // FH origine + FH redattore → FH prende l'intero resto
+                valFH = resto;
+            } else {
+                valFH = resto * 0.50;
+                if (redattore === 'AMIN') valAmin = resto * 0.50;
+                else if (redattore === 'GALVAN') valGalvan = resto * 0.50;
+            }
         }
 
         setCurrencyValue('c_fe', valFE);

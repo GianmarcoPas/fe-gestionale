@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app, make_response
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import func
@@ -11,10 +11,129 @@ from pathlib import Path
 from app.utils.offerta_docx import generate_offerta_docx, format_date_it_long
 
 
+def _recalc_compensi(lavoro, shown_importo, total_importo):
+    """Ricalcola i compensi automatici (FE, AMIN, GALVAN, FH ecc.) in base
+    al totale offerta dei beni mostrati, replicando la logica di calcolaCompensi JS.
+    I compensi revisore, caricamento ed esterno restano invariati."""
+    ratio = shown_importo / total_importo if total_importo > 0 else 1.0
+
+    if ratio == 1.0:
+        return {
+            'c_fe': lavoro.c_fe or 0,
+            'c_amin': lavoro.c_amin or 0,
+            'c_galvan': lavoro.c_galvan or 0,
+            'c_fh': lavoro.c_fh or 0,
+            'c_bianc': lavoro.c_bianc or 0,
+            'c_deloitte': getattr(lavoro, 'c_deloitte', 0) or 0,
+            'c_ext': lavoro.c_ext or 0,
+            'c_revisore': lavoro.c_revisore or 0,
+            'c_caricamento': lavoro.c_caricamento or 0,
+        }
+
+    origine = (lavoro.origine or '').upper()
+    redattore = (lavoro.redattore or '').upper()
+
+    is_manual = (origine in ('BIANC', 'DELOITTE') or
+                 redattore in ('BIANC', 'DELOITTE') or
+                 not origine or not redattore)
+
+    if is_manual:
+        return {
+            'c_fe': (lavoro.c_fe or 0) * ratio,
+            'c_amin': (lavoro.c_amin or 0) * ratio,
+            'c_galvan': (lavoro.c_galvan or 0) * ratio,
+            'c_fh': (lavoro.c_fh or 0) * ratio,
+            'c_bianc': (lavoro.c_bianc or 0) * ratio,
+            'c_deloitte': (getattr(lavoro, 'c_deloitte', 0) or 0) * ratio,
+            'c_ext': lavoro.c_ext or 0,
+            'c_revisore': lavoro.c_revisore or 0,
+            'c_caricamento': lavoro.c_caricamento or 0,
+        }
+
+    val_rev = lavoro.c_revisore or 0
+    val_car = lavoro.c_caricamento or 0
+    val_ext = lavoro.c_ext or 0
+    importo_rev = lavoro.importo_revisione or 0
+    importo_car = lavoro.importo_caricamento or 0
+
+    diff_rev = max(0, importo_rev - val_rev) if getattr(lavoro, 'has_revisore', False) else 0
+    diff_car = max(0, importo_car - val_car) if getattr(lavoro, 'has_caricamento', False) else 0
+
+    totale_lavoro = shown_importo + importo_rev + importo_car
+    spese_amm = totale_lavoro * 0.06 if getattr(lavoro, 'spese_amministrative', False) else 0
+
+    base_per_15 = max(0, shown_importo - val_ext)
+    fe15 = base_per_15 * 0.15
+    val_fe = diff_rev + diff_car + spese_amm + fe15
+
+    resto = base_per_15 - fe15
+
+    val_amin = 0
+    val_galvan = 0
+    val_fh = 0
+    val_bianc = 0
+    val_deloitte = 0
+
+    if origine == 'EXT':
+        val_fh = resto * 0.30
+        if redattore == 'AMIN':
+            val_amin = resto * 0.70
+        elif redattore == 'GALVAN':
+            val_galvan = resto * 0.70
+        elif redattore == 'FH':
+            val_fh += resto * 0.70
+        elif redattore == 'BIANC':
+            val_bianc = resto * 0.70
+        elif redattore == 'DELOITTE':
+            val_deloitte = resto * 0.70
+    elif origine == 'AMIN' and redattore == 'AMIN':
+        val_amin = resto * 0.70
+        val_fh = resto * 0.30
+    elif origine == 'GALVAN' and redattore == 'GALVAN':
+        val_galvan = resto * 0.70
+        val_fh = resto * 0.30
+    elif origine == 'FH':
+        if redattore == 'FH':
+            val_fh = resto
+        else:
+            val_fh = resto * 0.50
+            if redattore == 'AMIN':
+                val_amin = resto * 0.50
+            elif redattore == 'GALVAN':
+                val_galvan = resto * 0.50
+
+    return {
+        'c_fe': val_fe,
+        'c_amin': val_amin,
+        'c_galvan': val_galvan,
+        'c_fh': val_fh,
+        'c_bianc': val_bianc,
+        'c_deloitte': val_deloitte,
+        'c_ext': lavoro.c_ext or 0,
+        'c_revisore': lavoro.c_revisore or 0,
+        'c_caricamento': lavoro.c_caricamento or 0,
+    }
+
+
+def _active_compensi(lavoro):
+    """Ricalcola i compensi di un lavoro escludendo i beni abbandonati."""
+    all_beni = lavoro.beni_list or []
+    active_beni = [b for b in all_beni if b.stato != 'abbandonato']
+    if all_beni:
+        total_importo = sum((b.importo_offerta or 0) for b in all_beni)
+        shown_importo = sum((b.importo_offerta or 0) for b in active_beni)
+    else:
+        total_importo = lavoro.importo_offerta or 0
+        shown_importo = total_importo
+    return _recalc_compensi(lavoro, shown_importo, total_importo)
+
+
 def _build_beni_list_for_offerta(lavoro: LavoroAdmin) -> list[dict]:
     beni_list: list[dict] = []
     if lavoro.beni_list:
         for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+            if bene.stato == 'abbandonato':
+                continue
             beni_list.append({
                 'id': bene.id,
                 'descrizione': bene.descrizione,
@@ -103,6 +222,8 @@ def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
     # Imposta lo stato 'da firmare' per tutti i beni che non hanno già uno stato avanzato
     if lavoro.beni_list:
         for bene in lavoro.beni_list:
+            if bene.stato == 'abbandonato':
+                continue
             if bene.stato not in ['da firmare', 'pec da inviare', 'da fatturare', 'da incassare', 'incassata', 'chiusa']:
                 bene.stato = 'da firmare'
     elif lavoro.stato == 'da firmare' and not lavoro.beni_list:
@@ -213,297 +334,130 @@ def dashboard():
         timeline = get_timeline_data([LavoroAdmin])
         
         # 1. Calcolo Fatturati (Widget Rosso)
-        # ESCLUDI i lavori abbandonati dai calcoli
-        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'abbandonato'
-        ).all()]
+        # ESCLUDI solo i lavori con TUTTI i beni abbandonati dai calcoli.
+        # Lavori parzialmente abbandonati restano inclusi.
+        from sqlalchemy import func as sql_func_dash
+        total_beni_dash = db.session.query(
+            Bene.lavoro_id,
+            sql_func_dash.count(Bene.id).label('total')
+        ).group_by(Bene.lavoro_id).subquery()
+        abandoned_beni_dash = db.session.query(
+            Bene.lavoro_id,
+            sql_func_dash.count(Bene.id).label('abandoned')
+        ).filter(Bene.stato == 'abbandonato').group_by(Bene.lavoro_id).subquery()
+        lavori_ids_fully_abbandonati = [row[0] for row in db.session.query(total_beni_dash.c.lavoro_id)
+            .join(abandoned_beni_dash, total_beni_dash.c.lavoro_id == abandoned_beni_dash.c.lavoro_id)
+            .filter(total_beni_dash.c.total == abandoned_beni_dash.c.abandoned)
+            .all()]
         
-        # --- TOTALE LAVORI: Importi per stato ---
-        # Totale importi di tutti i lavori (attivi + chiusi, escludendo abbandonati)
-        if lavori_ids_abbandonati:
-            tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
-            ).scalar() or 0
-        else:
-            tot_importo = db.session.query(func.sum(LavoroAdmin.importo_offerta)).scalar() or 0
-        
-        # Totale importi lavori ATTIVI con TUTTI i beni attivi in stato "da fatturare"
-        # (basato sullo stato dei beni, non del lavoro)
-        tutti_lavori_con_beni = db.session.query(LavoroAdmin).join(Bene, LavoroAdmin.id == Bene.lavoro_id).all()
-        lavori_ids_da_fatturare = []
-        
-        for lavoro in tutti_lavori_con_beni:
-            if lavoro.id in lavori_ids_abbandonati:
-                continue
-            if lavoro.stato == 'chiusa':
-                continue
-            if lavoro.beni_list and len(lavoro.beni_list) > 0:
-                beni_attivi = [b for b in lavoro.beni_list if b.stato != 'abbandonato']
-                if beni_attivi and all(b.stato == 'da fatturare' for b in beni_attivi):
-                    lavori_ids_da_fatturare.append(lavoro.id)
-        
-        if lavori_ids_da_fatturare:
-            tot_importo_da_fatturare = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
-                LavoroAdmin.id.in_(lavori_ids_da_fatturare)
-            ).scalar() or 0
-        else:
-            tot_importo_da_fatturare = 0
-        
-        # Totale importi lavori attivi con TUTTI i beni attivi in stato "incassata"
-        lavori_ids_incassata_attivi = []
-        
-        for lavoro in tutti_lavori_con_beni:
-            if lavoro.id in lavori_ids_abbandonati:
-                continue
-            if lavoro.stato == 'chiusa':
-                continue
-            if lavoro.beni_list and len(lavoro.beni_list) > 0:
-                beni_attivi = [b for b in lavoro.beni_list if b.stato != 'abbandonato']
-                if beni_attivi and all(b.stato == 'incassata' for b in beni_attivi):
-                    lavori_ids_incassata_attivi.append(lavoro.id)
-        
-        if lavori_ids_incassata_attivi:
-            tot_importo_incassata_attivi = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
-                LavoroAdmin.id.in_(lavori_ids_incassata_attivi)
-            ).scalar() or 0
-        else:
-            tot_importo_incassata_attivi = 0
-        
-        # Totale importi lavori chiusi
-        if lavori_ids_abbandonati:
-            tot_importo_chiusi = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.stato == 'chiusa'
-            ).scalar() or 0
-        else:
-            tot_importo_chiusi = db.session.query(func.sum(LavoroAdmin.importo_offerta)).filter(
-                LavoroAdmin.stato == 'chiusa'
-            ).scalar() or 0
-        
-        # Totale "Incassata" = incassata attivi + chiusi
-        tot_importo_incassata = tot_importo_incassata_attivi + tot_importo_chiusi
-        
-        # --- COMPENSI PER AZIENDE ---
-        # Totali compensi per ogni azienda (tutti i lavori, escludendo abbandonati)
-        if lavori_ids_abbandonati:
-            tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
-            ).scalar() or 0
-            tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
-            ).scalar() or 0
-            tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
-            ).scalar() or 0
-            tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati)
-            ).scalar() or 0
-        else:
-            tot_fe = db.session.query(func.sum(LavoroAdmin.c_fe)).scalar() or 0
-            tot_amin = db.session.query(func.sum(LavoroAdmin.c_amin)).scalar() or 0
-            tot_galvan = db.session.query(func.sum(LavoroAdmin.c_galvan)).scalar() or 0
-            tot_fh = db.session.query(func.sum(LavoroAdmin.c_fh)).scalar() or 0
-        
-        # Compensi per lavori con TUTTI i beni attivi in stato "incassata" (per AMIN, GALV, FH)
-        # MA escludi quelli che hanno già la fattura emessa (perché sono già in "fatturato")
-        # FE non viene usato qui perché per FE "da fatturare" non si applica
-        lavori_ids_incassata_attivi_amin = []
-        lavori_ids_incassata_attivi_galvan = []
-        lavori_ids_incassata_attivi_fh = []
-        
-        for lavoro in tutti_lavori_con_beni:
-            if lavoro.id in lavori_ids_abbandonati:
-                continue
-            if lavoro.stato == 'chiusa':
-                continue
-            if lavoro.beni_list and len(lavoro.beni_list) > 0:
-                beni_attivi = [b for b in lavoro.beni_list if b.stato != 'abbandonato']
-                if beni_attivi and all(b.stato == 'incassata' for b in beni_attivi):
-                    # AMIN: solo se NON ha già fattura AMIN emessa
-                    if not (lavoro.f_amin and str(lavoro.f_amin).strip()):
-                        lavori_ids_incassata_attivi_amin.append(lavoro.id)
-                    # GALVAN: solo se NON ha già fattura GALVAN emessa
-                    if not (lavoro.f_galvan and str(lavoro.f_galvan).strip()):
-                        lavori_ids_incassata_attivi_galvan.append(lavoro.id)
-                    # FH: solo se NON ha già fattura FH emessa
-                    if not (lavoro.f_fh and str(lavoro.f_fh).strip()):
-                        lavori_ids_incassata_attivi_fh.append(lavoro.id)
-        
-        if lavori_ids_incassata_attivi_amin:
-            tot_amin_incassata = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                LavoroAdmin.id.in_(lavori_ids_incassata_attivi_amin)
-            ).scalar() or 0
-        else:
-            tot_amin_incassata = 0
-            
-        if lavori_ids_incassata_attivi_galvan:
-            tot_galvan_incassata = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                LavoroAdmin.id.in_(lavori_ids_incassata_attivi_galvan)
-            ).scalar() or 0
-        else:
-            tot_galvan_incassata = 0
-            
-        if lavori_ids_incassata_attivi_fh:
-            tot_fh_incassata = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                LavoroAdmin.id.in_(lavori_ids_incassata_attivi_fh)
-            ).scalar() or 0
-        else:
-            tot_fh_incassata = 0
-        
-        # FE non ha "da fatturare" (mostra "-")
+        # --- IMPORTI E COMPENSI (ricalcolati escludendo beni abbandonati) ---
+        set_fully_abb = set(lavori_ids_fully_abbandonati)
+        all_lavori_db = LavoroAdmin.query.all()
+
+        tot_importo = 0
+        tot_importo_da_fatturare = 0
+        tot_importo_incassata = 0
+
+        tot_fe = 0
+        tot_amin = 0
+        tot_galvan = 0
+        tot_fh = 0
         tot_fe_incassata = 0
-        
-        # Compensi per lavori con fattura emessa + lavori chiusi (per ogni azienda)
-        # Fatturato = lavori con fattura emessa (TUTTI, anche non chiusi) + lavori chiusi SENZA fattura emessa
-        # Per evitare doppio conteggio: contiamo lavori con fattura (tutti) + lavori chiusi senza fattura
-        from sqlalchemy import or_, and_
-        
-        if lavori_ids_abbandonati:
-            # FE: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_fe_con_fattura = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.f_fe.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_fe, '')) > 0
-            ).scalar() or 0
-            tot_fe_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_fe.is_(None),
-                    LavoroAdmin.f_fe == ''
-                )
-            ).scalar() or 0
-            tot_fe_fatturato = tot_fe_con_fattura + tot_fe_chiusi_senza_fattura
-            
-            # AMIN: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_amin_con_fattura = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.f_amin.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_amin, '')) > 0
-            ).scalar() or 0
-            tot_amin_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_amin.is_(None),
-                    LavoroAdmin.f_amin == ''
-                )
-            ).scalar() or 0
-            tot_amin_fatturato = tot_amin_con_fattura + tot_amin_chiusi_senza_fattura
-            
-            # GALVAN: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_galvan_con_fattura = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.f_galvan.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_galvan, '')) > 0
-            ).scalar() or 0
-            tot_galvan_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_galvan.is_(None),
-                    LavoroAdmin.f_galvan == ''
-                )
-            ).scalar() or 0
-            tot_galvan_fatturato = tot_galvan_con_fattura + tot_galvan_chiusi_senza_fattura
-            
-            # FH: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_fh_con_fattura = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.f_fh.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_fh, '')) > 0
-            ).scalar() or 0
-            tot_fh_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                ~LavoroAdmin.id.in_(lavori_ids_abbandonati),
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_fh.is_(None),
-                    LavoroAdmin.f_fh == ''
-                )
-            ).scalar() or 0
-            tot_fh_fatturato = tot_fh_con_fattura + tot_fh_chiusi_senza_fattura
-        else:
-            # FE: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_fe_con_fattura = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
-                LavoroAdmin.f_fe.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_fe, '')) > 0
-            ).scalar() or 0
-            tot_fe_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_fe)).filter(
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_fe.is_(None),
-                    LavoroAdmin.f_fe == ''
-                )
-            ).scalar() or 0
-            tot_fe_fatturato = tot_fe_con_fattura + tot_fe_chiusi_senza_fattura
-            
-            # AMIN: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_amin_con_fattura = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                LavoroAdmin.f_amin.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_amin, '')) > 0
-            ).scalar() or 0
-            tot_amin_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_amin)).filter(
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_amin.is_(None),
-                    LavoroAdmin.f_amin == ''
-                )
-            ).scalar() or 0
-            tot_amin_fatturato = tot_amin_con_fattura + tot_amin_chiusi_senza_fattura
-            
-            # GALVAN: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_galvan_con_fattura = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                LavoroAdmin.f_galvan.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_galvan, '')) > 0
-            ).scalar() or 0
-            tot_galvan_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_galvan)).filter(
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_galvan.is_(None),
-                    LavoroAdmin.f_galvan == ''
-                )
-            ).scalar() or 0
-            tot_galvan_fatturato = tot_galvan_con_fattura + tot_galvan_chiusi_senza_fattura
-            
-            # FH: lavori con fattura emessa (tutti) + lavori chiusi senza fattura
-            tot_fh_con_fattura = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                LavoroAdmin.f_fh.isnot(None),
-                func.length(func.coalesce(LavoroAdmin.f_fh, '')) > 0
-            ).scalar() or 0
-            tot_fh_chiusi_senza_fattura = db.session.query(func.sum(LavoroAdmin.c_fh)).filter(
-                LavoroAdmin.stato == 'chiusa',
-                or_(
-                    LavoroAdmin.f_fh.is_(None),
-                    LavoroAdmin.f_fh == ''
-                )
-            ).scalar() or 0
-            tot_fh_fatturato = tot_fh_con_fattura + tot_fh_chiusi_senza_fattura
+        tot_amin_incassata = 0
+        tot_galvan_incassata = 0
+        tot_fh_incassata = 0
+        tot_fe_fatturato = 0
+        tot_amin_fatturato = 0
+        tot_galvan_fatturato = 0
+        tot_fh_fatturato = 0
+
+        for lavoro in all_lavori_db:
+            if lavoro.id in set_fully_abb:
+                continue
+
+            all_beni = lavoro.beni_list or []
+            beni_attivi = [b for b in all_beni if b.stato != 'abbandonato']
+            if all_beni:
+                shown_importo = sum((b.importo_offerta or 0) for b in beni_attivi)
+            else:
+                shown_importo = lavoro.importo_offerta or 0
+
+            tot_importo += shown_importo
+
+            comp = _active_compensi(lavoro)
+            c_fe = comp['c_fe']
+            c_amin = comp['c_amin']
+            c_galvan = comp['c_galvan']
+            c_fh = comp['c_fh']
+
+            tot_fe += c_fe
+            tot_amin += c_amin
+            tot_galvan += c_galvan
+            tot_fh += c_fh
+
+            is_chiusa = lavoro.stato == 'chiusa'
+
+            if is_chiusa:
+                tot_importo_incassata += shown_importo
+            elif beni_attivi:
+                all_da_fatturare = all(b.stato == 'da fatturare' for b in beni_attivi)
+                all_incassata = all(b.stato == 'incassata' for b in beni_attivi)
+                if all_da_fatturare:
+                    tot_importo_da_fatturare += shown_importo
+                if all_incassata:
+                    tot_importo_incassata += shown_importo
+                    if not (lavoro.f_amin and str(lavoro.f_amin).strip()):
+                        tot_amin_incassata += c_amin
+                    if not (lavoro.f_galvan and str(lavoro.f_galvan).strip()):
+                        tot_galvan_incassata += c_galvan
+                    if not (lavoro.f_fh and str(lavoro.f_fh).strip()):
+                        tot_fh_incassata += c_fh
+
+            has_f_fe = bool(lavoro.f_fe and str(lavoro.f_fe).strip())
+            if has_f_fe or is_chiusa:
+                tot_fe_fatturato += c_fe
+            if bool(lavoro.f_amin and str(lavoro.f_amin).strip()) or is_chiusa:
+                tot_amin_fatturato += c_amin
+            if bool(lavoro.f_galvan and str(lavoro.f_galvan).strip()) or is_chiusa:
+                tot_galvan_fatturato += c_galvan
+            if bool(lavoro.f_fh and str(lavoro.f_fh).strip()) or is_chiusa:
+                tot_fh_fatturato += c_fh
         
         # Conteggi lavori
-        total_lavori = LavoroAdmin.query.count()
+        # Escludi solo lavori con TUTTI i beni abbandonati (non quelli parzialmente abbandonati)
+        query_lavori_attivi = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
+        if lavori_ids_fully_abbandonati:
+            query_lavori_attivi = query_lavori_attivi.filter(~LavoroAdmin.id.in_(lavori_ids_fully_abbandonati))
+        total_lavori = query_lavori_attivi.count()
         
-        # In Lavorazione: lavori che hanno almeno un bene con stato "vuoto" o "-"
-        # Oppure lavori senza beni (che hanno stato vuoto di default)
-        # ESCLUDI i lavori con stato "chiusa" o con beni "abbandonato"
-        lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == ''),
-            LavoroAdmin.stato != 'chiusa',
-            Bene.stato != 'abbandonato'
-        ).all()]
-        lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
-            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id)),
-            LavoroAdmin.stato != 'chiusa'
-        ).all()]
-        in_corso = len(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni))
+        stati_esclusi_in_lavorazione = [
+            'abbandonato',
+            'chiusa',
+            'da firmare',
+            'da fatturare',
+            'da incassare',
+            'incassata',
+        ]
+        lavori_ids_in_lavorazione = [
+            row[0]
+            for row in db.session.query(LavoroAdmin.id)
+                                 .distinct()
+                                 .join(Bene, LavoroAdmin.id == Bene.lavoro_id)
+                                 .filter(
+                                     LavoroAdmin.stato != 'chiusa',
+                                     ~LavoroAdmin.id.in_(lavori_ids_fully_abbandonati)
+                                     if lavori_ids_fully_abbandonati
+                                     else True,
+                                     ~Bene.stato.in_(stati_esclusi_in_lavorazione),
+                                 )
+                                 .all()
+        ]
+        in_corso = len(set(lavori_ids_in_lavorazione))
         
-        # Completati: lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
         completati = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').count()
         
-        # Abbandonati: lavori che hanno almeno un bene con stato "abbandonato"
-        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'abbandonato'
-        ).all()]
-        abbandonati = len(set(lavori_ids_abbandonati))
+        # Abbandonati: conta i singoli beni con stato "abbandonato"
+        abbandonati = db.session.query(func.count(Bene.id)).filter(Bene.stato == 'abbandonato').scalar() or 0
         
         # Recupera tutte le note per la card (scrollabile)
         tutte_note = NoteAdmin.query.order_by(NoteAdmin.created_at.desc()).all()
@@ -528,8 +482,13 @@ def dashboard():
             lavori_da_incassare = []
         da_incassare_totale = len(lavori_da_incassare)
         
-        # Importo totale da incassare (importo offerta dei lavori)
-        importo_da_incassare = sum(l.importo_offerta or 0 for l in lavori_da_incassare)
+        importo_da_incassare = 0
+        for l in lavori_da_incassare:
+            active_beni = [b for b in (l.beni_list or []) if b.stato != 'abbandonato']
+            if active_beni:
+                importo_da_incassare += sum((b.importo_offerta or 0) for b in active_beni)
+            else:
+                importo_da_incassare += l.importo_offerta or 0
         
         # Conteggio per settimane di ritardo (dalla data fattura FE)
         da_incassare_2w = 0
@@ -628,12 +587,15 @@ def api_da_incassare():
         cat_colors = {'old': '#9c27b0', 'iperamm': '#00A651', 'rsid': '#007AFF', 'varie': '#ff9f43'}
         cat_labels = {'old': '4.0 OLD', 'iperamm': '4.0 I.A.', 'rsid': 'RSID', 'varie': 'VARIE'}
         
+        active_beni = [b for b in (lavoro.beni_list or []) if b.stato != 'abbandonato']
+        shown_importo = sum((b.importo_offerta or 0) for b in active_beni) if active_beni else (lavoro.importo_offerta or 0)
+        
         result.append({
             'id': lavoro.id,
             'numero': lavoro.numero,
             'cliente': lavoro.cliente_nome or '',
             'beni': ', '.join(beni_desc) if beni_desc else '-',
-            'importo': lavoro.importo_offerta or 0,
+            'importo': shown_importo,
             'spese_amministrative': lavoro.spese_amministrative or False,
             'has_revisore': lavoro.has_revisore or False,
             'has_caricamento': lavoro.has_caricamento or False,
@@ -896,52 +858,48 @@ def lavori_admin():
     
     # Query base
     if filtro_stato == 'in_lavorazione':
-        # Lavori che hanno almeno un bene con stato "vuoto" o "-"
-        # Oppure lavori senza beni
-        # ESCLUDI i lavori con stato "chiusa" e quelli con beni "abbandonato"
-        lavori_ids_in_lavorazione = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            (Bene.stato == 'vuoto') | (Bene.stato == None) | (Bene.stato == ''),
-            LavoroAdmin.stato != 'chiusa',
-            Bene.stato != 'abbandonato'
-        ).all()]
-        lavori_ids_senza_beni = [row[0] for row in db.session.query(LavoroAdmin.id).filter(
-            ~LavoroAdmin.id.in_(db.session.query(Bene.lavoro_id)),
-            LavoroAdmin.stato != 'chiusa'
-        ).all()]
-        # Escludi anche i lavori che hanno beni abbandonati
-        lavori_ids_con_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'abbandonato'
-        ).all()]
-        tutti_ids = list(set(lavori_ids_in_lavorazione + lavori_ids_senza_beni) - set(lavori_ids_con_abbandonati))
-        if tutti_ids:
-            lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(tutti_ids), LavoroAdmin.stato != 'chiusa').order_by(LavoroAdmin.numero.asc()).all()
+        stati_esclusi_in_lavorazione = [
+            'abbandonato',
+            'chiusa',
+            'da firmare',
+            'da fatturare',
+            'da incassare',
+            'incassata',
+        ]
+        lavori_ids_in_lavorazione = [
+            row[0]
+            for row in db.session.query(LavoroAdmin.id)
+                                 .distinct()
+                                 .join(Bene, LavoroAdmin.id == Bene.lavoro_id)
+                                 .filter(
+                                     LavoroAdmin.stato != 'chiusa',
+                                     ~Bene.stato.in_(stati_esclusi_in_lavorazione),
+                                 )
+                                 .all()
+        ]
+        if lavori_ids_in_lavorazione:
+            lavori = (
+                LavoroAdmin.query.filter(
+                    LavoroAdmin.id.in_(lavori_ids_in_lavorazione)
+                )
+                .order_by(LavoroAdmin.numero.asc())
+                .all()
+            )
         else:
             lavori = []
     elif filtro_stato == 'da_incassare':
-        # Lavori con almeno un bene con stato "da incassare" (fatturati FE ma non ancora incassati)
-        # Escludi i beni abbandonati
         lavori_ids_da_incassare = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'da incassare',
-            Bene.stato != 'abbandonato'
+            Bene.stato == 'da incassare'
         ).all()]
         if lavori_ids_da_incassare:
             lavori = LavoroAdmin.query.filter(LavoroAdmin.id.in_(lavori_ids_da_incassare)).order_by(LavoroAdmin.numero.asc()).all()
         else:
             lavori = []
     elif filtro_stato == 'completati':
-        # Lavori con stato "chiusa" (chiusi automaticamente quando tutti i compensi interni hanno fattura)
-        # Ordinati per ID (data di creazione) per mantenere l'ordine cronologico
         lavori = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa').order_by(LavoroAdmin.id.asc()).all()
     elif filtro_stato == 'abbandonati':
-        # Lavori che hanno almeno un bene con stato "abbandonato"
-        # Devono essere mostrati nell'ordine in cui vengono abbandonati:
-        # il primo abbandonato in alto, poi via via gli altri aggiunti sotto.
-        # Per garantire questo, usiamo il campo Bene.ordine_abbandono,
-        # che è un progressivo globale impostato al momento dell'abbandono.
-
         from sqlalchemy import func as sql_func
 
-        # Subquery: per ogni lavoro prendi il minimo ordine_abbandono tra i suoi beni abbandonati
         subquery = (
             db.session.query(
                 Bene.lavoro_id,
@@ -952,7 +910,6 @@ def lavori_admin():
             .subquery()
         )
 
-        # Unisci i lavori con la subquery e ordina per ordine_abbandono crescente
         lavori = (
             db.session.query(LavoroAdmin)
             .join(subquery, LavoroAdmin.id == subquery.c.lavoro_id)
@@ -960,22 +917,44 @@ def lavori_admin():
             .all()
         )
     else:
-        # Se filtro_stato == 'tutti' o vuoto, mostra tutti i lavori ESCLUSI quelli chiusi e quelli abbandonati
-        lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-            Bene.stato == 'abbandonato'
-        ).all()]
+        # Mostra tutti i lavori ESCLUSI quelli chiusi e quelli con TUTTI i beni abbandonati.
+        # Lavori con solo alcuni beni abbandonati restano visibili (mostrando solo i beni attivi).
+        from sqlalchemy import func as sql_func
+        total_beni_sq = db.session.query(
+            Bene.lavoro_id,
+            sql_func.count(Bene.id).label('total')
+        ).group_by(Bene.lavoro_id).subquery()
+        abandoned_beni_sq = db.session.query(
+            Bene.lavoro_id,
+            sql_func.count(Bene.id).label('abandoned')
+        ).filter(Bene.stato == 'abbandonato').group_by(Bene.lavoro_id).subquery()
+        lavori_ids_fully_abbandonati = [row[0] for row in db.session.query(total_beni_sq.c.lavoro_id)
+            .join(abandoned_beni_sq, total_beni_sq.c.lavoro_id == abandoned_beni_sq.c.lavoro_id)
+            .filter(total_beni_sq.c.total == abandoned_beni_sq.c.abandoned)
+            .all()]
         lavori = LavoroAdmin.query.filter(
             LavoroAdmin.stato != 'chiusa',
-            ~LavoroAdmin.id.in_(lavori_ids_abbandonati) if lavori_ids_abbandonati else True
+            ~LavoroAdmin.id.in_(lavori_ids_fully_abbandonati) if lavori_ids_fully_abbandonati else True
         ).order_by(LavoroAdmin.numero.asc()).all()
     
-    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
+    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template.
+    # Per la vista "abbandonati" mostra solo i beni abbandonati;
+    # per tutte le altre viste (tranne completati) filtra via i beni abbandonati.
+    # I compensi automatici (FE, AMIN, GALVAN, FH) vengono ricalcolati in proporzione
+    # agli importi dei beni mostrati; revisore, caricamento ed esterno restano invariati.
     lavori_with_beni = []
-    for idx, lavoro in enumerate(lavori, start=1):
+    sequential_num = 0
+    for lavoro in lavori:
+        all_beni_objs = sorted(lavoro.beni_list, key=lambda x: x.ordine) if lavoro.beni_list else []
         beni_list = []
-        if lavoro.beni_list:
-            # Usa i beni dalla tabella separata
-            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+        if all_beni_objs:
+            for bene in all_beni_objs:
+                if filtro_stato == 'abbandonati':
+                    if bene.stato != 'abbandonato':
+                        continue
+                else:
+                    if bene.stato == 'abbandonato':
+                        continue
                 beni_list.append({
                     'id': bene.id,
                     'descrizione': bene.descrizione,
@@ -987,7 +966,6 @@ def lavori_admin():
                     'commento_abbandono': getattr(bene, 'commento_abbandono', None)
                 })
         else:
-            # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
             if lavoro.bene and ' | ' in lavoro.bene:
                 beni_parts = lavoro.bene.split(' | ')
                 valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
@@ -995,23 +973,30 @@ def lavori_admin():
                 for desc in beni_parts:
                     beni_list.append({'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene})
             else:
-                # Un solo bene
                 beni_list.append({'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta})
         
-        # Per la vista "completati" e "abbandonati", usa un numero sequenziale per la visualizzazione
-        # mantenendo il numero originale nel database
+        if not beni_list:
+            continue
+        
+        sequential_num += 1
+        
+        total_importo = sum((b.importo_offerta or 0) for b in all_beni_objs) if all_beni_objs else (lavoro.importo_offerta or 0)
+        shown_importo = sum((b.get('importo_offerta', 0) or 0) for b in beni_list)
+        compensi = _recalc_compensi(lavoro, shown_importo, total_importo)
+        
         if filtro_stato == 'completati' or filtro_stato == 'abbandonati':
-            numero_visualizzazione = idx
+            numero_visualizzazione = sequential_num
         else:
             numero_visualizzazione = lavoro.numero
         
         lavori_with_beni.append({
             'lavoro': lavoro, 
             'beni': beni_list,
-            'numero_visualizzazione': numero_visualizzazione
+            'numero_visualizzazione': numero_visualizzazione,
+            **compensi,
         })
     
-    return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode=view_mode)
+    return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode=view_mode, filtro_stato=filtro_stato or '')
     
 # NUOVA ROTTA SPECIALE (Sostituto Firma - Solo per Extra 2)
 @bp.route('/lavori_focus')
@@ -1020,24 +1005,43 @@ def lavori_focus():
     if current_user.role != 'admin' or current_user.admin_view_mode != 'extra2':
         return redirect(url_for('main.dashboard'))
     
-    # Escludi i lavori chiusi e quelli abbandonati dalla vista focus
-    lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-        Bene.stato == 'abbandonato'
-    ).all()]
+    # Modalità visualizzazione: attivi (default) o chiusi
+    show_mode = request.args.get('show', 'attivi')
     
-    query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
-    if lavori_ids_abbandonati:
-        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_abbandonati))
+    # Escludi solo lavori con TUTTI i beni abbandonati dalla vista focus
+    from sqlalchemy import func as sql_func_focus
+    total_beni_fq = db.session.query(
+        Bene.lavoro_id,
+        sql_func_focus.count(Bene.id).label('total')
+    ).group_by(Bene.lavoro_id).subquery()
+    abandoned_beni_fq = db.session.query(
+        Bene.lavoro_id,
+        sql_func_focus.count(Bene.id).label('abandoned')
+    ).filter(Bene.stato == 'abbandonato').group_by(Bene.lavoro_id).subquery()
+    lavori_ids_fully_abbandonati = [row[0] for row in db.session.query(total_beni_fq.c.lavoro_id)
+        .join(abandoned_beni_fq, total_beni_fq.c.lavoro_id == abandoned_beni_fq.c.lavoro_id)
+        .filter(total_beni_fq.c.total == abandoned_beni_fq.c.abandoned)
+        .all()]
+    
+    if show_mode == 'chiusi':
+        query = LavoroAdmin.query.filter(LavoroAdmin.stato == 'chiusa')
+    else:
+        show_mode = 'attivi'
+        query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
+    
+    if lavori_ids_fully_abbandonati:
+        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_fully_abbandonati))
     
     lavori = query.order_by(LavoroAdmin.numero.asc()).all()
     
-    # Carica i beni per ogni lavoro e crea una lista di dizionari per il template
     lavori_with_beni = []
     for lavoro in lavori:
+        all_beni_objs = sorted(lavoro.beni_list, key=lambda x: x.ordine) if lavoro.beni_list else []
         beni_list = []
-        if lavoro.beni_list:
-            # Usa i beni dalla tabella separata
-            for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+        if all_beni_objs:
+            for bene in all_beni_objs:
+                if bene.stato == 'abbandonato':
+                    continue
                 beni_list.append({
                     'id': bene.id,
                     'descrizione': bene.descrizione,
@@ -1049,7 +1053,6 @@ def lavori_focus():
                     'commento_abbandono': getattr(bene, 'commento_abbandono', None)
                 })
         else:
-            # Se non ci sono beni nella tabella separata, parsare dal campo concatenato
             if lavoro.bene and ' | ' in lavoro.bene:
                 beni_parts = lavoro.bene.split(' | ')
                 valore_per_bene = lavoro.valore_bene / len(beni_parts) if len(beni_parts) > 0 else lavoro.valore_bene
@@ -1057,12 +1060,27 @@ def lavori_focus():
                 for desc in beni_parts:
                     beni_list.append({'id': None, 'descrizione': desc.strip(), 'valore': valore_per_bene, 'importo_offerta': importo_per_bene, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec})
             else:
-                # Un solo bene
                 beni_list.append({'id': None, 'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec})
         
-        lavori_with_beni.append({'lavoro': lavoro, 'beni': beni_list})
+        if not beni_list:
+            continue
+        
+        total_importo = sum((b.importo_offerta or 0) for b in all_beni_objs) if all_beni_objs else (lavoro.importo_offerta or 0)
+        shown_importo = sum((b.get('importo_offerta', 0) or 0) for b in beni_list)
+        compensi = _recalc_compensi(lavoro, shown_importo, total_importo)
+        
+        lavori_with_beni.append({
+            'lavoro': lavoro,
+            'beni': beni_list,
+            **compensi,
+        })
     
-    return render_template('main/lavori_admin.html', lavori_with_beni=lavori_with_beni, view_mode='focus_special')
+    return render_template(
+        'main/lavori_admin.html',
+        lavori_with_beni=lavori_with_beni,
+        view_mode='focus_special',
+        focus_show_mode=show_mode,
+    )
 
 @bp.route('/api/lavoro/<int:id>', methods=['GET'])
 @login_required
@@ -1079,10 +1097,11 @@ def get_lavoro_admin(id):
         print(f"[DEBUG API] Caricamento letto - tipo: {getattr(lavoro, 'car_type', 'N/A')}, valore: {getattr(lavoro, 'car_value', 'N/A')}")
     cliente = Cliente.query.get(lavoro.cliente_id) if lavoro.cliente_id else None
     
-    # Recupera i beni
     beni_list = []
     if lavoro.beni_list:
         for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
+            if bene.stato == 'abbandonato':
+                continue
             beni_list.append({
                 'id': bene.id,
                 'descrizione': bene.descrizione,
@@ -1102,7 +1121,7 @@ def get_lavoro_admin(id):
         else:
             beni_list.append({'id': None, 'descrizione': lavoro.bene or '', 'valore': lavoro.valore_bene, 'importo_offerta': lavoro.importo_offerta, 'stato': lavoro.stato, 'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None})
     
-    return jsonify({
+    resp = make_response(jsonify({
         'id': lavoro.id,
         'numero': lavoro.numero,
         'cliente': {
@@ -1161,7 +1180,9 @@ def get_lavoro_admin(id):
         'f_ext': lavoro.f_ext or '',
         'f_revisore': lavoro.f_revisore or '',
         'f_caricamento': lavoro.f_caricamento or ''
-    })
+    }))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return resp
 
 
 @bp.route('/api/lavoro/<int:id>/genera_offerta', methods=['POST'])
@@ -1401,8 +1422,8 @@ def add_lavoro_admin():
             lavoro.c_caricamento = to_float(request.form.get('c_caricamento'))
             
             # Salva gli importi per l'offerta al cliente (sezione Ordine di Lavoro)
-            lavoro.importo_revisione = to_float(request.form.get('importo_revisione', '0'))
-            lavoro.importo_caricamento = to_float(request.form.get('importo_caricamento', '0'))
+            lavoro.importo_revisione = to_float(request.form.get('importo_revisione', '0')) if lavoro.has_revisore else 0
+            lavoro.importo_caricamento = to_float(request.form.get('importo_caricamento', '0')) if lavoro.has_caricamento else 0
             
             # Aggiorna importo_offerta totale
             lavoro.importo_offerta = importo_totale_offerta
@@ -1429,9 +1450,8 @@ def add_lavoro_admin():
                     )
                     db.session.add(b)
 
-            # Elimina beni rimossi
             for b in lavoro.beni_list:
-                if b.id not in seen_ids and b.id in existing:
+                if b.id not in seen_ids and b.id in existing and b.stato != 'abbandonato':
                     db.session.delete(b)
             
             db.session.commit()
@@ -1497,8 +1517,8 @@ def add_lavoro_admin():
                 c_ext=to_float(request.form.get('c_ext')),
                 c_revisore=to_float(request.form.get('c_revisore')),
                 c_caricamento=to_float(request.form.get('c_caricamento')),
-                importo_revisione=to_float(request.form.get('importo_revisione', '0')),
-                importo_caricamento=to_float(request.form.get('importo_caricamento', '0')),
+                importo_revisione=to_float(request.form.get('importo_revisione', '0')) if (request.form.get('has_revisore') == 'on') else 0,
+                importo_caricamento=to_float(request.form.get('importo_caricamento', '0')) if (request.form.get('has_caricamento') == 'on') else 0,
                 categoria=request.form.get('categoria') or None,
                 stato='In corso' # Default
             )
@@ -2154,29 +2174,34 @@ def api_caricamenti():
 
 def ricalcola_numeri_sequenziali():
     """
-    Ricalcola i numeri sequenziali dei lavori escludendo quelli con stato 'chiusa' e quelli abbandonati.
-    I lavori 'chiusa' e quelli abbandonati mantengono il loro numero originale, mentre i lavori attivi
-    vengono rinumerati sequenzialmente partendo da 1.
+    Ricalcola i numeri sequenziali dei lavori escludendo quelli con stato 'chiusa'
+    e quelli con TUTTI i beni abbandonati. Lavori con solo alcuni beni abbandonati
+    restano nella numerazione attiva.
     """
-    # Flush delle modifiche pendenti prima di fare expire_all, altrimenti le modifiche
-    # (es. cambio stato, numero fattura) vengono perse quando expire_all resetta il dirty tracking
     db.session.flush()
-    # Refresh della sessione per assicurarsi di vedere i cambiamenti più recenti
     db.session.expire_all()
     
-    # Ottieni i lavori che hanno almeno un bene con stato "abbandonato"
-    lavori_ids_abbandonati = [row[0] for row in db.session.query(LavoroAdmin.id).distinct().join(Bene, LavoroAdmin.id == Bene.lavoro_id).filter(
-        Bene.stato == 'abbandonato'
-    ).all()]
+    # Trova i lavori dove TUTTI i beni sono abbandonati
+    from sqlalchemy import func as sql_func
+    total_beni_sq = db.session.query(
+        Bene.lavoro_id,
+        sql_func.count(Bene.id).label('total')
+    ).group_by(Bene.lavoro_id).subquery()
+    abandoned_beni_sq = db.session.query(
+        Bene.lavoro_id,
+        sql_func.count(Bene.id).label('abandoned')
+    ).filter(Bene.stato == 'abbandonato').group_by(Bene.lavoro_id).subquery()
+    lavori_ids_fully_abbandonati = [row[0] for row in db.session.query(total_beni_sq.c.lavoro_id)
+        .join(abandoned_beni_sq, total_beni_sq.c.lavoro_id == abandoned_beni_sq.c.lavoro_id)
+        .filter(total_beni_sq.c.total == abandoned_beni_sq.c.abandoned)
+        .all()]
     
-    # Ottieni tutti i lavori NON chiusi e NON abbandonati, ordinati per numero attuale
     query = LavoroAdmin.query.filter(LavoroAdmin.stato != 'chiusa')
-    if lavori_ids_abbandonati:
-        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_abbandonati))
+    if lavori_ids_fully_abbandonati:
+        query = query.filter(~LavoroAdmin.id.in_(lavori_ids_fully_abbandonati))
     
     lavori_attivi = query.order_by(LavoroAdmin.numero.asc(), LavoroAdmin.id.asc()).all()
     
-    # Assegna numeri sequenziali partendo da 1
     for idx, lav in enumerate(lavori_attivi, start=1):
         lav.numero = idx
 
@@ -2205,14 +2230,12 @@ def verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=True):
     # Verifica FE
     if has_compenso(lavoro.c_fe):
         if not has_fattura(lavoro.f_fe):
-            # FE ha compenso ma non ha fattura - riapri il lavoro se era chiuso
             if lavoro.stato == 'chiusa':
                 lavoro.stato = 'incassata'
                 if lavoro.beni_list:
                     for bene in lavoro.beni_list:
                         if bene.stato == 'chiusa':
                             bene.stato = 'incassata'
-                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
                 if ricalcola_numeri:
                     ricalcola_numeri_sequenziali()
             return False
@@ -2226,7 +2249,6 @@ def verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=True):
                     for bene in lavoro.beni_list:
                         if bene.stato == 'chiusa':
                             bene.stato = 'incassata'
-                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
                 if ricalcola_numeri:
                     ricalcola_numeri_sequenziali()
             return False
@@ -2240,7 +2262,6 @@ def verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=True):
                     for bene in lavoro.beni_list:
                         if bene.stato == 'chiusa':
                             bene.stato = 'incassata'
-                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
                 if ricalcola_numeri:
                     ricalcola_numeri_sequenziali()
             return False
@@ -2254,20 +2275,16 @@ def verifica_e_chiudi_lavoro(lavoro, ricalcola_numeri=True):
                     for bene in lavoro.beni_list:
                         if bene.stato == 'chiusa':
                             bene.stato = 'incassata'
-                # Ricalcola i numeri sequenziali quando un lavoro viene riaperto
                 if ricalcola_numeri:
                     ricalcola_numeri_sequenziali()
             return False
     
-    # Tutti i compensi interni con valore > 0 hanno una fattura, chiudi il lavoro
     if lavoro.stato != 'chiusa':
         lavoro.stato = 'chiusa'
-        # Chiudi anche tutti i beni del lavoro
         if lavoro.beni_list:
             for bene in lavoro.beni_list:
-                if bene.stato != 'chiusa':
+                if bene.stato != 'chiusa' and bene.stato != 'abbandonato':
                     bene.stato = 'chiusa'
-        # Ricalcola i numeri sequenziali quando un lavoro viene chiuso
         if ricalcola_numeri:
             ricalcola_numeri_sequenziali()
     
@@ -2326,15 +2343,13 @@ def fatturazione(tipo):
             (campo_fattura_obj == None) | (campo_fattura_obj == '')
         ).order_by(LavoroAdmin.numero.asc()).all()
     
-    # Prepara dati per template - un elemento per lavoro, con lista beni inclusi
     lavori_data = []
     totale_compensi = 0.0
     
     for lavoro in lavori:
-        compenso = getattr(lavoro, campo_compenso) or 0.0
-        totale_compensi += compenso
+        comp = _active_compensi(lavoro)
+        compenso = comp.get(campo_compenso, 0.0)
         
-        # Recupera beni con lo stato richiesto
         beni_filtrati = []
         if lavoro.beni_list:
             for b in lavoro.beni_list:
@@ -2346,6 +2361,7 @@ def fatturazione(tipo):
                     })
         
         if beni_filtrati:
+            totale_compensi += compenso
             lavori_data.append({
                 'lavoro': lavoro,
                 'beni': beni_filtrati,
@@ -2446,7 +2462,8 @@ def lista_fatture(tipo):
     for lavoro in lavori:
         num_fattura = getattr(lavoro, campo_fattura)
         data_fattura = getattr(lavoro, campo_data)
-        compenso = getattr(lavoro, campo_compenso) or 0.0
+        comp = _active_compensi(lavoro)
+        compenso = comp.get(campo_compenso, 0.0)
         
         if num_fattura not in fatture_dict:
             fatture_dict[num_fattura] = {
@@ -2456,14 +2473,17 @@ def lista_fatture(tipo):
                 'totale_compensi': 0.0
             }
         
-        # Recupera beni
         beni_list = []
         if lavoro.beni_list:
             for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
-                beni_list.append(bene.descrizione)
+                if bene.stato != 'abbandonato':
+                    beni_list.append(bene.descrizione)
         else:
             if lavoro.bene:
                 beni_list = [b.strip() for b in lavoro.bene.split(' | ')]
+        
+        active_beni = [b for b in (lavoro.beni_list or []) if b.stato != 'abbandonato']
+        shown_importo = sum((b.importo_offerta or 0) for b in active_beni) if active_beni else (lavoro.importo_offerta or 0)
         
         fatture_dict[num_fattura]['lavori'].append({
             'id': lavoro.id,
@@ -2471,7 +2491,7 @@ def lista_fatture(tipo):
             'cliente': lavoro.cliente_nome or '',
             'beni': beni_list,
             'compenso': compenso,
-            'importo': lavoro.importo_offerta or 0.0
+            'importo': shown_importo
         })
         
         fatture_dict[num_fattura]['totale_compensi'] += compenso
@@ -2545,10 +2565,9 @@ def fatturazione_esterni(tipo):
     totale_compensi = 0.0
     
     for lavoro in lavori:
-        compenso = getattr(lavoro, campo_compenso) or 0.0
-        totale_compensi += compenso
+        comp = _active_compensi(lavoro)
+        compenso = comp.get(campo_compenso, 0.0)
         
-        # Recupera beni con stato "incassata" o "chiusa"
         beni_disponibili = []
         if lavoro.beni_list:
             for b in lavoro.beni_list:
@@ -2560,6 +2579,7 @@ def fatturazione_esterni(tipo):
                     })
         
         if beni_disponibili:
+            totale_compensi += compenso
             lavori_data.append({
                 'lavoro': lavoro,
                 'beni': beni_disponibili,
@@ -2672,7 +2692,8 @@ def lista_fatture_esterni(tipo):
     for lavoro in lavori:
         num_fattura = getattr(lavoro, campo_fattura)
         data_fattura = getattr(lavoro, campo_data)
-        compenso = getattr(lavoro, campo_compenso) or 0.0
+        comp = _active_compensi(lavoro)
+        compenso = comp.get(campo_compenso, 0.0)
         
         if num_fattura not in fatture_dict:
             fatture_dict[num_fattura] = {
@@ -2685,10 +2706,14 @@ def lista_fatture_esterni(tipo):
         beni_list = []
         if lavoro.beni_list:
             for bene in sorted(lavoro.beni_list, key=lambda x: x.ordine):
-                beni_list.append(bene.descrizione)
+                if bene.stato != 'abbandonato':
+                    beni_list.append(bene.descrizione)
         else:
             if lavoro.bene:
                 beni_list = [b.strip() for b in lavoro.bene.split(' | ')]
+        
+        active_beni = [b for b in (lavoro.beni_list or []) if b.stato != 'abbandonato']
+        shown_importo = sum((b.importo_offerta or 0) for b in active_beni) if active_beni else (lavoro.importo_offerta or 0)
         
         fatture_dict[num_fattura]['lavori'].append({
             'id': lavoro.id,
@@ -2696,7 +2721,7 @@ def lista_fatture_esterni(tipo):
             'cliente': lavoro.cliente_nome or '',
             'beni': beni_list,
             'compenso': compenso,
-            'importo': lavoro.importo_offerta or 0.0
+            'importo': shown_importo
         })
         
         fatture_dict[num_fattura]['totale_compensi'] += compenso
