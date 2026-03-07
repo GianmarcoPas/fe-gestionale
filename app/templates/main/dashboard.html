@@ -221,6 +221,7 @@
                             <th>Sp. Amm.</th>
                             <th>Rev.</th>
                             <th>Car.</th>
+                            <th>N.S.</th>
                             <th>Fattura FE</th>
                             <th>Data Fatt.</th>
                             <th>Giorni</th>
@@ -585,6 +586,7 @@
                                 <td style="text-align:center;">${l.spese_amministrative ? '<i class="bi bi-check-circle-fill" style="color:#00A651"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
                                 <td style="text-align:center;">${l.has_revisore ? '<i class="bi bi-check-circle-fill" style="color:#007AFF"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
                                 <td style="text-align:center;">${l.has_caricamento ? '<i class="bi bi-check-circle-fill" style="color:#ff9f43"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
+                                <td style="text-align:center;">${l.has_sabatini ? '<i class="bi bi-check-circle-fill" style="color:#8e44ad"></i>' : '<i class="bi bi-dash" style="color:#ccc"></i>'}</td>
                                 <td>${escapeHtml(l.fattura_fe)}</td>
                                 <td style="white-space:nowrap;">${l.data_fattura_fe}</td>
                                 <td><span class="giorni-badge giorni-${l.giorni_ritardo >= 28 ? 'critico' : l.giorni_ritardo >= 21 ? 'alto' : 'medio'}">${l.giorni_ritardo}g</span></td>

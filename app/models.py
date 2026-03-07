@@ -96,25 +96,30 @@ class LavoroAdmin(db.Model):
     # Checkbox Ruoli
     has_revisore = db.Column(db.Boolean, default=False)
     has_caricamento = db.Column(db.Boolean, default=False)
+    has_sabatini = db.Column(db.Boolean, default=False)
 
     # Spese amministrative (flag salvato a DB)
     spese_amministrative = db.Column(db.Boolean, default=False)
     
-    # Nomi revisore e caricamento
+    # Nomi revisore, caricamento e sabatini
     nome_revisore = db.Column(db.String(100))
     nome_caricamento = db.Column(db.String(100))
+    nome_sabatini = db.Column(db.String(100))
     
     # Importi per offerta al cliente (sezione Ordine di Lavoro)
-    importo_revisione = db.Column(db.Float, default=0.0)  # Importo nell'offerta
-    importo_caricamento = db.Column(db.Float, default=0.0)  # Importo nell'offerta
+    importo_revisione = db.Column(db.Float, default=0.0)
+    importo_caricamento = db.Column(db.Float, default=0.0)
+    importo_sabatini = db.Column(db.Float, default=0.0)
     
-    # Valori originali per revisore, caricamento e esterno (per modifica - sezione Compensi)
-    rev_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
-    rev_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
-    car_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
-    car_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
-    ext_type = db.Column(db.String(10), default='perc')  # 'perc' o 'euro'
-    ext_value = db.Column(db.Float, default=0.0)  # Valore originale inserito
+    # Valori originali per revisore, caricamento, sabatini e esterno (per modifica - sezione Compensi)
+    rev_type = db.Column(db.String(10), default='perc')
+    rev_value = db.Column(db.Float, default=0.0)
+    car_type = db.Column(db.String(10), default='perc')
+    car_value = db.Column(db.Float, default=0.0)
+    sab_type = db.Column(db.String(10), default='perc')
+    sab_value = db.Column(db.Float, default=0.0)
+    ext_type = db.Column(db.String(10), default='perc')
+    ext_value = db.Column(db.Float, default=0.0)
 
     # Compensi
     c_fe = db.Column(db.Float, default=0.0)
@@ -126,6 +131,7 @@ class LavoroAdmin(db.Model):
     c_ext = db.Column(db.Float, default=0.0)
     c_revisore = db.Column(db.Float, default=0.0)
     c_caricamento = db.Column(db.Float, default=0.0)
+    c_sabatini = db.Column(db.Float, default=0.0)
 
     # Fatture (Placeholder stringhe per numeri fattura)
     f_fe = db.Column(db.String(50))
@@ -137,6 +143,7 @@ class LavoroAdmin(db.Model):
     f_ext = db.Column(db.String(50))
     f_revisore = db.Column(db.String(50))
     f_caricamento = db.Column(db.String(50))
+    f_sabatini = db.Column(db.String(50))
     
     # Date fatturazione
     data_fattura_fe = db.Column(db.Date, nullable=True)
@@ -148,6 +155,7 @@ class LavoroAdmin(db.Model):
     data_fattura_ext = db.Column(db.Date, nullable=True)
     data_fattura_revisore = db.Column(db.Date, nullable=True)
     data_fattura_caricamento = db.Column(db.Date, nullable=True)
+    data_fattura_sabatini = db.Column(db.Date, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

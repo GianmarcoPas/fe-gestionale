@@ -281,6 +281,7 @@ def generate_offerta_docx(
     data_emissione_text: str,
     importo_caricamento: float,
     importo_revisione: float,
+    importo_sabatini: float = 0,
     beni: list[dict[str, Any]],
 ) -> BytesIO:
     doc = Document(str(template_path))
@@ -296,20 +297,25 @@ def generate_offerta_docx(
         "[data emissione]": data_emissione_text or "",
         "[importo caricamento]": format_eur(importo_caricamento),
         "[importo revisione]": format_eur(importo_revisione),
+        "[importo sabatini]": format_eur(importo_sabatini),
     }
 
     _replace_everywhere(doc, mapping)
     _populate_beni_table(doc, beni)
 
-    # ── Rimuovi righe relative a caricamento / revisione se importo è 0 ──
+    # ── Rimuovi righe relative a caricamento / revisione / sabatini se importo è 0 ──
     caricamento_val = float(importo_caricamento or 0)
     revisione_val = float(importo_revisione or 0)
+    sabatini_val = float(importo_sabatini or 0)
 
     if caricamento_val == 0:
         _remove_paragraphs_matching(doc, ["pto c)"])
 
     if revisione_val == 0:
         _remove_paragraphs_matching(doc, ["pto d)"])
+
+    if sabatini_val == 0:
+        _remove_paragraphs_matching(doc, ["pto e)"])
 
     buf = BytesIO()
     doc.save(buf)

@@ -464,10 +464,10 @@
         transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1), right 0.4s cubic-bezier(0.25, 1, 0.5, 1);
     }
     
-    /* Override per overlay procacciatori: usa larghezza dinamica invece di 60% */
-    .overlay-procacciatori.active {
-        width: auto !important;
-        max-width: none !important;
+    /* Override per overlay extra */
+    .overlay-extra.active {
+        width: 50%;
+        max-width: 700px;
     }
 
     /* Header Overlay - Allineato con la tabella principale */
@@ -515,25 +515,25 @@
         color: #e67e22 !important;
     }
     
-    /* Overlay Procacciatori - Colori Blu chiaro */
-    #overlayProcacciatori .overlay-table thead th {
+    /* Overlay Extra - Colori Blu chiaro */
+    #overlayExtra .overlay-table thead th {
         background-color: #f0f4ff !important;
     }
     
-    #overlayProcacciatori .overlay-table thead th:first-child {
+    #overlayExtra .overlay-table thead th:first-child {
         background-color: #e3f2fd !important;
         color: var(--primary) !important;
     }
     
-    #overlayProcacciatori .overlay-table tbody td {
+    #overlayExtra .overlay-table tbody td {
         background-color: #f0f4ff !important;
         text-align: center !important;
     }
     
-    /* Overlay Procacciatori: larghezza dinamica - override della regola .side-overlay.active */
-    #overlayProcacciatori.side-overlay.active {
-        width: auto !important;
-        max-width: none !important;
+    /* Overlay Extra: larghezza fissa */
+    #overlayExtra.side-overlay.active {
+        width: 50%;
+        max-width: 700px;
     }
 
     .side-overlay .overlay-table tbody tr {
@@ -582,7 +582,8 @@
     #focusTable tbody tr td.gruppo-esterni:nth-child(16),
     #focusTable tbody tr td.gruppo-esterni:nth-child(18),
     #focusTable tbody tr td.gruppo-esterni:nth-child(20),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(22) {
+    #focusTable tbody tr td.gruppo-esterni:nth-child(22),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(24) {
         background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
     }
     
@@ -594,7 +595,8 @@
     #focusTable tbody tr td.gruppo-esterni:nth-child(17),
     #focusTable tbody tr td.gruppo-esterni:nth-child(19),
     #focusTable tbody tr td.gruppo-esterni:nth-child(21),
-    #focusTable tbody tr td.gruppo-esterni:nth-child(23) {
+    #focusTable tbody tr td.gruppo-esterni:nth-child(23),
+    #focusTable tbody tr td.gruppo-esterni:nth-child(25) {
         background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
     }
     
@@ -607,7 +609,8 @@
     #focusTable thead th.gruppo-esterni:nth-child(16),
     #focusTable thead th.gruppo-esterni:nth-child(18),
     #focusTable thead th.gruppo-esterni:nth-child(20),
-    #focusTable thead th.gruppo-esterni:nth-child(22) {
+    #focusTable thead th.gruppo-esterni:nth-child(22),
+    #focusTable thead th.gruppo-esterni:nth-child(24) {
         background-color: #f5f9ff !important; /* Colore compensi (blu chiaro) */
     }
     
@@ -619,13 +622,14 @@
     #focusTable thead th.gruppo-esterni:nth-child(17),
     #focusTable thead th.gruppo-esterni:nth-child(19),
     #focusTable thead th.gruppo-esterni:nth-child(21),
-    #focusTable thead th.gruppo-esterni:nth-child(23) {
+    #focusTable thead th.gruppo-esterni:nth-child(23),
+    #focusTable thead th.gruppo-esterni:nth-child(25) {
         background-color: #fffaf5 !important; /* Colore fatture (arancione chiaro) */
     }
 
     /* ============================================================
        ROW HOVER HIGHLIGHT – illumina riga lavoro + beni collegati
-       (tabella principale + overlay compensi/fatture/procacciatori)
+       (tabella principale + overlay compensi/fatture/extra)
        ============================================================ */
     .oneui-table tbody tr > td {
         transition: background-color 0.15s ease;
@@ -639,7 +643,7 @@
     /* Override overlay (specificity > #id .class element element) */
     #overlayCompensi .overlay-table tbody tr.row-hover-highlight > td,
     #overlayFatture .overlay-table tbody tr.row-hover-highlight > td,
-    #overlayProcacciatori .overlay-table tbody tr.row-hover-highlight > td {
+    #overlayExtra .overlay-table tbody tr.row-hover-highlight > td {
         background: rgba(0, 122, 255, 0.08) !important;
     }
 
@@ -832,6 +836,7 @@
 
                 <th>Revisore</th>
                 <th>Caric.</th>
+                <th>N.S.</th>
 
                 <th>Origine</th>
                 <th>Redattore</th>
@@ -905,6 +910,13 @@
                     -
                     {% endif %}
                 </td>
+                <td class="col-imp-sab" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_sabatini and l.importo_sabatini > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_sabatini).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
                 <td class="col-origine" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.origine or '-' }}</td>
                 <td class="col-redattore" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.redattore or '-' }}</td>
                 {% endif %}
@@ -971,6 +983,7 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
+                    <th>N.S.</th>
                 </tr>
             </thead>
             <tbody>
@@ -993,6 +1006,7 @@
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_sabatini or item.c_sabatini == 0) else ('€ ' + "{:,.0f}".format(item.c_sabatini).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1018,6 +1032,7 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
+                    <th>N.S.</th>
                 </tr>
             </thead>
             <tbody>
@@ -1040,6 +1055,7 @@
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_sabatini or '-' }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1049,14 +1065,17 @@
         </table>
     </div>
 
-    <div id="overlayProcacciatori" class="side-overlay overlay-procacciatori">
+    <div id="overlayExtra" class="side-overlay overlay-extra">
         <table class="oneui-table overlay-table" style="width: 100%;">
             <thead>
                 <tr>
-                    <th style="background-color: #e3f2fd; color: var(--primary);">
-                        <span class="overlay-title"><i class="bi bi-person-badge"></i> Procacciatori</span>
+                    <th colspan="2" style="background-color: #e3f2fd; color: var(--primary);">
+                        <span class="overlay-title"><i class="bi bi-person-badge"></i> Extra</span>
                     </th>
-                    <th>Nome Esterno</th>
+                    <th>Procacciatore</th>
+                    <th>Revisione</th>
+                    <th>Caricamento</th>
+                    <th>Sabatini</th>
                 </tr>
             </thead>
             <tbody>
@@ -1068,12 +1087,23 @@
                 {% set bene_idx = loop.index0 %}
                 <tr data-id="{{ l.id }}">
                     {% if bene_idx == 0 %}
-                    <td colspan="2" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    <td rowspan="{{ num_beni }}" style="font-weight:bold; width: 40px; background:#f9f9f9; vertical-align: middle; text-align: center;">{{ item.numero_visualizzazione if item.numero_visualizzazione else l.numero }}</td>
+                    <td rowspan="{{ num_beni }}" class="text-truncate" style="max-width: 120px; background:#f9f9f9; vertical-align: middle;">{{ l.cliente_nome }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
                         {% if l.origine and l.origine.lower() == 'ext' %}
                             {{ l.nome_esterno or '-' }}
                         {% else %}
                             -
                         {% endif %}
+                    </td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                        {{ l.nome_revisore or '-' }}
+                    </td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                        {{ l.nome_caricamento or '-' }}
+                    </td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                        {{ l.nome_sabatini or '-' }}
                     </td>
                     {% endif %}
                 </tr>
@@ -1090,16 +1120,16 @@
         <i class="bi bi-calculator"></i> Compensi
     </button>
 
-    <button class="btn-add-circle" onclick="openCategoryModal()">
-        <i class="bi bi-plus-lg"></i>
-    </button>
-
     <button class="pill-btn" onclick="openOverlay('fatture')">
         <i class="bi bi-receipt"></i> Fatture
     </button>
 
-    <button class="pill-btn" onclick="openOverlay('procacciatori')">
-        <i class="bi bi-person-badge"></i> Procacc.
+    <button class="btn-add-circle" onclick="openCategoryModal()">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+
+    <button class="pill-btn" onclick="openOverlay('extra')">
+        <i class="bi bi-person-badge"></i> Extra
     </button>
 </div>
 
@@ -1123,6 +1153,7 @@
 
                 <th>Revisore</th>
                 <th>Caric.</th>
+                <th>N.S.</th>
 
                 <th>Origine</th>
                 <th>Redattore</th>
@@ -1137,6 +1168,7 @@
                 <th class="col-compensi">C. Ext</th>
                 <th class="col-compensi">C. Rev</th>
                 <th class="col-compensi">C. Car</th>
+                <th class="col-compensi">C. N.S.</th>
 
                 <th class="col-fatture">F. FE</th>
                 <th class="col-fatture">F. AMIN</th>
@@ -1147,6 +1179,7 @@
                 <th class="col-fatture">F. Ext</th>
                 <th class="col-fatture">F. Rev</th>
                 <th class="col-fatture">F. Car</th>
+                <th class="col-fatture">F. N.S.</th>
                 
                 <th class="col-stato">Stato</th>
             </tr>
@@ -1171,6 +1204,7 @@
                 data-origine="{{ (l.origine or '')|lower }}"
                 data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
                 data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
+                data-has-sabatini="{{ 'si' if l.has_sabatini else 'no' }}"
                 data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
                 {% if filtro_stato != 'abbandonati' %}oncontextmenu="showContextMenu(event, {{ l.id }})"{% endif %}
                 {% endif %}
@@ -1219,6 +1253,13 @@
                     -
                     {% endif %}
                 </td>
+                <td class="col-imp-sab" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">
+                    {% if l.importo_sabatini and l.importo_sabatini > 0 %}
+                    € {{ "{:,.0f}".format(l.importo_sabatini).replace(",", ".") }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
                 <td class="col-origine" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.origine or '-' }}</td>
                 <td class="col-redattore" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.redattore or '-' }}</td>
                 {% endif %}
@@ -1240,6 +1281,7 @@
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
                 <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
+                <td class="col-compensi" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_sabatini or item.c_sabatini == 0) else ('€ ' + "{:,.0f}".format(item.c_sabatini).replace(",", ".")) }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'fe')" data-fattura-type="fe" data-lavoro-id="{{ l.id }}">{{ l.f_fe or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'amin')" data-fattura-type="amin" data-lavoro-id="{{ l.id }}">{{ l.f_amin or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'galvan')" data-fattura-type="galvan" data-lavoro-id="{{ l.id }}">{{ l.f_galvan or '-' }}</td>
@@ -1249,6 +1291,7 @@
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'ext')" data-fattura-type="ext" data-lavoro-id="{{ l.id }}">{{ l.f_ext or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
                 <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
+                <td class="col-fatture cell-fattura" rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'sabatini')" data-fattura-type="sabatini" data-lavoro-id="{{ l.id }}">{{ l.f_sabatini or '-' }}</td>
                 {% endif %}
                 <td class="col-stato">
                     {% if (bene.stato or '')=='chiusa' %}
@@ -1337,6 +1380,8 @@
                 <th class="gruppo-esterni" style="display:none;">F. Rev</th>
                 <th class="gruppo-esterni" style="display:none;">C. Car</th>
                 <th class="gruppo-esterni" style="display:none;">F. Car</th>
+                <th class="gruppo-esterni" style="display:none;">C. N.S.</th>
+                <th class="gruppo-esterni" style="display:none;">F. N.S.</th>
             </tr>
         </thead>
         <tbody>
@@ -1359,6 +1404,7 @@
                 data-origine="{{ (l.origine or '')|lower }}"
                 data-has-revisore="{{ 'si' if l.has_revisore else 'no' }}"
                 data-has-caricamento="{{ 'si' if l.has_caricamento else 'no' }}"
+                data-has-sabatini="{{ 'si' if l.has_sabatini else 'no' }}"
                 data-spese-amm="{{ 'si' if l.spese_amministrative else 'no' }}"
                 {% if filtro_stato != 'abbandonati' %}oncontextmenu="showContextMenu(event, {{ l.id }})"{% endif %}
                 {% endif %}
@@ -1415,6 +1461,8 @@
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'revisore')" data-fattura-type="revisore" data-lavoro-id="{{ l.id }}">{{ l.f_revisore or '-' }}</td>
                 <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
                 <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'caricamento')" data-fattura-type="caricamento" data-lavoro-id="{{ l.id }}">{{ l.f_caricamento or '-' }}</td>
+                <td class="gruppo-esterni" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: right;">{{ '-' if (not item.c_sabatini or item.c_sabatini == 0) else ('€ ' + "{:,.0f}".format(item.c_sabatini).replace(",", ".")) }}</td>
+                <td class="gruppo-esterni cell-fattura" rowspan="{{ num_beni }}" style="display:none; vertical-align: middle; text-align: center; cursor: pointer;" ondblclick="editFattura(event, {{ l.id }}, 'sabatini')" data-fattura-type="sabatini" data-lavoro-id="{{ l.id }}">{{ l.f_sabatini or '-' }}</td>
                 {% endif %}
             </tr>
             {% endfor %}
@@ -1444,6 +1492,7 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
+                    <th>N.S.</th>
                 </tr>
             </thead>
             <tbody>
@@ -1465,6 +1514,7 @@
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_ext or item.c_ext == 0) else ('€ ' + "{:,.0f}".format(item.c_ext).replace(",", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_revisore or item.c_revisore == 0) else ('€ ' + "{:,.0f}".format(item.c_revisore).replace(",", ".")) }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_caricamento or item.c_caricamento == 0) else ('€ ' + "{:,.0f}".format(item.c_caricamento).replace(",", ".")) }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: right;">{{ '-' if (not item.c_sabatini or item.c_sabatini == 0) else ('€ ' + "{:,.0f}".format(item.c_sabatini).replace(",", ".")) }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1489,6 +1539,7 @@
                     <th>Ext</th>
                     <th>Rev</th>
                     <th>Caric.</th>
+                    <th>N.S.</th>
                 </tr>
             </thead>
             <tbody>
@@ -1510,6 +1561,7 @@
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_ext or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_revisore or '-' }}</td>
                     <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_caricamento or '-' }}</td>
+                    <td rowspan="{{ num_beni }}" style="vertical-align: middle; text-align: center;">{{ l.f_sabatini or '-' }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -1786,6 +1838,35 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="input-group flex-1" id="divSabatiniGroup" style="display:none;">
+                        <div class="switch-group">
+                            <span class="switch-label">Nuova Sabatini</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chkSabatini" name="has_sabatini"
+                                    onchange="toggleSpese()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div id="divImportoSabatini" class="sub-input" style="display:none; margin-top: 10px;">
+                            <label style="font-size: 12px; margin-bottom: 4px;">Nome Sabatini</label>
+                            <div class="autocomplete-wrapper" style="margin-bottom: 8px;">
+                                <input type="text" name="nome_sabatini" id="inpNomeSabatini" class="one-ui-input compact"
+                                    placeholder="Nome sabatini" autocomplete="off"
+                                    oninput="searchSabatini(this.value)">
+                                <div id="sabatiniSuggestions" class="suggestions-list"></div>
+                            </div>
+                            <label style="font-size: 12px; margin-bottom: 4px;">Importo</label>
+                            <div class="currency-wrapper">
+                                <span class="currency-symbol">€</span>
+                                <input type="text" name="importo_sabatini" id="impSabatini"
+                                    class="one-ui-input has-symbol compact currency-input" placeholder="0,00"
+                                    oninput="formatCurrencyInput(this); calcolaCompensi();"
+                                    onblur="formatCurrencyBlur(this); calcolaCompensi();">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-row">
@@ -1878,6 +1959,14 @@
                         </select>
                         <input type="text" id="carVal" name="car_val" value="0" class="small-input" oninput="calcolaCompensi()">
                     </div>
+                    <div id="sabOptions" class="toggle-option" style="display:none;">
+                        <span>Compenso Sabatini:</span>
+                        <select id="sabType" name="sab_type" class="small-select" onchange="calcolaCompensi()">
+                            <option value="euro">€</option>
+                            <option value="perc">%</option>
+                        </select>
+                        <input type="text" id="sabVal" name="sab_val" value="0" class="small-input" oninput="calcolaCompensi()">
+                    </div>
                     <div id="extOptions" class="toggle-option" style="display:none;">
                         <span>Compenso Esterno:</span>
                         <select id="extType" name="ext_type" class="small-select" onchange="calcolaCompensi()">
@@ -1933,6 +2022,12 @@
                     <div class="c-item" id="fieldCar" style="display:none;">
                         <label>Caricamento</label>
                         <input type="text" name="c_caricamento" id="c_caricamento"
+                            class="one-ui-input compact currency-input" oninput="formatCurrencyInput(this)"
+                            onblur="formatCurrencyBlur(this)">
+                    </div>
+                    <div class="c-item" id="fieldSab" style="display:none;">
+                        <label>N. Sabatini</label>
+                        <input type="text" name="c_sabatini" id="c_sabatini"
                             class="one-ui-input compact currency-input" oninput="formatCurrencyInput(this)"
                             onblur="formatCurrencyBlur(this)">
                     </div>
@@ -2348,7 +2443,7 @@
         document.getElementById('caricamentoSuggestions').style.display = 'none';
     }
 
-    // Chiudi dropdown al click fuori
+    // Chiudi dropdown al click fuori (include sabatini)
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.autocomplete-wrapper')) {
             document.getElementById('clienteSuggestions').style.display = 'none';
@@ -2438,40 +2533,13 @@
             // 1. Chiudi eventuali altri overlay
             closeOverlay('compensi');
             closeOverlay('fatture');
-            closeOverlay('procacciatori');
-            
-            // Per l'overlay procacciatori, calcola e imposta la larghezza PRIMA di aprire
-            if (type === 'procacciatori') {
-                // Calcola la larghezza quando l'overlay è ancora chiuso
-                const calculatedWidth = calculateProcacciatoriOverlayWidth();
-                // Imposta la larghezza inline PRIMA di aggiungere la classe active
-                // Questo ha priorità sul CSS
-                if (calculatedWidth > 0) {
-                    overlay.style.width = calculatedWidth + 'px';
-                    overlay.style.setProperty('width', calculatedWidth + 'px', 'important');
-                }
-            }
+            closeOverlay('extra');
             
             // Apri l'overlay selezionato
             overlay.classList.add('active');
             
-            // Per l'overlay procacciatori, ricalcola e riapplica la larghezza dopo che la classe active è stata aggiunta
-            if (type === 'procacciatori') {
-                // Usa requestAnimationFrame per assicurarsi che il CSS sia applicato
-                requestAnimationFrame(() => {
-                    const recalculatedWidth = calculateProcacciatoriOverlayWidth();
-                    if (recalculatedWidth > 0) {
-                        overlay.style.setProperty('width', recalculatedWidth + 'px', 'important');
-                    }
-                    // Ricalcola anche dopo un breve delay per sicurezza
-                    setTimeout(() => {
-                        const finalWidth = calculateProcacciatoriOverlayWidth();
-                        if (finalWidth > 0) {
-                            overlay.style.setProperty('width', finalWidth + 'px', 'important');
-                        }
-                        syncProcacciatoriScroll();
-                    }, 100);
-                });
+            if (type === 'extra') {
+                setTimeout(() => { syncExtraScroll(); }, 100);
             }
             
             // 3. FONDAMENTALE: Aggiunge la classe al BODY per mostrare la barra di scorrimento
@@ -2484,81 +2552,11 @@
         const overlay = document.getElementById(overlayId);
         
         if (overlay) {
-            // Per l'overlay procacciatori, rimuovi la larghezza inline per permettere la chiusura immediata
-            if (type === 'procacciatori') {
-                overlay.style.removeProperty('width');
-            }
-            
             overlay.classList.remove('active');
             
             // 4. Rimuove la classe dal BODY (nasconde la barra)
             document.body.classList.remove('overlay-open');
         }
-    }
-
-    function calculateProcacciatoriOverlayWidth() {
-        // Trova la colonna "Redattore" nella tabella principale (standard o extra1)
-        const mainTable = document.querySelector('.lavori-admin-standard-table') || 
-                         document.querySelector('.table-expanded');
-        const overlay = document.getElementById('overlayProcacciatori');
-        
-        if (!mainTable || !overlay) {
-            return 200; // Larghezza di fallback
-        }
-        
-        const headerRow = mainTable.querySelector('thead tr');
-        if (!headerRow) {
-            return 200;
-        }
-        
-        const headers = Array.from(headerRow.querySelectorAll('th'));
-        const redattoreIndex = headers.findIndex(th => th.textContent.trim() === 'Redattore');
-        
-        if (redattoreIndex === -1) {
-            return 200;
-        }
-        
-        // Calcola la larghezza usando le colonne dell'header
-        // Forza un reflow per assicurarsi che le dimensioni siano aggiornate
-        void mainTable.offsetHeight;
-        
-        let widthFromRedattore = 0;
-        for (let i = redattoreIndex; i < headers.length; i++) {
-            const header = headers[i];
-            const rect = header.getBoundingClientRect();
-            widthFromRedattore += rect.width;
-        }
-        
-        // Se il calcolo dall'header non funziona, prova con le celle del body
-        if (widthFromRedattore === 0 || widthFromRedattore < 50) {
-            const tbody = mainTable.querySelector('tbody');
-            if (tbody) {
-                const firstRow = tbody.querySelector('tr');
-                if (firstRow) {
-                    const cells = Array.from(firstRow.querySelectorAll('td'));
-                    if (redattoreIndex < cells.length) {
-                        widthFromRedattore = 0;
-                        for (let i = redattoreIndex; i < cells.length; i++) {
-                            const cell = cells[i];
-                            const rect = cell.getBoundingClientRect();
-                            widthFromRedattore += rect.width;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Se non riusciamo a calcolare, usa una larghezza di default
-        if (widthFromRedattore === 0 || widthFromRedattore < 150) {
-            widthFromRedattore = 200; // Larghezza minima
-        }
-        
-        // Imposta anche la larghezza inline (verrà sovrascritta dal chiamante se necessario)
-        overlay.style.right = '0px'; // Sempre parte da destra
-        overlay.style.maxWidth = 'none';
-        
-        // Ritorna la larghezza calcolata
-        return widthFromRedattore;
     }
 
     /* ==================== RICERCA E FILTRI ==================== */
@@ -2841,7 +2839,7 @@
         });
         
         // Applica lo stesso filtro agli overlay
-        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayProcacciatori'];
+        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayExtra'];
         
         overlayTables.forEach(overlaySelector => {
             const overlay = document.querySelector(overlaySelector);
@@ -2878,7 +2876,7 @@
     }
     
     function recalculateOverlayRowspans() {
-        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayProcacciatori'];
+        const overlayTables = ['#overlayCompensi', '#overlayFatture', '#overlayExtra'];
         
         overlayTables.forEach(overlaySelector => {
             const overlay = document.querySelector(overlaySelector);
@@ -3133,18 +3131,16 @@
         }
     });
 
-    function syncProcacciatoriScroll() {
-        // Sincronizza lo scroll verticale tra la tabella principale e l'overlay
+    function syncExtraScroll() {
         const mainTable = document.querySelector('.lavori-admin-standard-table') || 
                          document.querySelector('.table-expanded');
-        const overlayTable = document.querySelector('#overlayProcacciatori .overlay-table');
+        const overlayTable = document.querySelector('#overlayExtra .overlay-table');
         
         if (!mainTable || !overlayTable) return;
         
-        // Trova i container scrollabili
         const mainContainer = mainTable.closest('.table-container') || 
                              document.querySelector('#extra1TableScroll');
-        const overlayContainer = overlayTable.closest('#overlayProcacciatori');
+        const overlayContainer = overlayTable.closest('#overlayExtra');
         
         if (!mainContainer || !overlayContainer) return;
         
@@ -3190,6 +3186,7 @@
         const impOff = document.getElementById('impOfferta');
         const impRev = document.getElementById('impRevisione');
         const impCar = document.getElementById('impCaricamento');
+        const impSab = document.getElementById('impSabatini');
         if (!label || !impOff) return;
 
         const totNum = parseCurrency(impOff.value || '0');
@@ -3207,6 +3204,13 @@
             const carNum = parseCurrency(impCar.value || '0');
             if (carNum > 0) {
                 parts.push('Caricamento: € ' + formatCurrency(carNum));
+            }
+        }
+
+        if (impSab && (impSab.value || '').trim() !== '') {
+            const sabNum = parseCurrency(impSab.value || '0');
+            if (sabNum > 0) {
+                parts.push('N. Sabatini: € ' + formatCurrency(sabNum));
             }
         }
 
@@ -4203,9 +4207,13 @@
         const cImpCar = first.querySelector('.col-imp-car');
         if (cImpCar) cImpCar.textContent = _formatEuroCell(data.importo_caricamento || 0, 0);
 
+        const cImpSab = first.querySelector('.col-imp-sab');
+        if (cImpSab) cImpSab.textContent = _formatEuroCell(data.importo_sabatini || 0, 0);
+
         // Aggiorna data-attributes
         first.setAttribute('data-has-revisore', data.has_revisore ? 'si' : 'no');
         first.setAttribute('data-has-caricamento', data.has_caricamento ? 'si' : 'no');
+        first.setAttribute('data-has-sabatini', data.has_sabatini ? 'si' : 'no');
 
         const beni = Array.isArray(data.beni) ? data.beni : [];
         if (beni.length && beni.length !== rows.length) {
@@ -4496,6 +4504,12 @@
             } else {
                 document.getElementById('impCaricamento').value = formatCurrency(0);
             }
+
+            if (data.has_sabatini && data.importo_sabatini) {
+                document.getElementById('impSabatini').value = formatCurrency(data.importo_sabatini || 0);
+            } else {
+                document.getElementById('impSabatini').value = formatCurrency(0);
+            }
             
             // Compila origine e redattore
             document.getElementById('selOrigine').value = data.origine || '';
@@ -4506,11 +4520,13 @@
             // Compila checkbox e importi
             document.getElementById('chkRevisione').checked = data.has_revisore;
             document.getElementById('chkCaricamento').checked = data.has_caricamento;
+            document.getElementById('chkSabatini').checked = data.has_sabatini || false;
             document.getElementById('chkSpeseAmm').checked = !!data.spese_amministrative;
             
-            // Compila nomi revisore e caricamento
+            // Compila nomi revisore, caricamento e sabatini
             document.getElementById('inpNomeRevisore').value = data.nome_revisore || '';
             document.getElementById('inpNomeCaricamento').value = data.nome_caricamento || '';
+            document.getElementById('inpNomeSabatini').value = data.nome_sabatini || '';
 
             // Se siamo entrati da "Revisiona Offerta", mostra il bottone dedicato
             const revBtn = document.getElementById('btnRevisionaOfferta');
@@ -4528,18 +4544,27 @@
             // Ma NON chiamare calcolaCompensi() ancora, lo faremo dopo aver impostato i valori
             const hasRev = data.has_revisore;
             const hasCar = data.has_caricamento;
+            const hasSab = data.has_sabatini || false;
             
             document.getElementById('chkRevisione').checked = hasRev;
             document.getElementById('chkCaricamento').checked = hasCar;
+            document.getElementById('chkSabatini').checked = hasSab;
             
             // Mostra/nascondi i campi senza ricalcolare
             document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
             document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
+            document.getElementById('divImportoSabatini').style.display = hasSab ? 'block' : 'none';
             document.getElementById('revOptions').style.display = hasRev ? 'flex' : 'none';
             document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
             document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
             document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
-            document.getElementById('togglesRevCar').style.display = (hasRev || hasCar) ? 'flex' : 'none';
+            document.getElementById('sabOptions').style.display = hasSab ? 'flex' : 'none';
+            document.getElementById('fieldSab').style.display = hasSab ? 'block' : 'none';
+            document.getElementById('togglesRevCar').style.display = (hasRev || hasCar || hasSab) ? 'flex' : 'none';
+
+            // Sabatini group visibilità (solo per iperamm)
+            const catVal = (data.categoria || '').toLowerCase();
+            document.getElementById('divSabatiniGroup').style.display = (catVal === 'iperamm') ? '' : 'none';
             
             toggleExtInput();
             
@@ -4586,7 +4611,6 @@
                         console.log('Valore formattato (euro):', formatted);
                         document.getElementById('carVal').value = formatted;
                     } else {
-                        // Per percentuali, mostra il valore come numero intero se possibile
                         const valStr = (carValue % 1 === 0) ? Math.round(carValue).toString() : carValue.toString();
                         console.log('Valore (percentuale):', valStr);
                         document.getElementById('carVal').value = valStr;
@@ -4595,6 +4619,21 @@
                 } else {
                     document.getElementById('carType').value = 'perc';
                     document.getElementById('carVal').value = '0';
+                }
+
+                if (data.has_sabatini) {
+                    const sabType = data.sab_type || 'perc';
+                    const sabValue = parseFloat(data.sab_value) || 0;
+                    document.getElementById('sabType').value = sabType;
+                    if (sabType === 'euro') {
+                        document.getElementById('sabVal').value = formatCurrency(sabValue);
+                    } else {
+                        const valStr = (sabValue % 1 === 0) ? Math.round(sabValue).toString() : sabValue.toString();
+                        document.getElementById('sabVal').value = valStr;
+                    }
+                } else {
+                    document.getElementById('sabType').value = 'perc';
+                    document.getElementById('sabVal').value = '0';
                 }
                 
                 // Imposta i valori per esterno se origine è 'ext'
@@ -4620,6 +4659,9 @@
                 // (potrebbero essere stati sovrascritti da calcolaCompensi se chiamato prima)
                 if (data.has_revisore && data.importo_revisione) {
                     document.getElementById('impRevisione').value = formatCurrency(data.importo_revisione || 0);
+                }
+                if (data.has_sabatini && data.importo_sabatini) {
+                    document.getElementById('impSabatini').value = formatCurrency(data.importo_sabatini || 0);
                 }
                 if (data.has_caricamento && data.importo_caricamento) {
                     document.getElementById('impCaricamento').value = formatCurrency(data.importo_caricamento || 0);
@@ -4743,6 +4785,7 @@
         toggleExtInput();
         // Per nuovo lavoro 4.0 OLD: revisione spenta e bloccata
         applyRevisioneLockForCategoria(categoria || '');
+        applySabatiniVisibility(categoria || '');
     }
     
     function openCategoryModal() {
@@ -4790,6 +4833,7 @@
         
         // Per 4.0 OLD la revisione non è prevista: spegni e blocca il flag
         applyRevisioneLockForCategoria(categoria);
+        applySabatiniVisibility(categoria);
         
         // Aggiorna il titolo
         const lavoroId = document.getElementById('lavoroId').value;
@@ -4822,13 +4866,68 @@
             if (fieldRev) fieldRev.style.display = 'none';
             const togglesRevCar = document.getElementById('togglesRevCar');
             const hasCar = document.getElementById('chkCaricamento').checked;
+            const hasSab = document.getElementById('chkSabatini').checked;
             const isExt = document.getElementById('selOrigine').value === 'ext';
-            if (togglesRevCar) togglesRevCar.style.display = (hasCar || isExt) ? 'flex' : 'none';
+            if (togglesRevCar) togglesRevCar.style.display = (hasCar || hasSab || isExt) ? 'flex' : 'none';
             calcolaCompensi();
         } else {
             chk.disabled = false;
-            toggleSpese(); // riapplica visibilità in base a has_revisore/has_caricamento
+            toggleSpese();
         }
+    }
+
+    function applySabatiniVisibility(categoria) {
+        const cat = (categoria || '').toLowerCase();
+        const group = document.getElementById('divSabatiniGroup');
+        if (!group) return;
+        if (cat === 'iperamm') {
+            group.style.display = '';
+        } else {
+            group.style.display = 'none';
+            const chk = document.getElementById('chkSabatini');
+            if (chk) {
+                chk.checked = false;
+            }
+            document.getElementById('divImportoSabatini').style.display = 'none';
+            document.getElementById('impSabatini').value = formatCurrency(0);
+            document.getElementById('inpNomeSabatini').value = '';
+            document.getElementById('sabOptions').style.display = 'none';
+            document.getElementById('fieldSab').style.display = 'none';
+            calcolaCompensi();
+        }
+    }
+
+    let sabatiniCache = [];
+    async function searchSabatini(query) {
+        const suggestionsDiv = document.getElementById('sabatiniSuggestions');
+        if (query.length < 1) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/sabatini?q=${encodeURIComponent(query)}`);
+            sabatiniCache = await res.json();
+            if (sabatiniCache.length > 0) {
+                suggestionsDiv.innerHTML = sabatiniCache.map((nome, i) => `
+                <div class="suggestion-item" onclick="selectSabatini(${i})">
+                    <strong>${nome}</strong>
+                </div>
+            `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        } catch (err) {
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    function selectSabatini(index) {
+        const nome = sabatiniCache[index];
+        if (nome) {
+            document.getElementById('inpNomeSabatini').value = nome;
+        }
+        document.getElementById('sabatiniSuggestions').style.display = 'none';
     }
 
     function closeAddModal() {
@@ -4843,11 +4942,13 @@
     function toggleSpese() {
         const hasRev = document.getElementById('chkRevisione').checked;
         const hasCar = document.getElementById('chkCaricamento').checked;
+        const hasSab = document.getElementById('chkSabatini').checked;
         const origine = document.getElementById('selOrigine').value;
         const isExt = origine === 'ext';
 
         document.getElementById('divImportoRevisione').style.display = hasRev ? 'block' : 'none';
         document.getElementById('divImportoCaricamento').style.display = hasCar ? 'block' : 'none';
+        document.getElementById('divImportoSabatini').style.display = hasSab ? 'block' : 'none';
 
         if (!hasRev) {
             document.getElementById('impRevisione').value = formatCurrency(0);
@@ -4857,6 +4958,10 @@
             document.getElementById('impCaricamento').value = formatCurrency(0);
             document.getElementById('inpNomeCaricamento').value = '';
         }
+        if (!hasSab) {
+            document.getElementById('impSabatini').value = formatCurrency(0);
+            document.getElementById('inpNomeSabatini').value = '';
+        }
 
         document.getElementById('revOptions').style.display = hasRev ? 'flex' : 'none';
         document.getElementById('fieldRev').style.display = hasRev ? 'block' : 'none';
@@ -4864,7 +4969,10 @@
         document.getElementById('carOptions').style.display = hasCar ? 'flex' : 'none';
         document.getElementById('fieldCar').style.display = hasCar ? 'block' : 'none';
 
-        document.getElementById('togglesRevCar').style.display = (hasRev || hasCar || isExt) ? 'flex' : 'none';
+        document.getElementById('sabOptions').style.display = hasSab ? 'flex' : 'none';
+        document.getElementById('fieldSab').style.display = hasSab ? 'block' : 'none';
+
+        document.getElementById('togglesRevCar').style.display = (hasRev || hasCar || hasSab || isExt) ? 'flex' : 'none';
 
         calcolaCompensi();
     }
@@ -4896,9 +5004,10 @@
             setCurrencyValue('c_ext', 0);
             setCurrencyValue('c_revisore', 0);
             setCurrencyValue('c_caricamento', 0);
+            setCurrencyValue('c_sabatini', 0);
             
             // Aggiorna la visibilità dei campi (mostra solo quelli rilevanti per modalità manuale)
-            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
             
             // Nascondi eventuali alert
             const alertDiv = document.getElementById('alertCompensi');
@@ -4912,13 +5021,15 @@
         const importoOfferta = parseCurrency(document.getElementById('impOfferta').value);
         const importoRevisione = parseCurrency(document.getElementById('impRevisione').value);
         const importoCaricamento = parseCurrency(document.getElementById('impCaricamento').value);
+        const importoSabatini = parseCurrency(document.getElementById('impSabatini').value);
 
         const hasSpeseAmm = document.getElementById('chkSpeseAmm').checked;
         const hasRevisione = document.getElementById('chkRevisione').checked;
         const hasCaricamento = document.getElementById('chkCaricamento').checked;
+        const hasSabatini = document.getElementById('chkSabatini').checked;
 
-        // Totale Lavoro = Totale Offerta 4.0 + Offerta Revisione + Offerta Caricamento
-        const totaleLavoro = importoOfferta + importoRevisione + importoCaricamento;
+        // Totale Lavoro = Totale Offerta 4.0 + Offerta Revisione + Offerta Caricamento + Offerta Sabatini
+        const totaleLavoro = importoOfferta + importoRevisione + importoCaricamento + importoSabatini;
 
         // 1. SPESE AMM (6%) - calcolate su Totale Lavoro
         let speseAmm = 0;
@@ -4976,18 +5087,36 @@
             
             // Calcola la differenza tra importo caricamento e compenso caricamento
             diffCaricamento = importoCaricamento - valCar;
-            if (diffCaricamento < 0) diffCaricamento = 0; // Non consideriamo differenze negative
+            if (diffCaricamento < 0) diffCaricamento = 0;
+        }
+
+        // 4b. SABATINI - calcola il compenso
+        let valSab = 0;
+        let diffSabatini = 0;
+        if (hasSabatini) {
+            const sabType = document.getElementById('sabType').value;
+            let rawSabVal = document.getElementById('sabVal').value;
+
+            if (sabType === 'euro') {
+                valSab = parseCurrency(rawSabVal);
+            } else {
+                const sabPerc = parseFloat(rawSabVal.replace(',', '.')) || 0;
+                valSab = (totaleLavoro * sabPerc / 100);
+            }
+            
+            diffSabatini = importoSabatini - valSab;
+            if (diffSabatini < 0) diffSabatini = 0;
         }
 
         // 5. Calcola BASE per il 15% FE
-        // Base = Totale Lavoro - C.Rev - C.Car - DiffRev - DiffCar - C.Ext
-        let basePer15 = totaleLavoro - valRev - valCar - diffRevisione - diffCaricamento - valExt;
+        // Base = Totale Lavoro - C.Rev - C.Car - C.Sab - DiffRev - DiffCar - DiffSab - C.Ext
+        let basePer15 = totaleLavoro - valRev - valCar - valSab - diffRevisione - diffCaricamento - diffSabatini - valExt;
 
         // 6. FE 15% - calcolato sulla base
         const fe15 = basePer15 * 0.15;
         
         // 7. C.FE totale = Differenze + Spese Amm + 15%
-        let valFE = diffRevisione + diffCaricamento + speseAmm + fe15;
+        let valFE = diffRevisione + diffCaricamento + diffSabatini + speseAmm + fe15;
 
         // 8. Resto per lo split = Base - 15%
         let resto = basePer15 - fe15;
@@ -5030,11 +5159,12 @@
         setCurrencyValue('c_ext', valExt);
         setCurrencyValue('c_revisore', valRev);
         setCurrencyValue('c_caricamento', valCar);
+        setCurrencyValue('c_sabatini', valSab);
 
         // Aggiorna la visibilità dei campi in base ai valori calcolati
-        updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar);
+        updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar, valSab);
 
-        const allValues = [valFE, valAmin, valGalvan, valFH, valBianc, valExt, valRev, valCar, resto];
+        const allValues = [valFE, valAmin, valGalvan, valFH, valBianc, valExt, valRev, valCar, valSab, resto];
         const hasNegative = allValues.some(v => v < -0.01);
 
         const alertDiv = document.getElementById('alertCompensi');
@@ -5057,6 +5187,7 @@
         setCurrencyValue('c_ext', 0);
         setCurrencyValue('c_revisore', 0);
         setCurrencyValue('c_caricamento', 0);
+        setCurrencyValue('c_sabatini', 0);
         
         // Aggiorna la visibilità dei campi
         const origine = document.getElementById('selOrigine').value;
@@ -5065,10 +5196,10 @@
         
         if (isManual) {
             // In modalità manuale, mostra tutti i campi rilevanti
-            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         } else {
             // In modalità automatica, nascondi i campi a 0
-            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            updateCompensiFieldsVisibility(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
         
         // Nascondi eventuali alert
@@ -5126,7 +5257,8 @@
         if (togglesRow) {
             const hasRev = document.getElementById('chkRevisione').checked;
             const hasCar = document.getElementById('chkCaricamento').checked;
-            togglesRow.style.display = (hasRev || hasCar || isExt) ? 'flex' : 'none';
+            const hasSab = document.getElementById('chkSabatini').checked;
+            togglesRow.style.display = (hasRev || hasCar || hasSab || isExt) ? 'flex' : 'none';
         }
         
         // Per BIANC e DELOITTE, mostra sempre i campi e imposta 0,00 se vuoti
@@ -5162,27 +5294,27 @@
         document.getElementById('fieldExt').style.display = isExt ? 'block' : 'none';
     }
     
-    function updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar) {
+    function updateCompensiFieldsVisibility(valFE, valAmin, valGalvan, valFH, valBianc, valDeloitte, valExt, valRev, valCar, valSab) {
         const origine = document.getElementById('selOrigine').value;
         const redattore = document.getElementById('selRedattore').value;
         const isManual = origine === 'BIANC' || redattore === 'BIANC' || origine === 'DELOITTE' || redattore === 'DELOITTE';
         
         // Se è modalità manuale (BIANC o DELOITTE), mostra tutti i campi per inserimento manuale
         if (isManual) {
-            // Mostra sempre tutti i campi principali per inserimento manuale
             document.getElementById('fieldFE').style.display = 'block';
             document.getElementById('fieldAmin').style.display = 'block';
             document.getElementById('fieldGalvan').style.display = 'block';
             document.getElementById('fieldFH').style.display = 'block';
-            // Mostra Ext solo se origine è ext
             document.getElementById('fieldExt').style.display = (origine === 'ext') ? 'block' : 'none';
-            // Mostra Revisore e Caricamento solo se hanno valore > 0 o se sono attivi
             const hasRev = document.getElementById('chkRevisione').checked;
             const hasCar = document.getElementById('chkCaricamento').checked;
+            const hasSab = document.getElementById('chkSabatini').checked;
             const revField = document.getElementById('fieldRev');
             if (revField) revField.style.display = (hasRev || valRev > 0) ? 'block' : 'none';
             const carField = document.getElementById('fieldCar');
             if (carField) carField.style.display = (hasCar || valCar > 0) ? 'block' : 'none';
+            const sabField = document.getElementById('fieldSab');
+            if (sabField) sabField.style.display = (hasSab || (valSab || 0) > 0) ? 'block' : 'none';
             // BIANC e DELOITTE vengono gestiti da toggleExtInput (mostrati se selezionati)
             toggleExtInput();
             return;
@@ -5227,6 +5359,16 @@
             if (carInputVal <= 0) {
                 alert('Hai attivato "Caricamento" ma non hai inserito il compenso.');
                 document.getElementById('carVal').focus();
+                return false;
+            }
+        }
+
+        // Validazione Sabatini
+        if (document.getElementById('chkSabatini').checked) {
+            const sabInputVal = parseCurrency(document.getElementById('sabVal').value);
+            if (sabInputVal <= 0) {
+                alert('Hai attivato "Nuova Sabatini" ma non hai inserito il compenso.');
+                document.getElementById('sabVal').focus();
                 return false;
             }
         }

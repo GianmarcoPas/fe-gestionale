@@ -28,6 +28,7 @@ def _recalc_compensi(lavoro, shown_importo, total_importo):
             'c_ext': lavoro.c_ext or 0,
             'c_revisore': lavoro.c_revisore or 0,
             'c_caricamento': lavoro.c_caricamento or 0,
+            'c_sabatini': getattr(lavoro, 'c_sabatini', 0) or 0,
         }
 
     origine = (lavoro.origine or '').upper()
@@ -48,23 +49,27 @@ def _recalc_compensi(lavoro, shown_importo, total_importo):
             'c_ext': lavoro.c_ext or 0,
             'c_revisore': lavoro.c_revisore or 0,
             'c_caricamento': lavoro.c_caricamento or 0,
+            'c_sabatini': getattr(lavoro, 'c_sabatini', 0) or 0,
         }
 
     val_rev = lavoro.c_revisore or 0
     val_car = lavoro.c_caricamento or 0
+    val_sab = getattr(lavoro, 'c_sabatini', 0) or 0
     val_ext = lavoro.c_ext or 0
     importo_rev = lavoro.importo_revisione or 0
     importo_car = lavoro.importo_caricamento or 0
+    importo_sab = getattr(lavoro, 'importo_sabatini', 0) or 0
 
     diff_rev = max(0, importo_rev - val_rev) if getattr(lavoro, 'has_revisore', False) else 0
     diff_car = max(0, importo_car - val_car) if getattr(lavoro, 'has_caricamento', False) else 0
+    diff_sab = max(0, importo_sab - val_sab) if getattr(lavoro, 'has_sabatini', False) else 0
 
-    totale_lavoro = shown_importo + importo_rev + importo_car
+    totale_lavoro = shown_importo + importo_rev + importo_car + importo_sab
     spese_amm = totale_lavoro * 0.06 if getattr(lavoro, 'spese_amministrative', False) else 0
 
     base_per_15 = max(0, shown_importo - val_ext)
     fe15 = base_per_15 * 0.15
-    val_fe = diff_rev + diff_car + spese_amm + fe15
+    val_fe = diff_rev + diff_car + diff_sab + spese_amm + fe15
 
     resto = base_per_15 - fe15
 
@@ -112,6 +117,7 @@ def _recalc_compensi(lavoro, shown_importo, total_importo):
         'c_ext': lavoro.c_ext or 0,
         'c_revisore': lavoro.c_revisore or 0,
         'c_caricamento': lavoro.c_caricamento or 0,
+        'c_sabatini': getattr(lavoro, 'c_sabatini', 0) or 0,
     }
 
 
@@ -204,6 +210,7 @@ def _generate_offerta_response(*, lavoro: LavoroAdmin, tipo: str) :
         data_emissione_text=data_emissione_text,
         importo_caricamento=getattr(lavoro, 'importo_caricamento', 0) or 0,
         importo_revisione=getattr(lavoro, 'importo_revisione', 0) or 0,
+        importo_sabatini=getattr(lavoro, 'importo_sabatini', 0) or 0,
         beni=beni_list,
     )
 
@@ -599,6 +606,7 @@ def api_da_incassare():
             'spese_amministrative': lavoro.spese_amministrative or False,
             'has_revisore': lavoro.has_revisore or False,
             'has_caricamento': lavoro.has_caricamento or False,
+            'has_sabatini': getattr(lavoro, 'has_sabatini', False) or False,
             'fattura_fe': lavoro.f_fe or '-',
             'data_fattura_fe': lavoro.data_fattura_fe.strftime('%d/%m/%Y') if lavoro.data_fattura_fe else '-',
             'giorni_ritardo': giorni,
@@ -1142,16 +1150,21 @@ def get_lavoro_admin(id):
         'collaboratore': lavoro.collaboratore or '',
         'has_revisore': lavoro.has_revisore,
         'has_caricamento': lavoro.has_caricamento,
+        'has_sabatini': getattr(lavoro, 'has_sabatini', False) or False,
         'nome_revisore': lavoro.nome_revisore or '',
         'nome_caricamento': lavoro.nome_caricamento or '',
+        'nome_sabatini': getattr(lavoro, 'nome_sabatini', '') or '',
         'rev_type': getattr(lavoro, 'rev_type', 'perc') if lavoro.has_revisore else 'perc',
         'rev_value': float(getattr(lavoro, 'rev_value', 0)) if lavoro.has_revisore else 0,
         'car_type': getattr(lavoro, 'car_type', 'perc') if lavoro.has_caricamento else 'perc',
         'car_value': float(getattr(lavoro, 'car_value', 0)) if lavoro.has_caricamento else 0,
+        'sab_type': getattr(lavoro, 'sab_type', 'perc') if getattr(lavoro, 'has_sabatini', False) else 'perc',
+        'sab_value': float(getattr(lavoro, 'sab_value', 0)) if getattr(lavoro, 'has_sabatini', False) else 0,
         'ext_type': getattr(lavoro, 'ext_type', 'perc') if lavoro.origine == 'ext' else 'perc',
         'ext_value': float(getattr(lavoro, 'ext_value', 0)) if lavoro.origine == 'ext' else 0,
         'importo_revisione': getattr(lavoro, 'importo_revisione', 0) if lavoro.has_revisore else 0,
         'importo_caricamento': getattr(lavoro, 'importo_caricamento', 0) if lavoro.has_caricamento else 0,
+        'importo_sabatini': getattr(lavoro, 'importo_sabatini', 0) if getattr(lavoro, 'has_sabatini', False) else 0,
         'spese_amministrative': getattr(lavoro, 'spese_amministrative', False),
         'offerta_revision': getattr(lavoro, 'offerta_revision', 0),
         'offerta_dirty': getattr(lavoro, 'offerta_dirty', False),
@@ -1165,6 +1178,7 @@ def get_lavoro_admin(id):
         'c_ext': lavoro.c_ext,
         'c_revisore': lavoro.c_revisore,
         'c_caricamento': lavoro.c_caricamento,
+        'c_sabatini': getattr(lavoro, 'c_sabatini', 0.0),
         'data_offerta': lavoro.data_offerta.strftime('%Y-%m-%d') if lavoro.data_offerta else None,
         'data_firma': lavoro.data_firma.strftime('%Y-%m-%d') if lavoro.data_firma else None,
         'data_pec': lavoro.data_pec.strftime('%Y-%m-%d') if lavoro.data_pec else None,
@@ -1179,7 +1193,8 @@ def get_lavoro_admin(id):
         'f_deloitte': getattr(lavoro, 'f_deloitte', '') or '',
         'f_ext': lavoro.f_ext or '',
         'f_revisore': lavoro.f_revisore or '',
-        'f_caricamento': lavoro.f_caricamento or ''
+        'f_caricamento': lavoro.f_caricamento or '',
+        'f_sabatini': getattr(lavoro, 'f_sabatini', '') or ''
     }))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return resp
@@ -1348,6 +1363,7 @@ def add_lavoro_admin():
             lavoro.collaboratore = request.form.get('collaboratore')
             lavoro.has_revisore = (request.form.get('has_revisore') == 'on')
             lavoro.has_caricamento = (request.form.get('has_caricamento') == 'on')
+            lavoro.has_sabatini = (request.form.get('has_sabatini') == 'on')
             lavoro.spese_amministrative = (request.form.get('spese_amministrative') == 'on')
             
             # Gestione cambio categoria
@@ -1378,6 +1394,7 @@ def add_lavoro_admin():
                 lavoro.offerta_dirty = True
             lavoro.nome_revisore = request.form.get('nome_revisore') if lavoro.has_revisore else None
             lavoro.nome_caricamento = request.form.get('nome_caricamento') if lavoro.has_caricamento else None
+            lavoro.nome_sabatini = request.form.get('nome_sabatini') if lavoro.has_sabatini else None
             
             # Salva valori originali revisore e caricamento
             if lavoro.has_revisore:
@@ -1399,6 +1416,15 @@ def add_lavoro_admin():
             else:
                 lavoro.car_type = 'perc'
                 lavoro.car_value = 0.0
+
+            if lavoro.has_sabatini:
+                sab_type_val = request.form.get('sab_type', 'perc')
+                sab_val_val = to_float(request.form.get('sab_val', '0'))
+                lavoro.sab_type = sab_type_val
+                lavoro.sab_value = sab_val_val
+            else:
+                lavoro.sab_type = 'perc'
+                lavoro.sab_value = 0.0
             
             # Salva valori originali esterno
             if lavoro.origine == 'ext':
@@ -1420,10 +1446,12 @@ def add_lavoro_admin():
             lavoro.c_ext = to_float(request.form.get('c_ext'))
             lavoro.c_revisore = to_float(request.form.get('c_revisore'))
             lavoro.c_caricamento = to_float(request.form.get('c_caricamento'))
+            lavoro.c_sabatini = to_float(request.form.get('c_sabatini'))
             
             # Salva gli importi per l'offerta al cliente (sezione Ordine di Lavoro)
             lavoro.importo_revisione = to_float(request.form.get('importo_revisione', '0')) if lavoro.has_revisore else 0
             lavoro.importo_caricamento = to_float(request.form.get('importo_caricamento', '0')) if lavoro.has_caricamento else 0
+            lavoro.importo_sabatini = to_float(request.form.get('importo_sabatini', '0')) if lavoro.has_sabatini else 0
             
             # Aggiorna importo_offerta totale
             lavoro.importo_offerta = importo_totale_offerta
@@ -1501,13 +1529,17 @@ def add_lavoro_admin():
                 collaboratore=request.form.get('collaboratore'),
                 has_revisore=(request.form.get('has_revisore') == 'on'),
                 has_caricamento=(request.form.get('has_caricamento') == 'on'),
+                has_sabatini=(request.form.get('has_sabatini') == 'on'),
                 spese_amministrative=(request.form.get('spese_amministrative') == 'on'),
                 nome_revisore=request.form.get('nome_revisore') if (request.form.get('has_revisore') == 'on') else None,
                 nome_caricamento=request.form.get('nome_caricamento') if (request.form.get('has_caricamento') == 'on') else None,
+                nome_sabatini=request.form.get('nome_sabatini') if (request.form.get('has_sabatini') == 'on') else None,
                 rev_type=request.form.get('rev_type', 'perc') if (request.form.get('has_revisore') == 'on') else 'perc',
                 rev_value=to_float(request.form.get('rev_val', '0')) if (request.form.get('has_revisore') == 'on') else 0.0,
                 car_type=request.form.get('car_type', 'perc') if (request.form.get('has_caricamento') == 'on') else 'perc',
                 car_value=to_float(request.form.get('car_val', '0')) if (request.form.get('has_caricamento') == 'on') else 0.0,
+                sab_type=request.form.get('sab_type', 'perc') if (request.form.get('has_sabatini') == 'on') else 'perc',
+                sab_value=to_float(request.form.get('sab_val', '0')) if (request.form.get('has_sabatini') == 'on') else 0.0,
                 c_fe=to_float(request.form.get('c_fe')),
                 c_amin=to_float(request.form.get('c_amin')),
                 c_galvan=to_float(request.form.get('c_galvan')),
@@ -1517,8 +1549,10 @@ def add_lavoro_admin():
                 c_ext=to_float(request.form.get('c_ext')),
                 c_revisore=to_float(request.form.get('c_revisore')),
                 c_caricamento=to_float(request.form.get('c_caricamento')),
+                c_sabatini=to_float(request.form.get('c_sabatini')),
                 importo_revisione=to_float(request.form.get('importo_revisione', '0')) if (request.form.get('has_revisore') == 'on') else 0,
                 importo_caricamento=to_float(request.form.get('importo_caricamento', '0')) if (request.form.get('has_caricamento') == 'on') else 0,
+                importo_sabatini=to_float(request.form.get('importo_sabatini', '0')) if (request.form.get('has_sabatini') == 'on') else 0,
                 categoria=request.form.get('categoria') or None,
                 stato='In corso' # Default
             )
@@ -2160,11 +2194,26 @@ def api_caricamenti():
     if len(query) < 1:
         return jsonify([])
     
-    # Cerca i nomi univoci nella colonna nome_caricamento
     nomi = db.session.query(LavoroAdmin.nome_caricamento)\
         .filter(LavoroAdmin.nome_caricamento.ilike(f'%{query}%'))\
         .filter(LavoroAdmin.nome_caricamento != None)\
         .filter(LavoroAdmin.nome_caricamento != '')\
+        .distinct().limit(10).all()
+    
+    results = [n[0] for n in nomi]
+    return jsonify(results)
+
+@bp.route('/api/sabatini')
+@login_required
+def api_sabatini():
+    query = request.args.get('q', '')
+    if len(query) < 1:
+        return jsonify([])
+    
+    nomi = db.session.query(LavoroAdmin.nome_sabatini)\
+        .filter(LavoroAdmin.nome_sabatini.ilike(f'%{query}%'))\
+        .filter(LavoroAdmin.nome_sabatini != None)\
+        .filter(LavoroAdmin.nome_sabatini != '')\
         .distinct().limit(10).all()
     
     results = [n[0] for n in nomi]
@@ -2516,6 +2565,7 @@ def fatturazione_esterni(tipo):
         'deloitte': ('c_deloitte', 'f_deloitte', 'data_fattura_deloitte', 'DELOITTE', None),
         'revisore': ('c_revisore', 'f_revisore', 'data_fattura_revisore', 'REVISORE', 'nome_revisore'),
         'caricamento': ('c_caricamento', 'f_caricamento', 'data_fattura_caricamento', 'CARICAMENTO', 'nome_caricamento'),
+        'sabatini': ('c_sabatini', 'f_sabatini', 'data_fattura_sabatini', 'N. SABATINI', 'nome_sabatini'),
         'ext': ('c_ext', 'f_ext', 'data_fattura_ext', 'ESTERNI', 'nome_esterno')
     }
     
@@ -2626,6 +2676,7 @@ def salva_fatturazione_esterni():
         'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
         'revisore': ('f_revisore', 'data_fattura_revisore'),
         'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'sabatini': ('f_sabatini', 'data_fattura_sabatini'),
         'ext': ('f_ext', 'data_fattura_ext')
     }
     
@@ -2660,6 +2711,7 @@ def lista_fatture_esterni(tipo):
         'deloitte': ('f_deloitte', 'data_fattura_deloitte', 'c_deloitte'),
         'revisore': ('f_revisore', 'data_fattura_revisore', 'c_revisore'),
         'caricamento': ('f_caricamento', 'data_fattura_caricamento', 'c_caricamento'),
+        'sabatini': ('f_sabatini', 'data_fattura_sabatini', 'c_sabatini'),
         'ext': ('f_ext', 'data_fattura_ext', 'c_ext')
     }
     
@@ -2673,6 +2725,7 @@ def lista_fatture_esterni(tipo):
     campo_nome_map = {
         'revisore': 'nome_revisore',
         'caricamento': 'nome_caricamento',
+        'sabatini': 'nome_sabatini',
         'ext': 'nome_esterno'
     }
     campo_nome = campo_nome_map.get(tipo)
@@ -2742,6 +2795,7 @@ def lavori_disponibili_fatturazione_esterni(tipo):
         'deloitte': ('c_deloitte', 'f_deloitte'),
         'revisore': ('c_revisore', 'f_revisore', 'nome_revisore'),
         'caricamento': ('c_caricamento', 'f_caricamento', 'nome_caricamento'),
+        'sabatini': ('c_sabatini', 'f_sabatini', 'nome_sabatini'),
         'ext': ('c_ext', 'f_ext', 'nome_esterno')
     }
     
@@ -2850,6 +2904,7 @@ def aggiorna_fatturazione_esterni():
         'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
         'revisore': ('f_revisore', 'data_fattura_revisore'),
         'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'sabatini': ('f_sabatini', 'data_fattura_sabatini'),
         'ext': ('f_ext', 'data_fattura_ext')
     }
     
@@ -2905,6 +2960,7 @@ def rimuovi_lavoro_da_fattura_esterni():
         'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
         'revisore': ('f_revisore', 'data_fattura_revisore'),
         'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'sabatini': ('f_sabatini', 'data_fattura_sabatini'),
         'ext': ('f_ext', 'data_fattura_ext')
     }
     
@@ -2962,6 +3018,7 @@ def elimina_fattura_esterni():
         'deloitte': ('f_deloitte', 'data_fattura_deloitte'),
         'revisore': ('f_revisore', 'data_fattura_revisore'),
         'caricamento': ('f_caricamento', 'data_fattura_caricamento'),
+        'sabatini': ('f_sabatini', 'data_fattura_sabatini'),
         'ext': ('f_ext', 'data_fattura_ext')
     }
     
